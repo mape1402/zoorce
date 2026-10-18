@@ -26,4 +26,4 @@ Zoorce provides a dark-first, semantic-token UI foundation for Razor Pages. The 
 - Hints, validation/error presentation, checkboxes, radios and switches.
 - Tabs and tab panels.
 
-All visual colors consume `--z-*` semantic variables emitted by the Razor layout, so a host can brand both themes without editing Zoorce's generated Tailwind CSS.
+All visual colors consume `--z-*` semantic variables emitted by the Razor layout, including the foreground and semantic success/warning/danger/info states, so a host can brand both themes without editing Zoorce's generated Tailwind CSS.

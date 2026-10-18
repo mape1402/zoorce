@@ -29,11 +29,44 @@ public sealed class ZoorceThemePaletteOptions
     /// <summary>Gets or sets the primary brand accent.</summary>
     public string Primary { get; set; } = string.Empty;
 
+    /// <summary>Gets or sets the foreground color placed on the primary brand accent.</summary>
+    public string PrimaryForeground { get; set; } = string.Empty;
+
     /// <summary>Gets or sets the primary accent hover color.</summary>
     public string PrimaryHover { get; set; } = string.Empty;
 
     /// <summary>Gets or sets the low-emphasis primary accent.</summary>
     public string PrimarySoft { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the positive semantic accent.</summary>
+    public string Success { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the low-emphasis positive surface.</summary>
+    public string SuccessSoft { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the warning semantic accent.</summary>
+    public string Warning { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the low-emphasis warning surface.</summary>
+    public string WarningSoft { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the danger semantic accent.</summary>
+    public string Danger { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the foreground color placed on the danger accent.</summary>
+    public string DangerForeground { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the low-emphasis danger surface.</summary>
+    public string DangerSoft { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the information semantic accent.</summary>
+    public string Info { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the low-emphasis information surface.</summary>
+    public string InfoSoft { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the secondary data-visualization accent.</summary>
+    public string DataSecondary { get; set; } = string.Empty;
 
     /// <summary>Gets or sets the sidebar background color.</summary>
     public string Sidebar { get; set; } = string.Empty;
@@ -61,8 +94,19 @@ public sealed class ZoorceThemePaletteOptions
             Variable("--z-muted", Muted),
             Variable("--z-border", Border),
             Variable("--z-primary", Primary),
+            Variable("--z-primary-foreground", PrimaryForeground),
             Variable("--z-primary-hover", PrimaryHover),
             Variable("--z-primary-soft", PrimarySoft),
+            Variable("--z-success", Success),
+            Variable("--z-success-soft", SuccessSoft),
+            Variable("--z-warning", Warning),
+            Variable("--z-warning-soft", WarningSoft),
+            Variable("--z-danger", Danger),
+            Variable("--z-danger-foreground", DangerForeground),
+            Variable("--z-danger-soft", DangerSoft),
+            Variable("--z-info", Info),
+            Variable("--z-info-soft", InfoSoft),
+            Variable("--z-data-secondary", DataSecondary),
             Variable("--z-sidebar", Sidebar),
             Variable("--z-sidebar-text", SidebarText),
             Variable("--z-sidebar-muted", SidebarMuted),
@@ -74,20 +118,31 @@ public sealed class ZoorceThemePaletteOptions
     /// </summary>
     public static ZoorceThemePaletteOptions CreateLight() => new()
     {
-        Canvas = "#f4f8f7",
+        Canvas = "#f6f8f7",
         Surface = "#ffffff",
         Elevated = "#ffffff",
-        Subtle = "#eaf2ef",
-        Text = "#10221c",
-        Muted = "#5d7169",
-        Border = "#d8e5df",
-        Primary = "#087f5b",
-        PrimaryHover = "#056746",
-        PrimarySoft = "#d5f7e8",
-        Sidebar = "#0b1714",
-        SidebarText = "#f4fffa",
-        SidebarMuted = "#9cb8ac",
-        Glow = "rgba(8, 127, 91, 0.20)"
+        Subtle = "#edf3f0",
+        Text = "#15251f",
+        Muted = "#52675e",
+        Border = "#d6e2dc",
+        Primary = "#087a57",
+        PrimaryForeground = "#ffffff",
+        PrimaryHover = "#056446",
+        PrimarySoft = "#d9f2e7",
+        Success = "#087a57",
+        SuccessSoft = "#ddf4e9",
+        Warning = "#8a5a00",
+        WarningSoft = "#fff1d6",
+        Danger = "#b4233f",
+        DangerForeground = "#ffffff",
+        DangerSoft = "#ffe7ec",
+        Info = "#285eb8",
+        InfoSoft = "#e6eeff",
+        DataSecondary = "#6556bb",
+        Sidebar = "#eef5f1",
+        SidebarText = "#17362a",
+        SidebarMuted = "#587267",
+        Glow = "rgba(8, 122, 87, 0.08)"
     };
 
     /// <summary>
@@ -103,8 +158,19 @@ public sealed class ZoorceThemePaletteOptions
         Muted = "#93aa9f",
         Border = "#1d3930",
         Primary = "#20e7a0",
+        PrimaryForeground = "#04100b",
         PrimaryHover = "#53f3be",
         PrimarySoft = "#123f31",
+        Success = "#20e7a0",
+        SuccessSoft = "#123f31",
+        Warning = "#f2bd58",
+        WarningSoft = "#3a2c12",
+        Danger = "#ff7586",
+        DangerForeground = "#220509",
+        DangerSoft = "#40171e",
+        Info = "#8eb0ff",
+        InfoSoft = "#192b50",
+        DataSecondary = "#a18bff",
         Sidebar = "#07120f",
         SidebarText = "#eefff8",
         SidebarMuted = "#83a89a",

@@ -1,6 +1,7 @@
 (() => {
     const root = document.documentElement;
     const shell = document.querySelector("[data-z-shell]");
+    const sidebarBackdrop = document.querySelector("[data-z-sidebar-backdrop]");
     const toastStack = document.querySelector("[data-z-toast-stack]");
     const dialogLayer = document.querySelector("[data-z-dialog-layer]");
     const commandLayer = document.querySelector("[data-z-command-layer]");
@@ -25,18 +26,26 @@
     };
     updateThemeControls();
 
+    const setSidebar = open => {
+        if (!shell) return;
+        shell.dataset.sidebarOpen = String(open);
+        localStorage.setItem("zoerce-sidebar-open", String(open));
+        if (sidebarBackdrop) sidebarBackdrop.hidden = !open;
+        document.querySelectorAll("[data-z-sidebar-toggle]").forEach(button => {
+            button.setAttribute("aria-expanded", String(open));
+        });
+    };
+
     document.querySelectorAll("[data-z-theme-toggle]").forEach(button => {
         button.addEventListener("click", () => setTheme(mode() === "dark" ? "light" : "dark"));
     });
 
     document.querySelectorAll("[data-z-sidebar-toggle]").forEach(button => {
-        button.addEventListener("click", () => {
-            if (!shell) return;
-            const open = shell.dataset.sidebarOpen !== "true";
-            shell.dataset.sidebarOpen = String(open);
-            localStorage.setItem("zoerce-sidebar-open", String(open));
-        });
+        button.addEventListener("click", () => setSidebar(shell?.dataset.sidebarOpen !== "true"));
     });
+    document.querySelectorAll("[data-z-sidebar-close]").forEach(button => button.addEventListener("click", () => setSidebar(false)));
+    sidebarBackdrop?.addEventListener("click", () => setSidebar(false));
+    document.querySelectorAll(".z-sidebar a").forEach(link => link.addEventListener("click", () => setSidebar(false)));
 
     document.querySelectorAll("[data-z-nav-group]").forEach(button => {
         button.addEventListener("click", () => {
@@ -167,6 +176,7 @@
     });
 
     const closeLayer = layer => {
+        if (!layer) return;
         layer.hidden = true;
         restoreFocus?.focus();
         restoreFocus = null;
@@ -198,29 +208,74 @@
         }));
     });
 
-    document.querySelectorAll("[data-z-filter-input]").forEach(input => {
-        input.addEventListener("input", () => {
-            const query = input.value.trim().toLowerCase();
-            document.querySelectorAll(input.dataset.zFilterInput).forEach(row => {
-                row.hidden = !row.textContent.toLowerCase().includes(query);
+    document.querySelectorAll("[data-z-selection-group]").forEach(group => {
+        const buttons = [...group.querySelectorAll("button")];
+        buttons.forEach(button => button.addEventListener("click", () => {
+            buttons.forEach(candidate => {
+                const selected = candidate === button;
+                candidate.classList.toggle("is-active", selected);
+                candidate.setAttribute("aria-pressed", String(selected));
             });
-        });
+        }));
     });
-    document.querySelectorAll("[data-z-filter-chip]").forEach(chip => {
-        chip.addEventListener("click", () => chip.classList.toggle("is-active"));
+
+    document.querySelectorAll("[data-z-filter-input]").forEach(input => {
+        const panel = input.closest(".z-panel") ?? document;
+        const rows = [...panel.querySelectorAll(input.dataset.zFilterInput)];
+        const chips = [...panel.querySelectorAll("[data-z-filter-chip]")];
+        const applyFilter = () => {
+            const query = input.value.trim().toLowerCase();
+            const status = chips.find(chip => chip.classList.contains("is-active"))?.dataset.zFilterChip ?? "all";
+            rows.forEach(row => {
+                const matchesQuery = row.textContent.toLowerCase().includes(query);
+                const matchesStatus = status === "all" || row.dataset.zFilterStatus === status;
+                row.hidden = !matchesQuery || !matchesStatus;
+            });
+        };
+        input.addEventListener("input", applyFilter);
+        chips.forEach(chip => chip.addEventListener("click", () => {
+            chips.forEach(candidate => {
+                const selected = candidate === chip;
+                candidate.classList.toggle("is-active", selected);
+                candidate.setAttribute("aria-pressed", String(selected));
+            });
+            applyFilter();
+        }));
     });
     document.querySelectorAll("[data-z-copy]").forEach(button => {
         button.addEventListener("click", async () => {
             const target = document.querySelector(button.dataset.zCopy);
             if (!target) return;
-            await navigator.clipboard.writeText(target.textContent.trim());
-            const previous = button.textContent;
-            button.textContent = "Copied";
-            window.setTimeout(() => button.textContent = previous, 1400);
+            try {
+                await navigator.clipboard.writeText(target.textContent.trim());
+                const previous = button.textContent;
+                button.textContent = "Copied";
+                window.setTimeout(() => button.textContent = previous, 1400);
+            } catch {
+                toast("Copy unavailable", "Your browser blocked clipboard access.", "danger");
+            }
         });
     });
 
     document.addEventListener("keydown", event => {
+        if (event.key === "Tab") {
+            const activeLayer = [...document.querySelectorAll("[data-z-dialog-layer], [data-z-command-layer], [data-z-modal-layer], [data-z-drawer-layer]")]
+                .find(layer => !layer.hidden);
+            if (activeLayer) {
+                const focusable = [...activeLayer.querySelectorAll("a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex='-1'])")];
+                const first = focusable[0];
+                const last = focusable.at(-1);
+                if (!first || !last) {
+                    event.preventDefault();
+                } else if (event.shiftKey && document.activeElement === first) {
+                    event.preventDefault();
+                    last.focus();
+                } else if (!event.shiftKey && document.activeElement === last) {
+                    event.preventDefault();
+                    first.focus();
+                }
+            }
+        }
         if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
             event.preventDefault();
             openCommand();

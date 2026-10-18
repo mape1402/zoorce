@@ -19,8 +19,12 @@ public sealed class ThemeAndServiceTests
 
         Assert.Contains("data-zoerce-theme=\"light\"", rules);
         Assert.Contains("data-zoerce-theme=\"dark\"", rules);
-        Assert.Contains("--z-canvas:#f4f8f7;", rules);
+        Assert.Contains("--z-canvas:#f6f8f7;", rules);
         Assert.Contains("--z-primary:#20e7a0;", rules);
+        Assert.Contains("--z-primary-foreground:#ffffff;", rules);
+        Assert.Contains("--z-warning:#8a5a00;", rules);
+        Assert.Contains("--z-danger:#ff7586;", rules);
+        Assert.Contains("--z-data-secondary:#a18bff;", rules);
         Assert.Contains("--z-sidebar:#07120f;", rules);
     }
 

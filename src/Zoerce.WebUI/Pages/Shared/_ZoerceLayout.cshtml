@@ -47,7 +47,7 @@
                         <small>Design system</small>
                     </span>
                 </a>
-                <button class="z-icon-button z-sidebar-close" type="button" data-z-sidebar-toggle aria-label="Close navigation">×</button>
+                <button class="z-icon-button z-sidebar-close" type="button" data-z-sidebar-close aria-label="Close navigation">×</button>
             </div>
 
             <nav class="z-nav">
@@ -91,11 +91,12 @@
                 </div>
             </div>
         </aside>
+        <button class="z-sidebar-backdrop" type="button" data-z-sidebar-backdrop data-z-sidebar-close aria-label="Close navigation" hidden></button>
 
         <div class="z-page-shell">
             <header class="z-topbar">
                 <div class="z-topbar-start">
-                    <button class="z-icon-button" type="button" data-z-sidebar-toggle aria-label="Toggle navigation">☰</button>
+                    <button class="z-icon-button" type="button" data-z-sidebar-toggle aria-label="Toggle navigation" aria-expanded="false">☰</button>
                     <div class="z-topbar-context">
                         <span class="z-eyebrow">Zoorce UI</span>
                         <span class="z-topbar-title">@pageTitle</span>
@@ -161,7 +162,8 @@
 
     <div class="z-command-layer" data-z-command-layer hidden>
         <section class="z-command-palette" role="dialog" aria-modal="true" aria-labelledby="z-command-title">
-            <div class="z-command-search"><span aria-hidden="true">⌕</span><input data-z-command-input id="z-command-title" type="search" placeholder="Search pages and actions..." autocomplete="off" /><kbd>Esc</kbd></div>
+            <h2 id="z-command-title" class="z-visually-hidden">Quick search</h2>
+            <div class="z-command-search"><span aria-hidden="true">⌕</span><input data-z-command-input type="search" aria-label="Search pages and actions" placeholder="Search pages and actions..." autocomplete="off" /><kbd>Esc</kbd></div>
             <div class="z-command-list" data-z-command-list>
                 @foreach (var item in navigation.Where(item => !item.HasChildren))
                 {

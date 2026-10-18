@@ -12,12 +12,12 @@ builder.Services.AddRazorPages().AddZoerceWebUI(options =>
     options.ApplicationName = "Zoorce";
     options.BrandMark = "Z";
     options.DefaultTheme = ZoorceThemeMode.Dark;
-    options.Dark.Primary = "#20e7a0";
-    options.Dark.PrimaryHover = "#62f7c7";
-    options.Dark.Glow = "rgba(32, 231, 160, 0.24)";
-    options.Light.Primary = "#087f5b";
-    options.Light.PrimaryHover = "#056746";
-    options.Light.Glow = "rgba(8, 127, 91, 0.20)";
+    options.Dark.Primary = "#20e0a0";
+    options.Dark.PrimaryHover = "#65f1c1";
+    options.Dark.Glow = "rgba(32, 224, 160, 0.20)";
+    options.Light.Primary = "#087a57";
+    options.Light.PrimaryHover = "#056446";
+    options.Light.Glow = "rgba(8, 122, 87, 0.08)";
 });
 builder.Services.AddScoped<INavigationProvider, SampleNavigationProvider>();
 builder.Services.AddScoped<IUserMenuProvider, SampleUserMenuProvider>();
