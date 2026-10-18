@@ -11,3 +11,17 @@ Reusable web shell and UI components for ASP.NET Core Razor Pages.
 - `docs` holds architecture and usage documentation.
 
 The first implementation milestone is a KnOwl-inspired application shell: configurable sidebar, topbar, theme, notifications, cards, and data grids.
+
+Hosts customize the product name, brand mark, starting mode, and every Dark/Light semantic palette token through `builder.Services.AddRazorPages().AddZoerceWebUI(...)`.
+
+```csharp
+builder.Services.AddRazorPages().AddZoerceWebUI(options =>
+{
+    options.ApplicationName = "My product";
+    options.DefaultTheme = ZoorceThemeMode.Dark;
+    options.Dark.Primary = "#20e7a0";
+    options.Light.Primary = "#087f5b";
+});
+```
+
+See [the component catalog](docs/components.md) for the reusable shell and UI patterns included in the package.

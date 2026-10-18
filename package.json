@@ -1,0 +1,13 @@
+{
+  "name": "zoorce",
+  "private": true,
+  "scripts": {
+    "css:build": "tailwindcss -i ./src/Zoerce.WebUI/Styles/zoerce.css -o ./src/Zoerce.WebUI/wwwroot/css/zoerce.css --minify",
+    "css:watch": "tailwindcss -i ./src/Zoerce.WebUI/Styles/zoerce.css -o ./src/Zoerce.WebUI/wwwroot/css/zoerce.css --watch",
+    "test:coverage": "dotnet test tests/Zoerce.WebUI.Tests/Zoerce.WebUI.Tests.csproj --configuration Release --no-restore /p:CollectCoverage=true /p:CoverletOutputFormat=json /p:CoverletOutput=../../artifacts/coverage/coverage.json /p:ExcludeByFile=**/*.cshtml /p:Threshold=100 /p:ThresholdType=branch%2cline%2cmethod"
+  },
+  "devDependencies": {
+    "@tailwindcss/cli": "^4.3.1",
+    "tailwindcss": "^4.3.1"
+  }
+}

@@ -1,10 +1,26 @@
 using Zoerce.WebUI;
+using Zoerce.WebUI.Abstractions.Navigation;
+using Zoerce.WebUI.Abstractions.UserContext;
+using Zoerce.WebUI.Options;
+using Zoerce.WebUI.Sample.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
-builder.Services.AddRazorPages();
-builder.Services.AddZoerceWebUI();
+builder.Services.AddRazorPages().AddZoerceWebUI(options =>
+{
+    options.ApplicationName = "Zoorce";
+    options.BrandMark = "Z";
+    options.DefaultTheme = ZoorceThemeMode.Dark;
+    options.Dark.Primary = "#20e7a0";
+    options.Dark.PrimaryHover = "#62f7c7";
+    options.Dark.Glow = "rgba(32, 231, 160, 0.24)";
+    options.Light.Primary = "#087f5b";
+    options.Light.PrimaryHover = "#056746";
+    options.Light.Glow = "rgba(8, 127, 91, 0.20)";
+});
+builder.Services.AddScoped<INavigationProvider, SampleNavigationProvider>();
+builder.Services.AddScoped<IUserMenuProvider, SampleUserMenuProvider>();
 
 var app = builder.Build();
 
