@@ -55,6 +55,7 @@ public sealed class ThemeAndServiceTests
             options.SidebarMode = ZoorceSidebarMode.Fixed;
             options.SidebarCollapsedByDefault = true;
             options.PersistSidebarState = false;
+            options.NavigationDensity = ZoorceNavigationDensity.Dense;
             options.Light.Primary = "#7c3aed";
         });
 
@@ -70,6 +71,7 @@ public sealed class ThemeAndServiceTests
         Assert.Equal(ZoorceSidebarMode.Fixed, configured.SidebarMode);
         Assert.True(configured.SidebarCollapsedByDefault);
         Assert.False(configured.PersistSidebarState);
+        Assert.Equal(ZoorceNavigationDensity.Dense, configured.NavigationDensity);
         Assert.Empty(scope.ServiceProvider.GetRequiredService<INavigationProvider>().GetItems());
         Assert.Null(scope.ServiceProvider.GetRequiredService<IUserMenuProvider>().GetCurrentUser());
     }
@@ -98,6 +100,7 @@ public sealed class ThemeAndServiceTests
         Assert.Equal(ZoorceSidebarMode.Collapsible, options.SidebarMode);
         Assert.False(options.SidebarCollapsedByDefault);
         Assert.True(options.PersistSidebarState);
+        Assert.Equal(ZoorceNavigationDensity.Compact, options.NavigationDensity);
     }
 
     [Fact]

@@ -15,6 +15,7 @@ builder.Services.AddRazorPages().AddZoerceWebUI(options =>
     options.SidebarMode = ZoorceSidebarMode.Collapsible;
     options.SidebarCollapsedByDefault = false;
     options.PersistSidebarState = true;
+    options.NavigationDensity = ZoorceNavigationDensity.Compact;
     options.Dark.Primary = "#20e0a0";
     options.Dark.PrimaryHover = "#65f1c1";
     options.Dark.Glow = "rgba(32, 224, 160, 0.20)";

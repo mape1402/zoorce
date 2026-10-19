@@ -37,6 +37,11 @@ public sealed class ZoerceWebUiOptions
     public bool PersistSidebarState { get; set; } = true;
 
     /// <summary>
+    /// Gets or sets the vertical density used by the sidebar navigation.
+    /// </summary>
+    public ZoorceNavigationDensity NavigationDensity { get; set; } = ZoorceNavigationDensity.Compact;
+
+    /// <summary>
     /// Gets the light palette exposed as semantic CSS variables.
     /// </summary>
     public ZoorceThemePaletteOptions Light { get; } = ZoorceThemePaletteOptions.CreateLight();

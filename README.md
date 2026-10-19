@@ -21,11 +21,12 @@ builder.Services.AddRazorPages().AddZoerceWebUI(options =>
     options.DefaultTheme = ZoorceThemeMode.Dark;
     options.SidebarMode = ZoorceSidebarMode.Collapsible;
     options.PersistSidebarState = true;
+    options.NavigationDensity = ZoorceNavigationDensity.Compact;
     options.Dark.Primary = "#20e7a0";
     options.Light.Primary = "#087f5b";
 });
 ```
 
-The host supplies sidebar entries through `INavigationProvider`. Each `NavigationItem` owns its own URL and current-state strategy: `Exact`, `Prefix`, `Hash`, `None`, or sensible `Auto` matching. The sample uses real Razor Page routes; anchor navigation remains available when a host explicitly selects `Hash`.
+The host supplies sidebar entries through `INavigationProvider`. `NavigationItem.Children` supports a recursive navigation tree, while only the final navigable item receives the active state. Each item owns its own URL and current-state strategy: `Exact`, `Prefix`, `Hash`, `None`, or sensible `Auto` matching. Use `NavigationDensity.Comfortable`, `Compact`, or `Dense` to fit the product’s navigation volume. The sample uses real Razor Page routes and hash destinations.
 
 See [the component catalog](docs/components.md) for the reusable shell and UI patterns included in the package.

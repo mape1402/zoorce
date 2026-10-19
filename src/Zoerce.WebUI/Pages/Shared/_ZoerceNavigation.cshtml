@@ -1,0 +1,90 @@
+@using Microsoft.AspNetCore.Mvc.ViewFeatures
+@using Zoerce.WebUI.Abstractions.Navigation
+@model IReadOnlyList<NavigationItem>
+@{
+    var depth = ViewData["ZoorceNavigationDepth"] is int configuredDepth ? configuredDepth : 0;
+    var nodePath = ViewData["ZoorceNavigationPath"] as string ?? "root";
+    var currentPath = Context.Request.Path.Value ?? "/";
+
+    string GetTargetPath(string target)
+    {
+        var separator = target.IndexOfAny(['?', '#']);
+        var path = separator >= 0 ? target[..separator] : target;
+        return string.IsNullOrWhiteSpace(path) ? "/" : path;
+    }
+
+    bool IsHashTarget(string target) => target.Contains('#', StringComparison.Ordinal);
+
+    bool IsServerActive(NavigationItem item)
+    {
+        if (item.MatchMode is NavigationMatchMode.None or NavigationMatchMode.Hash)
+        {
+            return false;
+        }
+
+        var targets = item.GetActiveUrls();
+        if (targets.Count == 0 || (item.MatchMode == NavigationMatchMode.Auto && targets.Any(IsHashTarget)))
+        {
+            return false;
+        }
+
+        return targets.Any(target =>
+        {
+            var path = GetTargetPath(target);
+            var exact = item.MatchMode == NavigationMatchMode.Exact ||
+                (item.MatchMode == NavigationMatchMode.Auto && path == "/");
+
+            return exact
+                ? string.Equals(currentPath, path, StringComparison.OrdinalIgnoreCase)
+                : Context.Request.Path.StartsWithSegments(
+                    new Microsoft.AspNetCore.Http.PathString(path),
+                    StringComparison.OrdinalIgnoreCase);
+        });
+    }
+
+    bool HasActiveDescendant(NavigationItem item)
+        => item.Children?.Any(child => IsServerActive(child) || HasActiveDescendant(child)) == true;
+
+    string GetClientMatchMode(NavigationItem item)
+        => item.MatchMode == NavigationMatchMode.Auto && item.GetActiveUrls().Any(IsHashTarget)
+            ? "hash"
+            : item.MatchMode.ToString().ToLowerInvariant();
+
+    string GetNavigationTargets(NavigationItem item) => string.Join('|', item.GetActiveUrls());
+}
+<ul class="z-nav-list @(depth > 0 ? "z-nav-list-nested" : string.Empty)" data-z-nav-level="@depth">
+    @for (var index = 0; index < Model.Count; index++)
+    {
+        var item = Model[index];
+        var currentNodePath = $"{nodePath}-{index}";
+        if (item.HasChildren)
+        {
+            var groupId = $"z-nav-group-{currentNodePath}";
+            var isExpanded = HasActiveDescendant(item);
+            <li class="z-nav-node z-nav-node-group" data-z-nav-node data-z-nav-depth="@depth">
+                <button class="z-nav-group-trigger" type="button" data-z-nav-group aria-expanded="@isExpanded.ToString().ToLowerInvariant()" aria-controls="@groupId" title="@item.Text">
+                    <span class="z-nav-icon" aria-hidden="true">@item.Icon</span>
+                    <span data-z-nav-copy>@item.Text</span>
+                    <span class="z-nav-chevron" aria-hidden="true">⌄</span>
+                </button>
+                <div class="z-nav-group-items" id="@groupId">
+                    @await Html.PartialAsync("_ZoerceNavigation", item.Children!, new ViewDataDictionary(ViewData)
+                    {
+                        ["ZoorceNavigationDepth"] = depth + 1,
+                        ["ZoorceNavigationPath"] = currentNodePath
+                    })
+                </div>
+            </li>
+        }
+        else
+        {
+            var isActive = IsServerActive(item);
+            <li class="z-nav-node" data-z-nav-node data-z-nav-depth="@depth">
+                <a class="z-nav-link @(isActive ? "is-active" : string.Empty)" href="@item.Url" title="@item.Text" data-z-nav-link data-z-nav-match="@GetClientMatchMode(item)" data-z-nav-targets="@GetNavigationTargets(item)" aria-current="@(isActive ? "page" : null)">
+                    <span class="z-nav-icon" aria-hidden="true">@item.Icon</span>
+                    <span data-z-nav-copy>@item.Text</span>
+                </a>
+            </li>
+        }
+    }
+</ul>

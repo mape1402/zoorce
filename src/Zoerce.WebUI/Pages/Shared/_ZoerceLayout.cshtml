@@ -1,4 +1,5 @@
 @using Microsoft.Extensions.Options
+@using Microsoft.AspNetCore.Mvc.ViewFeatures
 @using Zoerce.WebUI.Abstractions.Navigation
 @using Zoerce.WebUI.Abstractions.Notifications
 @using Zoerce.WebUI.Abstractions.UserContext
@@ -19,50 +20,25 @@
     var defaultTheme = options.DefaultTheme == ZoorceThemeMode.Light ? "light" : "dark";
     var sidebarMode = options.SidebarMode.ToString().ToLowerInvariant();
     var sidebarDefault = options.SidebarCollapsedByDefault ? "collapsed" : "expanded";
-    var currentPath = Context.Request.Path.Value ?? "/";
+    var navigationDensity = options.NavigationDensity.ToString().ToLowerInvariant();
 
-    string GetTargetPath(string target)
+    IEnumerable<NavigationItem> GetLeafNavigationItems(IEnumerable<NavigationItem> items)
     {
-        var separator = target.IndexOfAny(['?', '#']);
-        var path = separator >= 0 ? target[..separator] : target;
-        return string.IsNullOrWhiteSpace(path) ? "/" : path;
-    }
-
-    bool IsHashTarget(string target) => target.Contains('#', StringComparison.Ordinal);
-
-    bool IsServerActive(NavigationItem item)
-    {
-        if (item.MatchMode is NavigationMatchMode.None or NavigationMatchMode.Hash)
+        foreach (var item in items)
         {
-            return false;
+            if (item.HasChildren)
+            {
+                foreach (var child in GetLeafNavigationItems(item.Children!))
+                {
+                    yield return child;
+                }
+            }
+            else if (!string.IsNullOrWhiteSpace(item.Url))
+            {
+                yield return item;
+            }
         }
-
-        var targets = item.GetActiveUrls();
-        if (targets.Count == 0 || (item.MatchMode == NavigationMatchMode.Auto && targets.Any(IsHashTarget)))
-        {
-            return false;
-        }
-
-        return targets.Any(target =>
-        {
-            var path = GetTargetPath(target);
-            var exact = item.MatchMode == NavigationMatchMode.Exact ||
-                (item.MatchMode == NavigationMatchMode.Auto && path == "/");
-
-            return exact
-                ? string.Equals(currentPath, path, StringComparison.OrdinalIgnoreCase)
-                : Context.Request.Path.StartsWithSegments(
-                    new Microsoft.AspNetCore.Http.PathString(path),
-                    StringComparison.OrdinalIgnoreCase);
-        });
     }
-
-    string GetClientMatchMode(NavigationItem item)
-        => item.MatchMode == NavigationMatchMode.Auto && item.GetActiveUrls().Any(IsHashTarget)
-            ? "hash"
-            : item.MatchMode.ToString().ToLowerInvariant();
-
-    string GetNavigationTargets(NavigationItem item) => string.Join('|', item.GetActiveUrls());
 }
 <!DOCTYPE html>
 <html lang="en" data-zoerce-theme="@defaultTheme">
@@ -83,7 +59,7 @@
 </head>
 <body>
     <a class="z-skip-link" href="#main-content">Skip to content</a>
-    <div class="z-app-shell" data-z-shell data-sidebar-mode="@sidebarMode" data-sidebar-default="@sidebarDefault" data-sidebar-persist="@options.PersistSidebarState.ToString().ToLowerInvariant()">
+    <div class="z-app-shell" data-z-shell data-sidebar-mode="@sidebarMode" data-sidebar-default="@sidebarDefault" data-sidebar-persist="@options.PersistSidebarState.ToString().ToLowerInvariant()" data-navigation-density="@navigationDensity">
         <aside class="z-sidebar" id="zoerce-sidebar" data-z-sidebar aria-label="Primary navigation">
             <div class="z-sidebar-brand">
                 <a class="z-brand" href="/" aria-label="@options.ApplicationName home">
@@ -100,38 +76,11 @@
 
             <nav class="z-nav">
                 <p class="z-nav-label">Workspace</p>
-                @foreach (var item in navigation)
+                @await Html.PartialAsync("_ZoerceNavigation", navigation, new ViewDataDictionary(ViewData)
                 {
-                    if (item.HasChildren)
-                    {
-                        var groupId = $"z-group-{item.Text.Replace(" ", "-").ToLowerInvariant()}";
-                        <section class="z-nav-group" data-z-nav-group-container>
-                            <button class="z-nav-group-trigger" type="button" data-z-nav-group aria-expanded="true" aria-controls="@groupId" title="@item.Text">
-                                <span class="z-nav-icon" aria-hidden="true">@item.Icon</span>
-                                <span data-z-nav-copy>@item.Text</span>
-                                <span class="z-nav-chevron" aria-hidden="true">⌄</span>
-                            </button>
-                            <div class="z-nav-group-items" id="@groupId">
-                                @foreach (var child in item.Children!)
-                                {
-                                    var childIsActive = IsServerActive(child);
-                                    <a class="z-nav-link @(childIsActive ? "is-active" : string.Empty)" href="@child.Url" title="@child.Text" data-z-nav-link data-z-nav-match="@GetClientMatchMode(child)" data-z-nav-targets="@GetNavigationTargets(child)" aria-current="@(childIsActive ? "page" : null)">
-                                        <span class="z-nav-icon" aria-hidden="true">@child.Icon</span>
-                                        <span data-z-nav-copy>@child.Text</span>
-                                    </a>
-                                }
-                            </div>
-                        </section>
-                    }
-                    else
-                    {
-                        var itemIsActive = IsServerActive(item);
-                        <a class="z-nav-link @(itemIsActive ? "is-active" : string.Empty)" href="@item.Url" title="@item.Text" data-z-nav-link data-z-nav-match="@GetClientMatchMode(item)" data-z-nav-targets="@GetNavigationTargets(item)" aria-current="@(itemIsActive ? "page" : null)">
-                            <span class="z-nav-icon" aria-hidden="true">@item.Icon</span>
-                            <span data-z-nav-copy>@item.Text</span>
-                        </a>
-                    }
-                }
+                    ["ZoorceNavigationDepth"] = 0,
+                    ["ZoorceNavigationPath"] = "root"
+                })
             </nav>
 
             <div class="z-sidebar-footer">
@@ -217,16 +166,9 @@
             <h2 id="z-command-title" class="z-visually-hidden">Quick search</h2>
             <div class="z-command-search"><span aria-hidden="true">⌕</span><input data-z-command-input type="search" aria-label="Search pages and actions" placeholder="Search pages and actions..." autocomplete="off" /><kbd>Esc</kbd></div>
             <div class="z-command-list" data-z-command-list>
-                @foreach (var item in navigation.Where(item => !item.HasChildren))
+                @foreach (var item in GetLeafNavigationItems(navigation))
                 {
                     <a class="z-command-item" href="@item.Url" data-z-command-item><span>@item.Icon</span><span>@item.Text</span><kbd>↵</kbd></a>
-                }
-                @foreach (var group in navigation.Where(item => item.HasChildren))
-                {
-                    @foreach (var child in group.Children!)
-                    {
-                        <a class="z-command-item" href="@child.Url" data-z-command-item><span>@child.Icon</span><span>@child.Text</span><kbd>↵</kbd></a>
-                    }
                 }
             </div>
         </section>

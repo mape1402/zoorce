@@ -48,7 +48,7 @@
         if (!canCollapseSidebar()) sidebarCollapsed = false;
         shell.dataset.sidebarCollapsed = String(sidebarCollapsed);
         shell.dataset.sidebarOpen = String(mobileSidebarOpen);
-        const sidebarIsHidden = desktop && sidebarCollapsed;
+        const sidebarIsHidden = desktop ? sidebarCollapsed : !mobileSidebarOpen;
         if (sidebar) {
             sidebar.toggleAttribute("inert", sidebarIsHidden);
             sidebar.setAttribute("aria-hidden", String(sidebarIsHidden));
@@ -104,10 +104,36 @@
         updateSidebarControls();
     });
 
+    const setGroupExpanded = (button, expanded) => button.setAttribute("aria-expanded", String(expanded));
+    const visibleNavigationControls = () => [...document.querySelectorAll("[data-z-nav-group], [data-z-nav-link]")]
+        .filter(control => control.getClientRects().length > 0);
+
     document.querySelectorAll("[data-z-nav-group]").forEach(button => {
         button.addEventListener("click", () => {
             const expanded = button.getAttribute("aria-expanded") === "true";
-            button.setAttribute("aria-expanded", String(!expanded));
+            setGroupExpanded(button, !expanded);
+        });
+        button.addEventListener("keydown", event => {
+            const expanded = button.getAttribute("aria-expanded") === "true";
+            if (event.key === "ArrowRight" && !expanded) {
+                event.preventDefault();
+                setGroupExpanded(button, true);
+                return;
+            }
+            if (event.key === "ArrowLeft") {
+                event.preventDefault();
+                if (expanded) {
+                    setGroupExpanded(button, false);
+                } else {
+                    button.closest(".z-nav-group-items")?.previousElementSibling?.focus();
+                }
+                return;
+            }
+            if (event.key === "Home" || event.key === "End") {
+                event.preventDefault();
+                const controls = visibleNavigationControls();
+                controls[event.key === "Home" ? 0 : controls.length - 1]?.focus();
+            }
         });
     });
 
@@ -123,6 +149,10 @@
             link.classList.toggle("is-active", active);
             if (active) link.setAttribute("aria-current", "page");
             else link.removeAttribute("aria-current");
+        });
+        document.querySelectorAll("[data-z-nav-group]").forEach(button => {
+            const group = document.getElementById(button.getAttribute("aria-controls") ?? "");
+            if (group?.querySelector(".z-nav-link.is-active")) setGroupExpanded(button, true);
         });
     };
     syncHashNavigation();
@@ -291,6 +321,15 @@
                 candidate.setAttribute("aria-pressed", String(selected));
             });
         }));
+    });
+
+    document.querySelectorAll("[data-z-density-preview]").forEach(button => {
+        button.addEventListener("click", () => {
+            const density = button.dataset.zDensityPreview;
+            if (shell && (density === "comfortable" || density === "compact" || density === "dense")) {
+                shell.dataset.navigationDensity = density;
+            }
+        });
     });
 
     document.querySelectorAll("[data-z-filter-input]").forEach(input => {

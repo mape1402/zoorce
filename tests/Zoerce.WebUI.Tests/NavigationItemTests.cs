@@ -22,4 +22,16 @@ public sealed class NavigationItemTests
 
         Assert.False(item.HasChildren);
     }
+
+    [Fact]
+    public void Children_can_describe_a_navigation_tree_with_multiple_levels()
+    {
+        var leaf = new NavigationItem("Tokens", "/library/tokens");
+        var section = new NavigationItem("Foundations", Icon: "F", Children: [leaf]);
+        var root = new NavigationItem("Library", Icon: "L", Children: [section]);
+
+        Assert.True(root.HasChildren);
+        Assert.True(root.Children!.Single().HasChildren);
+        Assert.Same(leaf, root.Children!.Single().Children!.Single());
+    }
 }

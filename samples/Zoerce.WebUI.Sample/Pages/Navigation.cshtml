@@ -1,0 +1,62 @@
+@page
+@{
+    ViewData["Title"] = "Navigation scale lab";
+    var destinations = new[]
+    {
+        ("release-queue", "Release queue", "Delivery work that is ready for the next decision."),
+        ("milestones", "Milestones", "A dated view of the delivery checkpoints that matter."),
+        ("roadmap", "Roadmap", "A directional plan for the active product surface."),
+        ("reviews", "Reviews", "Cross-functional work waiting for a response."),
+        ("risks", "Risks", "Constraints that could affect the current outcome."),
+        ("patterns", "Patterns", "Reusable interaction patterns with consistent behavior."),
+        ("tokens", "Tokens", "Semantic values that keep every theme coherent."),
+        ("accessibility", "Accessibility", "Keyboard, contrast and semantic checks for the system."),
+        ("service-health", "Service health", "A concise operational readout for critical services."),
+        ("incidents", "Incidents", "Current and resolved incidents with an auditable timeline."),
+        ("alerts", "Alerts", "Signals that need an owner before they become interruptions."),
+        ("usage", "Usage", "Adoption patterns across active workspaces."),
+        ("capacity", "Capacity", "Headroom and resource trends across the platform."),
+        ("policies", "Policies", "Guardrails that keep operational choices consistent."),
+        ("audit-log", "Audit log", "A chronological record of meaningful system activity."),
+        ("retention", "Retention", "Lifecycle settings for workspace information."),
+        ("approvals", "Approvals", "Pending decisions that require an accountable reviewer."),
+        ("compliance", "Compliance", "Controls mapped to the organization’s commitments."),
+        ("members", "Members", "People who can contribute to this workspace."),
+        ("roles", "Roles", "Permission sets with explicit responsibilities."),
+        ("sessions", "Sessions", "Recent authenticated activity for this product."),
+        ("api-access", "API access", "Machine-facing credentials and their scopes."),
+        ("service-accounts", "Service accounts", "Non-human identities used by integrations."),
+        ("colors", "Colors", "Semantic color decisions for each visual state."),
+        ("typography", "Typography", "Text roles that preserve hierarchy at every density."),
+        ("spacing", "Spacing", "A measured rhythm for surfaces, groups and controls."),
+        ("icons", "Icons", "Compact, recognizable markers for recurring actions."),
+        ("motion", "Motion", "Purposeful transitions that respect reduced-motion settings.")
+    };
+}
+
+<section class="z-page-heading">
+    <div>
+        <span class="z-section-kicker">Navigation scale lab</span>
+        <h1>Deep structure, calm orientation.</h1>
+        <p>This sample gives every nested destination a real anchor so the sidebar can be tested with route, hash and three-level navigation states.</p>
+    </div>
+    <div class="z-page-actions"><a class="z-button z-button-secondary" href="#service-health">Jump to operations</a></div>
+</section>
+
+<article class="z-panel">
+    <div class="z-card-header">
+        <div><h2 class="z-card-title">Compact by default</h2><p class="z-card-caption">Expand Operations, Governance and Access to test a long nested menu. The sidebar scrolls independently from this page.</p></div>
+        <div style="display:grid;justify-items:end;gap:8px"><span class="z-badge z-badge-primary">3 levels</span><div class="z-button-group" data-z-selection-group aria-label="Navigation density preview"><button type="button" data-z-density-preview="comfortable" aria-pressed="false">Comfortable</button><button class="is-active" type="button" data-z-density-preview="compact" aria-pressed="true">Compact</button><button type="button" data-z-density-preview="dense" aria-pressed="false">Dense</button></div></div>
+    </div>
+</article>
+
+@foreach (var destination in destinations)
+{
+    <section class="z-section" id="@destination.Item1">
+        <article class="z-card">
+            <span class="z-section-kicker">Linked destination</span>
+            <h2 class="z-card-title" style="margin-top:6px">@destination.Item2</h2>
+            <p class="z-card-caption">@destination.Item3</p>
+        </article>
+    </section>
+}
