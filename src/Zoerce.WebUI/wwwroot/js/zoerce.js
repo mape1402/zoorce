@@ -406,3 +406,321 @@
         }
     });
 })();
+
+(() => {
+    const instances = new WeakMap();
+    const svgNamespace = "http://www.w3.org/2000/svg";
+
+    const parseConfiguration = (root, selector) => {
+        const source = root.querySelector(selector)?.textContent;
+        if (!source) return null;
+        try {
+            return JSON.parse(source);
+        } catch {
+            root.dispatchEvent(new CustomEvent("zoerce:component-error", { detail: { message: "Invalid component configuration." } }));
+            return null;
+        }
+    };
+
+    const dispatch = (root, name, detail = {}) => root.dispatchEvent(new CustomEvent(name, { bubbles: true, detail }));
+    const displayValue = value => value === null || value === undefined ? "" : String(value);
+
+    class DataGridController {
+        constructor(root, configuration) {
+            this.root = root;
+            this.configuration = configuration;
+            this.abortController = new AbortController();
+            this.requestController = null;
+            this.page = 1;
+            this.hasMore = false;
+            this.search = "";
+            this.sort = null;
+            this.descending = false;
+            this.searchTimer = 0;
+            this.body = root.querySelector("[data-z-grid-body]");
+            this.empty = root.querySelector("[data-z-grid-empty]");
+            this.summary = root.querySelector("[data-z-grid-summary]");
+            this.state = root.querySelector("[data-z-grid-state]");
+            this.pagination = root.querySelector("[data-z-grid-pagination]");
+            this.previous = root.querySelector("[data-z-grid-previous]");
+            this.next = root.querySelector("[data-z-grid-next]");
+            this.loadMore = root.querySelector("[data-z-grid-load-more]");
+            this.sentinel = root.querySelector("[data-z-grid-sentinel]");
+            this.bind();
+            this.connectRealtime();
+            this.load(1);
+        }
+
+        bind() {
+            const signal = this.abortController.signal;
+            this.root.querySelector("[data-z-grid-search]")?.addEventListener("input", event => {
+                const value = event.currentTarget.value.trim();
+                window.clearTimeout(this.searchTimer);
+                this.searchTimer = window.setTimeout(() => {
+                    this.search = value;
+                    this.load(1);
+                }, 180);
+            }, { signal });
+            this.root.querySelectorAll("[data-z-grid-sort]").forEach(button => button.addEventListener("click", () => {
+                const field = button.dataset.zGridSort;
+                this.descending = this.sort === field ? !this.descending : false;
+                this.sort = field;
+                this.root.querySelectorAll("[data-z-grid-sort]").forEach(candidate => candidate.setAttribute("aria-sort", candidate.dataset.zGridSort === field ? this.descending ? "descending" : "ascending" : "none"));
+                this.load(1);
+            }, { signal }));
+            this.previous?.addEventListener("click", () => this.load(Math.max(1, this.page - 1)), { signal });
+            this.next?.addEventListener("click", () => this.load(this.page + 1), { signal });
+            this.loadMore?.addEventListener("click", () => this.load(this.page + 1, true), { signal });
+
+            if (this.configuration.loadMode === "InfiniteScroll" && "IntersectionObserver" in window && this.sentinel) {
+                this.observer = new IntersectionObserver(entries => {
+                    if (entries.some(entry => entry.isIntersecting) && this.hasMore && !this.requestController) this.load(this.page + 1, true);
+                }, { rootMargin: "180px" });
+                this.observer.observe(this.sentinel);
+            }
+        }
+
+        async load(page, append = false) {
+            if (this.requestController) this.requestController.abort();
+            this.requestController = new AbortController();
+            this.root.setAttribute("aria-busy", "true");
+            this.setState("Loading…");
+            const url = new URL(this.configuration.sourceUrl, window.location.origin);
+            url.searchParams.set("page", String(page));
+            url.searchParams.set("pageSize", String(this.configuration.pageSize));
+            if (this.search) url.searchParams.set("search", this.search);
+            if (this.sort) url.searchParams.set("sort", this.sort);
+            if (this.descending) url.searchParams.set("descending", "true");
+
+            try {
+                const response = await fetch(url, { headers: { Accept: "application/json" }, signal: this.requestController.signal });
+                if (!response.ok) throw new Error(`Request failed with ${response.status}`);
+                const result = await response.json();
+                this.render(result.items ?? [], append);
+                this.page = page;
+                this.hasMore = Boolean(result.hasMore);
+                this.updateControls(result.totalCount);
+                this.setState("");
+                dispatch(this.root, "zoerce:grid:loaded", { page, append, result });
+            } catch (error) {
+                if (error.name !== "AbortError") {
+                    this.setState("Unable to load records.");
+                    dispatch(this.root, "zoerce:grid:error", { error });
+                }
+            } finally {
+                this.root.removeAttribute("aria-busy");
+                this.requestController = null;
+            }
+        }
+
+        render(items, append) {
+            if (!append) this.body.replaceChildren();
+            const fragment = document.createDocumentFragment();
+            items.forEach(item => {
+                const row = document.createElement("tr");
+                this.configuration.columns.forEach(column => {
+                    const cell = document.createElement("td");
+                    cell.textContent = displayValue(item[column.field]);
+                    row.append(cell);
+                });
+                fragment.append(row);
+            });
+            this.body.append(fragment);
+            if (this.configuration.virtualize && this.body.rows.length > this.configuration.pageSize * 6) {
+                const excess = this.body.rows.length - this.configuration.pageSize * 6;
+                for (let index = 0; index < excess; index += 1) this.body.deleteRow(0);
+            }
+            this.empty.hidden = this.body.rows.length > 0;
+        }
+
+        updateControls(totalCount) {
+            const infinite = this.configuration.loadMode === "InfiniteScroll";
+            this.pagination.hidden = infinite;
+            this.sentinel.hidden = !infinite || !this.hasMore;
+            this.loadMore.hidden = !infinite || !this.hasMore || Boolean(this.observer);
+            this.previous.disabled = this.page <= 1;
+            this.next.disabled = !this.hasMore;
+            const loaded = this.body.rows.length;
+            this.summary.textContent = totalCount === null || totalCount === undefined
+                ? `Showing ${loaded} records`
+                : `Showing ${loaded} of ${totalCount} records`;
+        }
+
+        setState(message) {
+            if (this.state) this.state.textContent = message;
+        }
+
+        connectRealtime() {
+            if (!this.configuration.realtimeHubUrl || !this.configuration.realtimeEventName) return;
+            if (!window.ZoorceSignalR?.subscribe) {
+                document.addEventListener("zoerce:signalr-ready", () => this.connectRealtime(), { once: true, signal: this.abortController.signal });
+                return;
+            }
+            this.unsubscribeRealtime = window.ZoorceSignalR.subscribe({ hubUrl: this.configuration.realtimeHubUrl, eventName: this.configuration.realtimeEventName }, change => {
+                if (change?.kind === "remove" || change?.kind === "upsert" || change?.kind === "invalidate") this.load(1);
+                dispatch(this.root, "zoerce:grid:realtime", { change });
+            });
+        }
+
+        dispose() {
+            window.clearTimeout(this.searchTimer);
+            this.abortController.abort();
+            this.requestController?.abort();
+            this.observer?.disconnect();
+            this.unsubscribeRealtime?.();
+        }
+    }
+
+    const normalizeSeries = series => Array.isArray(series) ? series.filter(item => Array.isArray(item?.points)) : [];
+    const createSvgElement = name => document.createElementNS(svgNamespace, name);
+
+    class ChartController {
+        constructor(root, configuration) {
+            this.root = root;
+            this.configuration = configuration;
+            this.abortController = new AbortController();
+            this.canvas = root.querySelector("[data-z-chart-canvas]");
+            this.state = root.querySelector("[data-z-chart-state]");
+            this.render(normalizeSeries(configuration.series));
+            this.connectRealtime();
+            if (configuration.sourceUrl) this.load();
+        }
+
+        async load() {
+            try {
+                this.setState("Refreshing…");
+                const response = await fetch(this.configuration.sourceUrl, { headers: { Accept: "application/json" }, signal: this.abortController.signal });
+                if (!response.ok) throw new Error(`Request failed with ${response.status}`);
+                const body = await response.json();
+                this.render(normalizeSeries(body.series ?? body));
+                this.setState("");
+                dispatch(this.root, "zoerce:chart:loaded", { series: body.series ?? body });
+            } catch (error) {
+                if (error.name !== "AbortError") {
+                    this.setState("Unable to refresh chart.");
+                    dispatch(this.root, "zoerce:chart:error", { error });
+                }
+            }
+        }
+
+        render(series) {
+            if (!this.canvas) return;
+            this.canvas.replaceChildren();
+            const values = series.flatMap(item => item.points.map(point => Number(point.value))).filter(Number.isFinite);
+            if (!values.length) return;
+            const minimum = Math.min(...values);
+            const maximum = Math.max(...values);
+            const range = maximum - minimum || 1;
+            const grid = createSvgElement("path");
+            grid.setAttribute("class", "z-native-chart-grid");
+            grid.setAttribute("d", "M0 20H100M0 50H100M0 80H100");
+            this.canvas.append(grid);
+            if (this.configuration.kind === "Donut") {
+                this.renderDonut(series, values);
+                return;
+            }
+            series.forEach((item, seriesIndex) => {
+                const points = item.points.map((point, index) => {
+                    const x = item.points.length <= 1 ? 50 : index * 100 / (item.points.length - 1);
+                    const y = 92 - ((Number(point.value) - minimum) / range) * 76;
+                    return `${x},${y}`;
+                }).join(" ");
+                if (this.configuration.kind === "Bar") {
+                    this.renderBars(item.points, minimum, range, seriesIndex, series.length);
+                    return;
+                }
+                if (this.configuration.kind === "Area" && seriesIndex === 0) {
+                    const fill = createSvgElement("polygon");
+                    fill.setAttribute("class", "z-native-chart-area");
+                    fill.setAttribute("points", `0,92 ${points} 100,92`);
+                    this.canvas.append(fill);
+                }
+                const line = createSvgElement("polyline");
+                line.setAttribute("class", seriesIndex === 0 ? "z-native-chart-line" : "z-native-chart-line-secondary");
+                line.setAttribute("points", points);
+                this.canvas.append(line);
+            });
+        }
+
+        renderBars(points, minimum, range, seriesIndex, seriesCount) {
+            const width = 76 / Math.max(points.length, 1) / Math.max(seriesCount, 1);
+            points.forEach((point, index) => {
+                const value = Number(point.value);
+                const height = Math.max(2, ((value - minimum) / range) * 76);
+                const bar = createSvgElement("rect");
+                bar.setAttribute("class", seriesIndex === 0 ? "z-native-chart-bar" : "z-native-chart-bar-secondary");
+                bar.setAttribute("x", String(12 + index * (76 / points.length) + seriesIndex * width));
+                bar.setAttribute("y", String(92 - height));
+                bar.setAttribute("width", String(Math.max(1.5, width - 1)));
+                bar.setAttribute("height", String(height));
+                bar.setAttribute("rx", "1");
+                this.canvas.append(bar);
+            });
+        }
+
+        renderDonut(series, values) {
+            const total = values.reduce((sum, value) => sum + value, 0) || 1;
+            let offset = 25;
+            values.forEach((value, index) => {
+                const circle = createSvgElement("circle");
+                const share = value / total * 100;
+                circle.setAttribute("class", index === 0 ? "z-native-chart-donut" : "z-native-chart-donut-secondary");
+                circle.setAttribute("cx", "50"); circle.setAttribute("cy", "50"); circle.setAttribute("r", "34");
+                circle.setAttribute("fill", "none"); circle.setAttribute("pathLength", "100");
+                circle.setAttribute("stroke-dasharray", `${Math.max(0, share - 1)} ${101 - share}`);
+                circle.setAttribute("stroke-dashoffset", String(-offset));
+                offset += share;
+                this.canvas.append(circle);
+            });
+        }
+
+        setState(message) {
+            if (this.state) this.state.textContent = message;
+        }
+
+        connectRealtime() {
+            if (!this.configuration.realtimeHubUrl || !this.configuration.realtimeEventName) return;
+            if (!window.ZoorceSignalR?.subscribe) {
+                document.addEventListener("zoerce:signalr-ready", () => this.connectRealtime(), { once: true, signal: this.abortController.signal });
+                return;
+            }
+            this.unsubscribeRealtime = window.ZoorceSignalR.subscribe({ hubUrl: this.configuration.realtimeHubUrl, eventName: this.configuration.realtimeEventName }, update => {
+                this.render(normalizeSeries(update?.series ?? update));
+                dispatch(this.root, "zoerce:chart:realtime", { update });
+            });
+        }
+
+        dispose() {
+            this.abortController.abort();
+            this.unsubscribeRealtime?.();
+        }
+    }
+
+    const mountComponent = root => {
+        if (instances.has(root)) return;
+        const configuration = root.matches("[data-z-data-grid]")
+            ? parseConfiguration(root, "[data-z-grid-config]")
+            : root.matches("[data-z-chart]")
+                ? parseConfiguration(root, "[data-z-chart-config]")
+                : null;
+        if (!configuration) return;
+        const controller = root.matches("[data-z-data-grid]")
+            ? new DataGridController(root, configuration)
+            : root.matches("[data-z-chart]") ? new ChartController(root, configuration) : null;
+        if (controller) instances.set(root, controller);
+    };
+
+    const mount = (scope = document) => {
+        if (scope.matches?.("[data-z-data-grid], [data-z-chart]")) mountComponent(scope);
+        scope.querySelectorAll?.("[data-z-data-grid], [data-z-chart]").forEach(mountComponent);
+    };
+
+    const dispose = root => {
+        const controller = instances.get(root);
+        controller?.dispose();
+        instances.delete(root);
+    };
+
+    window.ZoorceComponents = Object.freeze({ mount, dispose });
+    mount();
+})();

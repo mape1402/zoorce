@@ -27,6 +27,16 @@ builder.Services.AddRazorPages().AddZoerceWebUI(options =>
 });
 ```
 
+For a complete, internally consistent identity, start with a palette preset and then override individual semantic tokens only when necessary. A preset defines the canvas, surfaces, foregrounds, semantic states, code surfaces, overlay and shadow tokens for both modes; it is not just a primary-color override.
+
+```csharp
+builder.Services.AddRazorPages().AddZoerceWebUI(options =>
+{
+    options.UseThemePreset(ZoorceThemePreset.Amethyst);
+    options.Dark.Primary = "#c4b5fd";
+});
+```
+
 The host supplies sidebar entries through `INavigationProvider`. `NavigationItem.Children` supports a recursive navigation tree, while only the final navigable item receives the active state. Each item owns its own URL and current-state strategy: `Exact`, `Prefix`, `Hash`, `None`, or sensible `Auto` matching. Use `NavigationDensity.Comfortable`, `Compact`, or `Dense` to fit the product’s navigation volume. The sample uses real Razor Page routes and hash destinations.
 
 See [the component catalog](docs/components.md) for the reusable shell and UI patterns included in the package.

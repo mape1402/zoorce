@@ -51,6 +51,13 @@ public sealed class ZoerceWebUiOptions
     /// </summary>
     public ZoorceThemePaletteOptions Dark { get; } = ZoorceThemePaletteOptions.CreateDark();
 
+    /// <summary>Applies a complete semantic palette pair to this UI configuration.</summary>
+    public ZoerceWebUiOptions UseThemePreset(ZoorceThemePreset preset)
+    {
+        ZoorceThemePresets.Apply(this, preset);
+        return this;
+    }
+
     /// <summary>
     /// Gets CSS rules that make both configured palettes available to the web shell.
     /// </summary>

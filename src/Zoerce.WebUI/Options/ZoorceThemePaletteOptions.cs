@@ -80,6 +80,27 @@ public sealed class ZoorceThemePaletteOptions
     /// <summary>Gets or sets the shadow and ambient-glow color.</summary>
     public string Glow { get; set; } = string.Empty;
 
+    /// <summary>Gets or sets the neutral shadow color used by elevated surfaces.</summary>
+    public string Shadow { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the background used by rendered code blocks.</summary>
+    public string CodeCanvas { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the foreground used by rendered code blocks.</summary>
+    public string CodeText { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the border used by rendered code controls.</summary>
+    public string CodeBorder { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the surface used by rendered code controls.</summary>
+    public string CodeControlSurface { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the foreground used by rendered code controls.</summary>
+    public string CodeControlText { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the scrim shown behind modal and mobile overlay content.</summary>
+    public string Overlay { get; set; } = string.Empty;
+
     /// <summary>
     /// Returns CSS custom-property declarations for this palette.
     /// </summary>
@@ -110,8 +131,54 @@ public sealed class ZoorceThemePaletteOptions
             Variable("--z-sidebar", Sidebar),
             Variable("--z-sidebar-text", SidebarText),
             Variable("--z-sidebar-muted", SidebarMuted),
-            Variable("--z-glow", Glow)
+            Variable("--z-glow", Glow),
+            Variable("--z-shadow", Shadow),
+            Variable("--z-code-canvas", CodeCanvas),
+            Variable("--z-code-text", CodeText),
+            Variable("--z-code-border", CodeBorder),
+            Variable("--z-code-control-surface", CodeControlSurface),
+            Variable("--z-code-control-text", CodeControlText),
+            Variable("--z-overlay", Overlay)
         ]);
+
+    /// <summary>Copies every semantic token from another palette.</summary>
+    public void CopyFrom(ZoorceThemePaletteOptions source)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+
+        Canvas = source.Canvas;
+        Surface = source.Surface;
+        Elevated = source.Elevated;
+        Subtle = source.Subtle;
+        Text = source.Text;
+        Muted = source.Muted;
+        Border = source.Border;
+        Primary = source.Primary;
+        PrimaryForeground = source.PrimaryForeground;
+        PrimaryHover = source.PrimaryHover;
+        PrimarySoft = source.PrimarySoft;
+        Success = source.Success;
+        SuccessSoft = source.SuccessSoft;
+        Warning = source.Warning;
+        WarningSoft = source.WarningSoft;
+        Danger = source.Danger;
+        DangerForeground = source.DangerForeground;
+        DangerSoft = source.DangerSoft;
+        Info = source.Info;
+        InfoSoft = source.InfoSoft;
+        DataSecondary = source.DataSecondary;
+        Sidebar = source.Sidebar;
+        SidebarText = source.SidebarText;
+        SidebarMuted = source.SidebarMuted;
+        Glow = source.Glow;
+        Shadow = source.Shadow;
+        CodeCanvas = source.CodeCanvas;
+        CodeText = source.CodeText;
+        CodeBorder = source.CodeBorder;
+        CodeControlSurface = source.CodeControlSurface;
+        CodeControlText = source.CodeControlText;
+        Overlay = source.Overlay;
+    }
 
     /// <summary>
     /// Creates the default light palette.
@@ -142,7 +209,14 @@ public sealed class ZoorceThemePaletteOptions
         Sidebar = "#eef5f1",
         SidebarText = "#17362a",
         SidebarMuted = "#587267",
-        Glow = "rgba(8, 122, 87, 0.08)"
+        Glow = "rgba(8, 122, 87, 0.08)",
+        Shadow = "rgba(19, 54, 40, 0.14)",
+        CodeCanvas = "#06100d",
+        CodeText = "#baf7d9",
+        CodeBorder = "#245343",
+        CodeControlSurface = "#0e211b",
+        CodeControlText = "#9bd9ba",
+        Overlay = "rgba(1, 12, 9, 0.56)"
     };
 
     /// <summary>
@@ -174,7 +248,14 @@ public sealed class ZoorceThemePaletteOptions
         Sidebar = "#07120f",
         SidebarText = "#eefff8",
         SidebarMuted = "#83a89a",
-        Glow = "rgba(32, 231, 160, 0.24)"
+        Glow = "rgba(32, 231, 160, 0.24)",
+        Shadow = "rgba(0, 0, 0, 0.44)",
+        CodeCanvas = "#06100d",
+        CodeText = "#baf7d9",
+        CodeBorder = "#245343",
+        CodeControlSurface = "#0e211b",
+        CodeControlText = "#9bd9ba",
+        Overlay = "rgba(0, 0, 0, 0.56)"
     };
 
     private static string Variable(string name, string value) => $"{name}:{value};";

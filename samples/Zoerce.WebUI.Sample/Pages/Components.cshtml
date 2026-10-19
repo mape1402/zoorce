@@ -1,9 +1,108 @@
 @page "/components"
+@using Zoerce.WebUI.Abstractions.Data
+@using Zoerce.WebUI.Components.Charts
+@using Zoerce.WebUI.Components.DataGrid
 @{
-    ViewData["Title"] = "Component catalog";
+    ViewData["Title"] = "Component lab";
+    var starterRows = new IReadOnlyDictionary<string, string?>[]
+    {
+        new Dictionary<string, string?> { ["name"] = "App shell", ["category"] = "Layout", ["theme"] = "Dark / Light", ["status"] = "Stable", ["adoption"] = "94%" },
+        new Dictionary<string, string?> { ["name"] = "Data grid", ["category"] = "Data", ["theme"] = "Dark / Light", ["status"] = "Stable", ["adoption"] = "91%" },
+        new Dictionary<string, string?> { ["name"] = "Markdown", ["category"] = "Content", ["theme"] = "Dark / Light", ["status"] = "Preview", ["adoption"] = "72%" }
+    };
+    var columns = new[]
+    {
+        new ZoorceDataGridColumn("name", "Component", true),
+        new ZoorceDataGridColumn("category", "Category", true),
+        new ZoorceDataGridColumn("theme", "Theme"),
+        new ZoorceDataGridColumn("status", "Status", true),
+        new ZoorceDataGridColumn("adoption", "Adoption", true)
+    };
+    var initialSeries = new[]
+    {
+        new ZoorceChartSeries("Adoption", new[]
+        {
+            new ZoorceChartPoint("May", 48), new ZoorceChartPoint("Jun", 56), new ZoorceChartPoint("Jul", 54),
+            new ZoorceChartPoint("Aug", 67), new ZoorceChartPoint("Sep", 74), new ZoorceChartPoint("Oct", 82)
+        }),
+        new ZoorceChartSeries("Quality", new[]
+        {
+            new ZoorceChartPoint("May", 41), new ZoorceChartPoint("Jun", 45), new ZoorceChartPoint("Jul", 51),
+            new ZoorceChartPoint("Aug", 55), new ZoorceChartPoint("Sep", 61), new ZoorceChartPoint("Oct", 68)
+        })
+    };
+    var markdown = """
+## Markdown, contained
+
+This component is rendered **server-side** with advanced Markdown syntax, while raw HTML is deliberately disabled.
+
+- It has its own semantic article root.
+- It can be used without the rest of the shell.
+- [Relative links remain local](./components); unsafe protocols are removed.
+
+> Documentation surfaces should be legible in either theme.
+""";
 }
 
 <section>
-    <div class="z-page-heading"><div><span class="z-section-kicker">Component catalog</span><h1>Data dense, still breathable.</h1><p>Search, filters, status and row actions stay clear without turning the page into a spreadsheet.</p></div><button class="z-button z-button-primary" type="button" data-z-toast="A blank component record is ready." data-z-toast-title="New component">+ Add component</button></div>
-    <article class="z-panel"><div class="z-toolbar"><label class="z-search-field"><span aria-hidden="true">⌕</span><input type="search" placeholder="Search components..." data-z-filter-input="[data-z-filter-row]" aria-label="Search components" /></label><div class="z-filter-row" data-z-filter-controls><button class="z-filter-chip is-active" type="button" data-z-filter-chip="all" aria-pressed="true">All <span>24</span></button><button class="z-filter-chip" type="button" data-z-filter-chip="stable" aria-pressed="false">Stable</button><button class="z-filter-chip" type="button" data-z-filter-chip="preview" aria-pressed="false">Preview</button></div></div><div class="z-data-shell"><table class="z-data-grid"><thead><tr><th><button type="button">Component ↕</button></th><th>Category</th><th>Theme</th><th>Status</th><th style="text-align:right">Actions</th></tr></thead><tbody><tr data-z-filter-row data-z-filter-status="stable"><td><span class="z-cell-main"><span class="z-cell-mark">CS</span>App shell</span></td><td>Layout</td><td>Dark / Light</td><td><span class="z-status z-status-success">Stable</span></td><td><span class="z-row-actions"><button title="Inspect App shell">⌕</button><button title="Edit App shell">⋯</button></span></td></tr><tr data-z-filter-row data-z-filter-status="stable"><td><span class="z-cell-main"><span class="z-cell-mark">DG</span>Data grid</span></td><td>Data</td><td>Dark / Light</td><td><span class="z-status z-status-success">Stable</span></td><td><span class="z-row-actions"><button title="Inspect Data grid">⌕</button><button title="Edit Data grid">⋯</button></span></td></tr><tr data-z-filter-row data-z-filter-status="preview"><td><span class="z-cell-main"><span class="z-cell-mark">CP</span>Command palette</span></td><td>Navigation</td><td>Dark / Light</td><td><span class="z-status z-status-warning">Preview</span></td><td><span class="z-row-actions"><button title="Inspect Command palette">⌕</button><button title="Edit Command palette">⋯</button></span></td></tr><tr data-z-filter-row data-z-filter-status="updated"><td><span class="z-cell-main"><span class="z-cell-mark">TS</span>Toast service</span></td><td>Feedback</td><td>Dark / Light</td><td><span class="z-status z-status-info">Updated</span></td><td><span class="z-row-actions"><button title="Inspect Toast service">⌕</button><button title="Edit Toast service">⋯</button></span></td></tr></tbody></table><div class="z-pagination"><span>Showing 1–4 of 24 components</span><div class="z-pagination-actions"><button disabled>←</button><button class="is-current">1</button><button>2</button><button>3</button><button>→</button></div></div></div></article>
+    <div class="z-page-heading">
+        <div>
+            <span class="z-section-kicker">Component laboratory</span>
+            <h1>Independent by default.</h1>
+            <p>Each module owns its markup, state and transport. The server-rendered fallback remains useful before JavaScript or a live connection is available.</p>
+        </div>
+        <button class="z-button z-button-primary" type="button" data-z-toast="The component lab is ready for a new record." data-z-toast-title="New component">+ Add component</button>
+    </div>
+
+    <section class="z-component-lab-section" aria-labelledby="paginated-grid-title">
+        <div class="z-component-lab-heading"><div><span class="z-section-kicker">REST · pagination</span><h2 id="paginated-grid-title">Data grid with explicit controls</h2></div><p>Search and sorting are sent to the endpoint without relying on global page state.</p></div>
+        @await Component.InvokeAsync("ZoorceDataGrid", new ZoorceDataGridOptions
+        {
+            Id = "component-grid-pagination",
+            AriaLabel = "Component catalogue with pagination",
+            SourceUrl = "/api/components",
+            LoadMode = ZoorceDataLoadMode.Pagination,
+            PageSize = 5,
+            Columns = columns,
+            InitialItems = starterRows,
+            InitialTotalCount = 20
+        })
+    </section>
+
+    <section class="z-component-lab-section" aria-labelledby="live-grid-title">
+        <div class="z-component-lab-heading"><div><span class="z-section-kicker">REST + SignalR · infinite scroll</span><h2 id="live-grid-title">Live catalogue, no pagination chrome</h2></div><p>The observer requests further pages near the edge; new activity is merged into only this grid.</p></div>
+        @await Component.InvokeAsync("ZoorceDataGrid", new ZoorceDataGridOptions
+        {
+            Id = "component-grid-infinite",
+            AriaLabel = "Live component catalogue with infinite scroll",
+            SourceUrl = "/api/components",
+            RealtimeHubUrl = "/hubs/component-activity",
+            RealtimeEventName = "component-change",
+            LoadMode = ZoorceDataLoadMode.InfiniteScroll,
+            PageSize = 4,
+            Virtualize = true,
+            Columns = columns,
+            InitialItems = starterRows,
+            InitialTotalCount = 20
+        })
+    </section>
+
+    <section class="z-component-lab-section" aria-labelledby="chart-title">
+        <div class="z-component-lab-heading"><div><span class="z-section-kicker">Native SVG · REST + SignalR</span><h2 id="chart-title">Charts without a charting dependency</h2></div><p>Line, area, bar, donut and sparkline presentations share the same small data contract.</p></div>
+        <div class="z-component-lab-charts">
+            @await Component.InvokeAsync("ZoorceChart", new ZoorceChartOptions { Id = "adoption-line", Title = "Component adoption", Summary = "Live component adoption for the last six months", Kind = ZoorceChartKind.Area, SourceUrl = "/api/charts/adoption", RealtimeHubUrl = "/hubs/component-activity", RealtimeEventName = "adoption-update", Series = initialSeries })
+            @await Component.InvokeAsync("ZoorceChart", new ZoorceChartOptions { Id = "quality-bars", Title = "Quality trend", Summary = "Quality trends by month", Kind = ZoorceChartKind.Bar, Series = initialSeries })
+            @await Component.InvokeAsync("ZoorceChart", new ZoorceChartOptions { Id = "adoption-donut", Title = "Adoption signal", Summary = "Current adoption proportion", Kind = ZoorceChartKind.Donut, Series = initialSeries })
+        </div>
+    </section>
+
+    <section class="z-component-lab-section" aria-labelledby="markdown-title">
+        <div class="z-component-lab-heading"><div><span class="z-section-kicker">Safe Markdown</span><h2 id="markdown-title">Portable documentation content</h2></div><p>The renderer can be injected into any Razor Pages product without inheriting KnOwl’s domain rules.</p></div>
+        <zoerce-markdown markdown="@markdown" css-class="z-panel"></zoerce-markdown>
+    </section>
 </section>
+
+@section Scripts {
+    <script src="/vendor/signalr/signalr.min.js"></script>
+    <script src="~/_content/Zoerce.WebUI/js/zoerce-signalr.js" asp-append-version="true"></script>
+}

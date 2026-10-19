@@ -3,6 +3,10 @@ using Zoerce.WebUI.Abstractions.Navigation;
 using Zoerce.WebUI.Abstractions.UserContext;
 using Zoerce.WebUI.Options;
 using Zoerce.WebUI.Sample.Infrastructure;
+using Zoerce.WebUI.Abstractions.Data;
+using System.Text.Json;
+using System.Text.Json.Serialization;
+using Microsoft.Extensions.FileProviders;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -12,19 +16,17 @@ builder.Services.AddRazorPages().AddZoerceWebUI(options =>
     options.ApplicationName = "Zoorce";
     options.BrandMark = "Z";
     options.DefaultTheme = ZoorceThemeMode.Dark;
+    options.UseThemePreset(ZoorceThemePreset.Amethyst);
     options.SidebarMode = ZoorceSidebarMode.Collapsible;
     options.SidebarCollapsedByDefault = false;
     options.PersistSidebarState = true;
     options.NavigationDensity = ZoorceNavigationDensity.Compact;
-    options.Dark.Primary = "#20e0a0";
-    options.Dark.PrimaryHover = "#65f1c1";
-    options.Dark.Glow = "rgba(32, 224, 160, 0.20)";
-    options.Light.Primary = "#087a57";
-    options.Light.PrimaryHover = "#056446";
-    options.Light.Glow = "rgba(8, 122, 87, 0.08)";
 });
 builder.Services.AddScoped<INavigationProvider, SampleNavigationProvider>();
 builder.Services.AddScoped<IUserMenuProvider, SampleUserMenuProvider>();
+builder.Services.AddSingleton<SampleComponentCatalog>();
+builder.Services.AddHostedService<SampleRealtimePublisher>();
+builder.Services.AddSignalR().AddJsonProtocol(options => options.PayloadSerializerOptions.Converters.Add(new JsonStringEnumConverter(JsonNamingPolicy.CamelCase)));
 
 var app = builder.Build();
 
@@ -38,6 +40,16 @@ if (!app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+var signalrClientDirectory = Path.GetFullPath(Path.Combine(app.Environment.ContentRootPath, "..", "..", "node_modules", "@microsoft", "signalr", "dist", "browser"));
+if (Directory.Exists(signalrClientDirectory))
+{
+    app.UseStaticFiles(new StaticFileOptions
+    {
+        FileProvider = new PhysicalFileProvider(signalrClientDirectory),
+        RequestPath = "/vendor/signalr"
+    });
+}
+
 app.UseRouting();
 
 app.UseAuthorization();
@@ -45,5 +57,13 @@ app.UseAuthorization();
 app.MapStaticAssets();
 app.MapRazorPages()
    .WithStaticAssets();
+app.MapHub<ComponentActivityHub>("/hubs/component-activity");
+app.MapGet("/api/components", async (string? search, string? sort, bool? descending, int? page, int? pageSize, SampleComponentCatalog catalog, CancellationToken cancellationToken) =>
+{
+    var query = new ZoorceDataQuery(search, sort, descending ?? false);
+    var request = new ZoorcePageRequest { Page = page ?? 1, PageSize = pageSize ?? 10 };
+    return Results.Ok(await catalog.QueryAsync(query, request, cancellationToken));
+});
+app.MapGet("/api/charts/adoption", () => Results.Ok(SampleChartData.Create()));
 
 app.Run();

@@ -20,6 +20,45 @@ The sample’s density selector is a live visual preview. Production defaults co
 - Client and server-backed toasts via `IToastService`.
 - Confirmation dialog, modal, drawer, tooltip, skeleton loader and empty state.
 
+## Encapsulated data components
+
+`ZoorceDataGrid` and `ZoorceChart` are Razor View Components. Every rendered instance has its own root element, config payload, request lifecycle and optional realtime subscription. They can live together on the same document without shared selectors or a page-level coordinator. Server-rendered rows and SVG provide a usable first paint; JavaScript only enhances each individual root.
+
+The host owns the backend implementation through transport-neutral contracts in `Zoerce.WebUI.Abstractions.Data`:
+
+- `IZoorceDataSource<T>` receives a `ZoorceDataQuery` and `ZoorcePageRequest`, then returns `ZoorceDataPage<T>`.
+- `ZoorceDataChange<T>` describes optional SignalR mutations (`Upsert`, `Remove`, or `Invalidate`).
+- REST uses the same envelope in JSON. A grid needs a URL that returns `{ items, totalCount, hasMore, nextCursor }`.
+
+Use `ZoorceDataGridOptions.LoadMode` to select `Pagination` (previous/next controls) or `InfiniteScroll` (intersection observer plus a keyboard-accessible fallback). Both send the same query and page parameters; the difference is entirely presentational. `Virtualize` bounds appended DOM rows for long streams.
+
+```cshtml
+@await Component.InvokeAsync("ZoorceDataGrid", new ZoorceDataGridOptions
+{
+    Id = "orders",
+    AriaLabel = "Orders",
+    SourceUrl = "/api/orders",
+    LoadMode = ZoorceDataLoadMode.InfiniteScroll,
+    RealtimeHubUrl = "/hubs/orders",
+    RealtimeEventName = "order-change",
+    Columns = [new("number", "Order"), new("status", "Status")]
+})
+```
+
+`ZoorceChart` renders Line, Area, Bar, Donut and Sparkline presentations with native SVG—there is no charting library dependency. Charts can be static, REST-backed, SignalR-backed, or all three. Its data contract is a collection of named series composed of `ZoorceChartPoint` values.
+
+SignalR is deliberately an opt-in adapter rather than a global shell dependency. When a component is given both realtime options, load the official SignalR browser client and Zoorce's `zoerce-signalr.js` adapter on the page that uses it. Static and REST-only components require neither script.
+
+## Markdown
+
+`IZoorceMarkdownRenderer` is registered in dependency injection and uses Markdig with advanced Markdown extensions, GitHub-style heading identifiers and raw HTML disabled. Generated heading metadata is available through `ZoorceMarkdownRenderResult.TableOfContents`. The renderer preserves only fragment, application-relative, `./`, `../`, HTTP(S), and `mailto` links; other protocols and protocol-relative URLs are replaced with `#`.
+
+For direct Razor use, add `@addTagHelper *, Zoerce.WebUI` and render an independent semantic surface:
+
+```cshtml
+<zoerce-markdown markdown="@Model.Documentation" css-class="z-panel"></zoerce-markdown>
+```
+
 ## Data and content
 
 - Metric cards, insight cards, progress indicators, charts, status chips and badges.
@@ -32,4 +71,4 @@ The sample’s density selector is a live visual preview. Production defaults co
 - Hints, validation/error presentation, checkboxes, radios and switches.
 - Tabs and tab panels.
 
-All visual colors consume `--z-*` semantic variables emitted by the Razor layout, including the foreground and semantic success/warning/danger/info states, so a host can brand both themes without editing Zoorce's generated Tailwind CSS.
+All visual colors consume `--z-*` semantic variables emitted by the Razor layout, including canvas, surfaces, code surfaces, overlay, shadow, foreground, and semantic success/warning/danger/info states. A host can brand both themes without editing Zoorce's generated Tailwind CSS.

@@ -7,6 +7,7 @@ using Zoerce.WebUI.Abstractions.UserContext;
 using Zoerce.WebUI.Navigation;
 using Zoerce.WebUI.Notifications;
 using Zoerce.WebUI.Options;
+using Zoerce.WebUI.Markdown;
 
 namespace Zoerce.WebUI;
 
@@ -50,6 +51,7 @@ public static class ServiceCollectionExtensions
         services.TryAddScoped<INavigationProvider, EmptyNavigationProvider>();
         services.TryAddScoped<IUserMenuProvider, EmptyUserMenuProvider>();
         services.TryAddScoped<IToastService, ToastService>();
+        services.TryAddSingleton<IZoorceMarkdownRenderer, ZoorceMarkdownRenderer>();
 
         return services;
     }

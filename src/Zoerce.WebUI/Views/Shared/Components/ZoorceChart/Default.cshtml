@@ -1,0 +1,30 @@
+@using System.Globalization
+@using System.Text.Json
+@using System.Text.Json.Serialization
+@using Zoerce.WebUI.Components.Charts
+@model ZoorceChartOptions
+@{
+    var jsonOptions = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
+    jsonOptions.Converters.Add(new JsonStringEnumConverter());
+    var configuration = JsonSerializer.Serialize(new { kind = Model.Kind, sourceUrl = Model.SourceUrl, realtimeHubUrl = Model.RealtimeHubUrl, realtimeEventName = Model.RealtimeEventName, series = Model.Series }, jsonOptions);
+    var firstSeries = Model.Series.FirstOrDefault();
+    var coordinates = firstSeries is null ? [] : ZoorceChartGeometry.Normalize(firstSeries.Points);
+    var polyline = string.Join(" ", coordinates.Select(point => $"{point.X.ToString(CultureInfo.InvariantCulture)},{point.Y.ToString(CultureInfo.InvariantCulture)}"));
+}
+<section id="@Model.Id" class="z-component z-chart-component" data-z-chart aria-label="@Model.Summary">
+    <script type="application/json" data-z-chart-config>@Html.Raw(configuration)</script>
+    <div class="z-chart-component-header"><div><p class="z-card-title">@Model.Title</p><p class="z-card-caption">@Model.Summary</p></div><span class="z-component-state" data-z-chart-state aria-live="polite"></span></div>
+    <svg class="z-native-chart" data-z-chart-canvas viewBox="0 0 100 100" preserveAspectRatio="none" role="img" aria-label="@Model.Summary">
+        <path class="z-native-chart-grid" d="M0 20H100M0 50H100M0 80H100" />
+        <polyline class="z-native-chart-line" data-z-chart-line points="@polyline" />
+    </svg>
+    <table class="z-visually-hidden"><caption>@Model.Summary</caption><tbody>
+        @foreach (var series in Model.Series)
+        {
+            @foreach (var point in series.Points)
+            {
+                <tr><th scope="row">@point.Label</th><td>@point.Value</td><td>@series.Name</td></tr>
+            }
+        }
+    </tbody></table>
+</section>
