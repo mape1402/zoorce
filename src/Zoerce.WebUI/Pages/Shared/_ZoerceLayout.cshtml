@@ -17,6 +17,52 @@
         ? options.BrandMark
         : profile!.DisplayName[..1].ToUpperInvariant();
     var defaultTheme = options.DefaultTheme == ZoorceThemeMode.Light ? "light" : "dark";
+    var sidebarMode = options.SidebarMode.ToString().ToLowerInvariant();
+    var sidebarDefault = options.SidebarCollapsedByDefault ? "collapsed" : "expanded";
+    var currentPath = Context.Request.Path.Value ?? "/";
+
+    string GetTargetPath(string target)
+    {
+        var separator = target.IndexOfAny(['?', '#']);
+        var path = separator >= 0 ? target[..separator] : target;
+        return string.IsNullOrWhiteSpace(path) ? "/" : path;
+    }
+
+    bool IsHashTarget(string target) => target.Contains('#', StringComparison.Ordinal);
+
+    bool IsServerActive(NavigationItem item)
+    {
+        if (item.MatchMode is NavigationMatchMode.None or NavigationMatchMode.Hash)
+        {
+            return false;
+        }
+
+        var targets = item.GetActiveUrls();
+        if (targets.Count == 0 || (item.MatchMode == NavigationMatchMode.Auto && targets.Any(IsHashTarget)))
+        {
+            return false;
+        }
+
+        return targets.Any(target =>
+        {
+            var path = GetTargetPath(target);
+            var exact = item.MatchMode == NavigationMatchMode.Exact ||
+                (item.MatchMode == NavigationMatchMode.Auto && path == "/");
+
+            return exact
+                ? string.Equals(currentPath, path, StringComparison.OrdinalIgnoreCase)
+                : Context.Request.Path.StartsWithSegments(
+                    new Microsoft.AspNetCore.Http.PathString(path),
+                    StringComparison.OrdinalIgnoreCase);
+        });
+    }
+
+    string GetClientMatchMode(NavigationItem item)
+        => item.MatchMode == NavigationMatchMode.Auto && item.GetActiveUrls().Any(IsHashTarget)
+            ? "hash"
+            : item.MatchMode.ToString().ToLowerInvariant();
+
+    string GetNavigationTargets(NavigationItem item) => string.Join('|', item.GetActiveUrls());
 }
 <!DOCTYPE html>
 <html lang="en" data-zoerce-theme="@defaultTheme">
@@ -37,8 +83,8 @@
 </head>
 <body>
     <a class="z-skip-link" href="#main-content">Skip to content</a>
-    <div class="z-app-shell" data-z-shell>
-        <aside class="z-sidebar" aria-label="Primary navigation">
+    <div class="z-app-shell" data-z-shell data-sidebar-mode="@sidebarMode" data-sidebar-default="@sidebarDefault" data-sidebar-persist="@options.PersistSidebarState.ToString().ToLowerInvariant()">
+        <aside class="z-sidebar" id="zoerce-sidebar" data-z-sidebar aria-label="Primary navigation">
             <div class="z-sidebar-brand">
                 <a class="z-brand" href="/" aria-label="@options.ApplicationName home">
                     <span class="z-brand-mark" aria-hidden="true">@options.BrandMark</span>
@@ -47,7 +93,9 @@
                         <small>Design system</small>
                     </span>
                 </a>
-                <button class="z-icon-button z-sidebar-close" type="button" data-z-sidebar-close aria-label="Close navigation">×</button>
+                <button class="z-icon-button z-sidebar-close" type="button" data-z-sidebar-close aria-label="Close navigation">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" /></svg>
+                </button>
             </div>
 
             <nav class="z-nav">
@@ -57,18 +105,19 @@
                     if (item.HasChildren)
                     {
                         var groupId = $"z-group-{item.Text.Replace(" ", "-").ToLowerInvariant()}";
-                        <section class="z-nav-group">
-                            <button class="z-nav-group-trigger" type="button" data-z-nav-group aria-expanded="true" aria-controls="@groupId">
+                        <section class="z-nav-group" data-z-nav-group-container>
+                            <button class="z-nav-group-trigger" type="button" data-z-nav-group aria-expanded="true" aria-controls="@groupId" title="@item.Text">
                                 <span class="z-nav-icon" aria-hidden="true">@item.Icon</span>
-                                <span>@item.Text</span>
+                                <span data-z-nav-copy>@item.Text</span>
                                 <span class="z-nav-chevron" aria-hidden="true">⌄</span>
                             </button>
                             <div class="z-nav-group-items" id="@groupId">
                                 @foreach (var child in item.Children!)
                                 {
-                                    <a class="z-nav-link @(Context.Request.Path.StartsWithSegments(child.Url) ? "is-active" : string.Empty)" href="@child.Url">
+                                    var childIsActive = IsServerActive(child);
+                                    <a class="z-nav-link @(childIsActive ? "is-active" : string.Empty)" href="@child.Url" title="@child.Text" data-z-nav-link data-z-nav-match="@GetClientMatchMode(child)" data-z-nav-targets="@GetNavigationTargets(child)" aria-current="@(childIsActive ? "page" : null)">
                                         <span class="z-nav-icon" aria-hidden="true">@child.Icon</span>
-                                        <span>@child.Text</span>
+                                        <span data-z-nav-copy>@child.Text</span>
                                     </a>
                                 }
                             </div>
@@ -76,9 +125,10 @@
                     }
                     else
                     {
-                        <a class="z-nav-link @(Context.Request.Path == item.Url ? "is-active" : string.Empty)" href="@item.Url">
+                        var itemIsActive = IsServerActive(item);
+                        <a class="z-nav-link @(itemIsActive ? "is-active" : string.Empty)" href="@item.Url" title="@item.Text" data-z-nav-link data-z-nav-match="@GetClientMatchMode(item)" data-z-nav-targets="@GetNavigationTargets(item)" aria-current="@(itemIsActive ? "page" : null)">
                             <span class="z-nav-icon" aria-hidden="true">@item.Icon</span>
-                            <span>@item.Text</span>
+                            <span data-z-nav-copy>@item.Text</span>
                         </a>
                     }
                 }
@@ -96,7 +146,9 @@
         <div class="z-page-shell">
             <header class="z-topbar">
                 <div class="z-topbar-start">
-                    <button class="z-icon-button" type="button" data-z-sidebar-toggle aria-label="Toggle navigation" aria-expanded="false">☰</button>
+                    <button class="z-icon-button z-sidebar-toggle" type="button" data-z-sidebar-toggle aria-label="Collapse navigation" aria-controls="zoerce-sidebar" aria-expanded="true">
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16" /></svg>
+                    </button>
                     <div class="z-topbar-context">
                         <span class="z-eyebrow">Zoorce UI</span>
                         <span class="z-topbar-title">@pageTitle</span>

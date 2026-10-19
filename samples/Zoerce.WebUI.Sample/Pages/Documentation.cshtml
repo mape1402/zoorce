@@ -1,0 +1,13 @@
+@page "/documentation"
+@{
+    ViewData["Title"] = "Integration guide";
+}
+
+<section>
+    <div class="z-page-heading"><div><span class="z-section-kicker">Documentation layout</span><h1>Configure the shell around your application.</h1><p>Navigation content, active-state matching, sidebar behavior and theme tokens remain owned by the consuming host.</p></div></div>
+    <div class="z-docs-layout"><aside class="z-docs-nav"><strong>On this page</strong><a class="is-active" href="#registration">Registration</a><a href="#navigation">Navigation</a><a href="#sidebar">Sidebar</a></aside><article class="z-docs-article"><span class="z-section-kicker">Integration</span><h1 id="registration">Install the Zoorce shell.</h1><p>The application owns routes and business logic; Zoorce owns the visual contract and the accessible interaction primitives.</p><div class="z-callout"><strong>Tip</strong><span>Configure both palettes and keep route choices in your application's <code>INavigationProvider</code>.</span></div><h2 id="navigation">Configure navigation</h2><pre class="z-code-block" id="navigation-code"><code>new NavigationItem("Dashboard", "/dashboard", "↗", MatchMode: NavigationMatchMode.Exact)
+new NavigationItem("Docs", "/docs", "03", MatchMode: NavigationMatchMode.Prefix)
+new NavigationItem("Feedback", "/#feedback", "◉", MatchMode: NavigationMatchMode.Hash)</code><button class="z-code-copy" type="button" data-z-copy="#navigation-code">Copy</button></pre><h2 id="sidebar">Configure the sidebar</h2><pre class="z-code-block" id="sidebar-code"><code>options.SidebarMode = ZoorceSidebarMode.Collapsible;
+options.SidebarCollapsedByDefault = false;
+options.PersistSidebarState = true;</code><button class="z-code-copy" type="button" data-z-copy="#sidebar-code">Copy</button></pre></article><aside class="z-docs-toc"><strong>Contents</strong><a href="#registration">Install</a><a href="#navigation">Navigate</a><a href="#sidebar">Customize</a></aside></div>
+</section>

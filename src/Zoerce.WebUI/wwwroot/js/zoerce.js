@@ -1,6 +1,7 @@
 (() => {
     const root = document.documentElement;
     const shell = document.querySelector("[data-z-shell]");
+    const sidebar = document.querySelector("[data-z-sidebar]");
     const sidebarBackdrop = document.querySelector("[data-z-sidebar-backdrop]");
     const toastStack = document.querySelector("[data-z-toast-stack]");
     const dialogLayer = document.querySelector("[data-z-dialog-layer]");
@@ -26,26 +27,82 @@
     };
     updateThemeControls();
 
-    const setSidebar = open => {
+    const desktopSidebarQuery = window.matchMedia("(min-width: 851px)");
+    const canCollapseSidebar = () => shell?.dataset.sidebarMode === "collapsible";
+    const persistsSidebar = () => shell?.dataset.sidebarPersist === "true";
+    let sidebarCollapsed = shell?.dataset.sidebarDefault === "collapsed";
+    let mobileSidebarOpen = false;
+
+    if (canCollapseSidebar() && persistsSidebar()) {
+        try {
+            const savedState = localStorage.getItem("zoerce-sidebar-collapsed");
+            if (savedState === "true" || savedState === "false") sidebarCollapsed = savedState === "true";
+        } catch {
+            // A blocked storage area should not prevent the shell from rendering.
+        }
+    }
+
+    const updateSidebarControls = () => {
         if (!shell) return;
-        shell.dataset.sidebarOpen = String(open);
-        localStorage.setItem("zoerce-sidebar-open", String(open));
-        if (sidebarBackdrop) sidebarBackdrop.hidden = !open;
+        const desktop = desktopSidebarQuery.matches;
+        if (!canCollapseSidebar()) sidebarCollapsed = false;
+        shell.dataset.sidebarCollapsed = String(sidebarCollapsed);
+        shell.dataset.sidebarOpen = String(mobileSidebarOpen);
+        const sidebarIsHidden = desktop && sidebarCollapsed;
+        if (sidebar) {
+            sidebar.toggleAttribute("inert", sidebarIsHidden);
+            sidebar.setAttribute("aria-hidden", String(sidebarIsHidden));
+        }
+        if (sidebarBackdrop) sidebarBackdrop.hidden = desktop || !mobileSidebarOpen;
         document.querySelectorAll("[data-z-sidebar-toggle]").forEach(button => {
-            button.setAttribute("aria-expanded", String(open));
+            const expanded = desktop ? !sidebarCollapsed : mobileSidebarOpen;
+            button.setAttribute("aria-expanded", String(expanded));
+            button.setAttribute("aria-label", desktop
+                ? expanded ? "Collapse navigation" : "Expand navigation"
+                : mobileSidebarOpen ? "Close navigation" : "Open navigation");
         });
     };
+    const setSidebarCollapsed = (collapsed, persist = true) => {
+        if (!canCollapseSidebar()) return;
+        sidebarCollapsed = Boolean(collapsed);
+        if (persist && persistsSidebar()) {
+            try {
+                localStorage.setItem("zoerce-sidebar-collapsed", String(sidebarCollapsed));
+            } catch {
+                // Keep the current-page preference when persistent storage is unavailable.
+            }
+        }
+        updateSidebarControls();
+    };
+    const setMobileSidebar = open => {
+        mobileSidebarOpen = Boolean(open);
+        updateSidebarControls();
+    };
+    const toggleSidebar = () => {
+        if (desktopSidebarQuery.matches) {
+            setSidebarCollapsed(!sidebarCollapsed);
+        } else {
+            setMobileSidebar(!mobileSidebarOpen);
+        }
+    };
+    updateSidebarControls();
 
     document.querySelectorAll("[data-z-theme-toggle]").forEach(button => {
         button.addEventListener("click", () => setTheme(mode() === "dark" ? "light" : "dark"));
     });
 
     document.querySelectorAll("[data-z-sidebar-toggle]").forEach(button => {
-        button.addEventListener("click", () => setSidebar(shell?.dataset.sidebarOpen !== "true"));
+        button.addEventListener("click", toggleSidebar);
     });
-    document.querySelectorAll("[data-z-sidebar-close]").forEach(button => button.addEventListener("click", () => setSidebar(false)));
-    sidebarBackdrop?.addEventListener("click", () => setSidebar(false));
-    document.querySelectorAll(".z-sidebar a").forEach(link => link.addEventListener("click", () => setSidebar(false)));
+    document.querySelectorAll("[data-z-sidebar-close]").forEach(button => button.addEventListener("click", () => setMobileSidebar(false)));
+    sidebarBackdrop?.addEventListener("click", () => setMobileSidebar(false));
+    document.querySelectorAll(".z-sidebar a").forEach(link => link.addEventListener("click", () => {
+        if (!desktopSidebarQuery.matches) setMobileSidebar(false);
+    }));
+    desktopSidebarQuery.addEventListener("change", () => {
+        if (desktopSidebarQuery.matches) mobileSidebarOpen = false;
+        updateSidebarControls();
+    });
 
     document.querySelectorAll("[data-z-nav-group]").forEach(button => {
         button.addEventListener("click", () => {
@@ -53,6 +110,23 @@
             button.setAttribute("aria-expanded", String(!expanded));
         });
     });
+
+    const syncHashNavigation = () => {
+        const currentTarget = `${window.location.pathname}${window.location.hash}`;
+        document.querySelectorAll("[data-z-nav-link][data-z-nav-match='hash']").forEach(link => {
+            const active = (link.dataset.zNavTargets ?? "").split("|").some(target => {
+                if (!target.includes("#")) return false;
+                return target.startsWith("#")
+                    ? window.location.hash === target
+                    : currentTarget === target;
+            });
+            link.classList.toggle("is-active", active);
+            if (active) link.setAttribute("aria-current", "page");
+            else link.removeAttribute("aria-current");
+        });
+    };
+    syncHashNavigation();
+    window.addEventListener("hashchange", syncHashNavigation);
 
     const removeToast = toast => {
         if (!toast || toast.classList.contains("is-leaving")) return;
@@ -281,6 +355,10 @@
             openCommand();
         }
         if (event.key === "Escape") {
+            if (!desktopSidebarQuery.matches && mobileSidebarOpen) {
+                setMobileSidebar(false);
+                return;
+            }
             if (commandLayer && !commandLayer.hidden) closeCommand();
             if (dialogLayer && !dialogLayer.hidden) closeDialog();
             document.querySelectorAll("[data-z-modal-layer], [data-z-drawer-layer]").forEach(layer => {

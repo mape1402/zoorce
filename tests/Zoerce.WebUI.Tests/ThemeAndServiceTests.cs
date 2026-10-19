@@ -52,6 +52,9 @@ public sealed class ThemeAndServiceTests
             options.ApplicationName = "Atlas";
             options.BrandMark = "A";
             options.DefaultTheme = ZoorceThemeMode.Light;
+            options.SidebarMode = ZoorceSidebarMode.Fixed;
+            options.SidebarCollapsedByDefault = true;
+            options.PersistSidebarState = false;
             options.Light.Primary = "#7c3aed";
         });
 
@@ -64,6 +67,9 @@ public sealed class ThemeAndServiceTests
         Assert.Equal("A", configured.BrandMark);
         Assert.Equal(ZoorceThemeMode.Light, configured.DefaultTheme);
         Assert.Equal("#7c3aed", configured.Light.Primary);
+        Assert.Equal(ZoorceSidebarMode.Fixed, configured.SidebarMode);
+        Assert.True(configured.SidebarCollapsedByDefault);
+        Assert.False(configured.PersistSidebarState);
         Assert.Empty(scope.ServiceProvider.GetRequiredService<INavigationProvider>().GetItems());
         Assert.Null(scope.ServiceProvider.GetRequiredService<IUserMenuProvider>().GetCurrentUser());
     }
@@ -82,6 +88,16 @@ public sealed class ThemeAndServiceTests
 
         Assert.Equal("Host", scope.ServiceProvider.GetRequiredService<INavigationProvider>().GetItems().Single().Text);
         Assert.Equal("Ada Lovelace", scope.ServiceProvider.GetRequiredService<IUserMenuProvider>().GetCurrentUser()!.DisplayName);
+    }
+
+    [Fact]
+    public void Sidebar_options_default_to_a_persistent_collapsible_shell()
+    {
+        var options = new ZoerceWebUiOptions();
+
+        Assert.Equal(ZoorceSidebarMode.Collapsible, options.SidebarMode);
+        Assert.False(options.SidebarCollapsedByDefault);
+        Assert.True(options.PersistSidebarState);
     }
 
     [Fact]
@@ -145,8 +161,10 @@ public sealed class ThemeAndServiceTests
     [Fact]
     public void Contract_records_expose_every_configured_value()
     {
-        var child = new NavigationItem("Child", "/child", "C");
-        var parent = new NavigationItem("Parent", "/parent", "P", [child]);
+        var child = new NavigationItem("Child", "/child", "C", MatchMode: NavigationMatchMode.Prefix);
+        var parent = new NavigationItem("Parent", "/parent", "P", [child], NavigationMatchMode.Exact, ["/parent", "/parent/overview"]);
+        var root = new NavigationItem("Root", "/");
+        var empty = new NavigationItem("Empty");
         var action = new UserMenuAction("Profile", "/profile", "◌");
         var profile = new UserMenuProfile("Ada Lovelace", "ada@example.test", "https://example.test/ada.png", [action]);
         var toast = new ZoorceToastMessage("Ready", "The sample is ready.", ZoorceToastKind.Danger, 1200);
@@ -154,6 +172,11 @@ public sealed class ThemeAndServiceTests
         Assert.Equal("/parent", parent.Url);
         Assert.Equal("P", parent.Icon);
         Assert.Same(child, parent.Children!.Single());
+        Assert.Equal(NavigationMatchMode.Exact, parent.MatchMode);
+        Assert.Equal(["/parent", "/parent/overview"], parent.GetActiveUrls());
+        Assert.Equal(NavigationMatchMode.Prefix, child.MatchMode);
+        Assert.Equal(["/"], root.GetActiveUrls());
+        Assert.Empty(empty.GetActiveUrls());
         Assert.Equal("Profile", action.Text);
         Assert.Equal("/profile", action.Url);
         Assert.Equal("◌", action.Icon);

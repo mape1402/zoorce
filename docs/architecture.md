@@ -7,3 +7,5 @@ Zoorce is organized as a reusable Razor Class Library rather than a copied layou
 This separation keeps the web shell independent from a specific authentication provider, database, or business module.
 
 Each host chains `AddZoerceWebUI(...)` from `AddRazorPages()`; this registers the packaged layout and the dependency-injection services. The host configures its own `Light` and `Dark` palette in that call. The layout emits those values as semantic CSS variables, including foreground, success, warning, danger, information, and data-visualization colors, allowing Tailwind-built components to change brand colors without recompiling Zoorce.
+
+The same options object configures desktop shell behavior through `SidebarMode`, `SidebarCollapsedByDefault`, and `PersistSidebarState`. On desktop, a collapsible shell hides the navigation panel completely; on mobile it always becomes an overlay. The host owns navigation data through `INavigationProvider`, including target URLs and `NavigationMatchMode`, while the package renders route, prefix, or hash state consistently.

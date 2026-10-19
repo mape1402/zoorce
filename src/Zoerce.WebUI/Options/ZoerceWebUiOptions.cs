@@ -21,6 +21,22 @@ public sealed class ZoerceWebUiOptions
     public string BrandMark { get; set; } = "Z";
 
     /// <summary>
+    /// Gets or sets the sidebar behavior for desktop-sized viewports.
+    /// </summary>
+    public ZoorceSidebarMode SidebarMode { get; set; } = ZoorceSidebarMode.Collapsible;
+
+    /// <summary>
+    /// Gets or sets whether a collapsible desktop sidebar starts in its compact state
+    /// when the visitor has no previously saved preference.
+    /// </summary>
+    public bool SidebarCollapsedByDefault { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the visitor's desktop sidebar preference is kept locally.
+    /// </summary>
+    public bool PersistSidebarState { get; set; } = true;
+
+    /// <summary>
     /// Gets the light palette exposed as semantic CSS variables.
     /// </summary>
     public ZoorceThemePaletteOptions Light { get; } = ZoorceThemePaletteOptions.CreateLight();

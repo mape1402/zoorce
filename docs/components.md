@@ -5,8 +5,11 @@ Zoorce provides a dark-first, semantic-token UI foundation for Razor Pages. The 
 ## Shell and navigation
 
 - Application shell, responsive sidebar, topbar, product brand and user profile surface.
-- Grouped navigation, current-page states, mobile menu, skip link and quick command palette.
+- Desktop sidebar that can hide completely, preserves the visitor preference, and can be configured as fixed instead.
+- Grouped navigation, current-page states, mobile overlay, skip link and quick command palette.
 - Light/Dark switcher, with colors injected through `ZoerceWebUiOptions` in dependency injection.
+
+Navigation entries come from the host application's `INavigationProvider`; Zoorce never hard-codes product sections. Use `NavigationMatchMode.Exact` for a single route, `Prefix` for a route branch, `Hash` for a one-page section, `None` for a passive item, or `Auto` for the default behavior. `ActiveUrls` can add aliases without changing the visible target.
 
 ## Actions and feedback
 
