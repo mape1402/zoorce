@@ -21,6 +21,7 @@ public sealed class SampleNavigationProvider : INavigationProvider
             new("Build", Icon: "▤", Children:
             [
                 new("Components", "/components", "▤", MatchMode: NavigationMatchMode.Exact),
+                new("Charts", "/charts", "◒", MatchMode: NavigationMatchMode.Exact),
                 new("Infinite grid", "/data-grid", "∞", MatchMode: NavigationMatchMode.Exact),
                 new("Forms", "/forms", "⌘", MatchMode: NavigationMatchMode.Exact),
                 LabItem("Patterns", "patterns", "PT"),

@@ -29,6 +29,8 @@ public sealed class ThemeAndMarkdownTests
         Assert.Same(options, returned);
         Assert.Equal(lightPrimary, options.Light.Primary);
         Assert.Equal(darkPrimary, options.Dark.Primary);
+        Assert.NotEqual(options.Light.Primary, options.Light.DataPrimary);
+        Assert.NotEqual(options.Dark.Primary, options.Dark.DataPrimary);
         Assert.False(string.IsNullOrWhiteSpace(options.Light.CodeCanvas));
         Assert.False(string.IsNullOrWhiteSpace(options.Dark.CodeControlText));
         Assert.False(string.IsNullOrWhiteSpace(options.Light.Overlay));
@@ -55,6 +57,10 @@ public sealed class ThemeAndMarkdownTests
         source.CodeControlSurface = "code-control";
         source.CodeControlText = "code-control-text";
         source.Overlay = "overlay";
+        source.DataPrimary = "data-primary";
+        source.DataTertiary = "data-tertiary";
+        source.DataQuaternary = "data-quaternary";
+        source.DataQuinary = "data-quinary";
         var target = new ZoorceThemePaletteOptions();
 
         target.CopyFrom(source);
@@ -62,6 +68,10 @@ public sealed class ThemeAndMarkdownTests
 
         Assert.Equal("canvas", target.Canvas);
         Assert.Equal("shadow", target.Shadow);
+        Assert.Equal("data-primary", target.DataPrimary);
+        Assert.Equal("data-tertiary", target.DataTertiary);
+        Assert.Equal("data-quaternary", target.DataQuaternary);
+        Assert.Equal("data-quinary", target.DataQuinary);
         Assert.Contains("--z-shadow:shadow;", variables);
         Assert.Contains("--z-code-canvas:code;", variables);
         Assert.Contains("--z-code-text:code-text;", variables);
@@ -69,6 +79,10 @@ public sealed class ThemeAndMarkdownTests
         Assert.Contains("--z-code-control-surface:code-control;", variables);
         Assert.Contains("--z-code-control-text:code-control-text;", variables);
         Assert.Contains("--z-overlay:overlay;", variables);
+        Assert.Contains("--z-data-primary:data-primary;", variables);
+        Assert.Contains("--z-data-tertiary:data-tertiary;", variables);
+        Assert.Contains("--z-data-quaternary:data-quaternary;", variables);
+        Assert.Contains("--z-data-quinary:data-quinary;", variables);
         Assert.Throws<ArgumentNullException>(() => target.CopyFrom(null!));
     }
 

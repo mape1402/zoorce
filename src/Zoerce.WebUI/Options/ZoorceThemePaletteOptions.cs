@@ -65,8 +65,20 @@ public sealed class ZoorceThemePaletteOptions
     /// <summary>Gets or sets the low-emphasis information surface.</summary>
     public string InfoSoft { get; set; } = string.Empty;
 
-    /// <summary>Gets or sets the secondary data-visualization accent.</summary>
+    /// <summary>Gets or sets the primary accent used for analytical data visualizations.</summary>
+    public string DataPrimary { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the secondary accent used for analytical data visualizations.</summary>
     public string DataSecondary { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the tertiary accent used for analytical data visualizations.</summary>
+    public string DataTertiary { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the fourth accent used for analytical data visualizations.</summary>
+    public string DataQuaternary { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the fifth accent used for analytical data visualizations.</summary>
+    public string DataQuinary { get; set; } = string.Empty;
 
     /// <summary>Gets or sets the sidebar background color.</summary>
     public string Sidebar { get; set; } = string.Empty;
@@ -127,7 +139,11 @@ public sealed class ZoorceThemePaletteOptions
             Variable("--z-danger-soft", DangerSoft),
             Variable("--z-info", Info),
             Variable("--z-info-soft", InfoSoft),
+            Variable("--z-data-primary", DataPrimary),
             Variable("--z-data-secondary", DataSecondary),
+            Variable("--z-data-tertiary", DataTertiary),
+            Variable("--z-data-quaternary", DataQuaternary),
+            Variable("--z-data-quinary", DataQuinary),
             Variable("--z-sidebar", Sidebar),
             Variable("--z-sidebar-text", SidebarText),
             Variable("--z-sidebar-muted", SidebarMuted),
@@ -166,7 +182,11 @@ public sealed class ZoorceThemePaletteOptions
         DangerSoft = source.DangerSoft;
         Info = source.Info;
         InfoSoft = source.InfoSoft;
+        DataPrimary = source.DataPrimary;
         DataSecondary = source.DataSecondary;
+        DataTertiary = source.DataTertiary;
+        DataQuaternary = source.DataQuaternary;
+        DataQuinary = source.DataQuinary;
         Sidebar = source.Sidebar;
         SidebarText = source.SidebarText;
         SidebarMuted = source.SidebarMuted;
@@ -205,7 +225,11 @@ public sealed class ZoorceThemePaletteOptions
         DangerSoft = "#ffe7ec",
         Info = "#285eb8",
         InfoSoft = "#e6eeff",
-        DataSecondary = "#6556bb",
+        DataPrimary = "#2477c9",
+        DataSecondary = "#7156c5",
+        DataTertiary = "#c13e9a",
+        DataQuaternary = "#c57908",
+        DataQuinary = "#0a8075",
         Sidebar = "#eef5f1",
         SidebarText = "#17362a",
         SidebarMuted = "#587267",
@@ -244,7 +268,11 @@ public sealed class ZoorceThemePaletteOptions
         DangerSoft = "#40171e",
         Info = "#8eb0ff",
         InfoSoft = "#192b50",
-        DataSecondary = "#a18bff",
+        DataPrimary = "#78b7ff",
+        DataSecondary = "#aa91ff",
+        DataTertiary = "#ef8fd4",
+        DataQuaternary = "#ffd06d",
+        DataQuinary = "#61d7c7",
         Sidebar = "#07120f",
         SidebarText = "#eefff8",
         SidebarMuted = "#83a89a",

@@ -106,7 +106,7 @@ This component is rendered **server-side** with advanced Markdown syntax, while 
     </section>
 
     <section class="z-component-lab-section" aria-labelledby="chart-title">
-        <div class="z-component-lab-heading"><div><span class="z-section-kicker">Native SVG · REST + SignalR</span><h2 id="chart-title">Charts without a charting dependency</h2></div><p>Line, area, bar, donut and sparkline presentations share the same small data contract.</p></div>
+        <div class="z-component-lab-heading"><div><span class="z-section-kicker">Native SVG · REST + SignalR</span><h2 id="chart-title">Charts without a charting dependency</h2></div><p>These live examples share one small data contract. The dedicated Charts gallery covers the full native visual catalog.</p></div>
         <div class="z-component-lab-charts">
             @await Component.InvokeAsync("ZoorceChart", new ZoorceChartOptions { Id = "adoption-line", Title = "Component adoption", Summary = "Adoption against its target over the last six months", Kind = ZoorceChartKind.Area, Size = ZoorceChartSize.Wide, ValueSuffix = "%", SourceUrl = "/api/charts/adoption", RealtimeHubUrl = "/hubs/component-activity", RealtimeEventName = "adoption-update", Series = initialSeries })
             @await Component.InvokeAsync("ZoorceChart", new ZoorceChartOptions { Id = "quality-bars", Title = "Release checks", Summary = "Checks passed and checks reviewed by month", Kind = ZoorceChartKind.Bar, ValueSuffix = "%", Series = releaseSeries })

@@ -24,7 +24,11 @@ public sealed class ThemeAndServiceTests
         Assert.Contains("--z-primary-foreground:#ffffff;", rules);
         Assert.Contains("--z-warning:#8a5a00;", rules);
         Assert.Contains("--z-danger:#ff7586;", rules);
-        Assert.Contains("--z-data-secondary:#a18bff;", rules);
+        Assert.Contains("--z-data-primary:#78b7ff;", rules);
+        Assert.Contains("--z-data-secondary:#aa91ff;", rules);
+        Assert.Contains("--z-data-tertiary:#ef8fd4;", rules);
+        Assert.Contains("--z-data-quaternary:#ffd06d;", rules);
+        Assert.Contains("--z-data-quinary:#61d7c7;", rules);
         Assert.Contains("--z-sidebar:#07120f;", rules);
     }
 
@@ -33,11 +37,13 @@ public sealed class ThemeAndServiceTests
     {
         var palette = ZoorceThemePaletteOptions.CreateDark();
         palette.Primary = "#a855f7";
+        palette.DataPrimary = "#36a8ff";
         palette.Glow = "rgba(168, 85, 247, 0.30)";
 
         var variables = palette.ToCssVariables();
 
         Assert.Contains("--z-primary:#a855f7;", variables);
+        Assert.Contains("--z-data-primary:#36a8ff;", variables);
         Assert.Contains("--z-glow:rgba(168, 85, 247, 0.30);", variables);
         Assert.Contains("--z-text:#edfff7;", variables);
     }
@@ -57,6 +63,8 @@ public sealed class ThemeAndServiceTests
             options.PersistSidebarState = false;
             options.NavigationDensity = ZoorceNavigationDensity.Dense;
             options.Light.Primary = "#7c3aed";
+            options.Light.DataPrimary = "#2485df";
+            options.Dark.DataQuinary = "#5de0c6";
         });
 
         Assert.Same(services, result);
@@ -68,6 +76,8 @@ public sealed class ThemeAndServiceTests
         Assert.Equal("A", configured.BrandMark);
         Assert.Equal(ZoorceThemeMode.Light, configured.DefaultTheme);
         Assert.Equal("#7c3aed", configured.Light.Primary);
+        Assert.Equal("#2485df", configured.Light.DataPrimary);
+        Assert.Equal("#5de0c6", configured.Dark.DataQuinary);
         Assert.Equal(ZoorceSidebarMode.Fixed, configured.SidebarMode);
         Assert.True(configured.SidebarCollapsedByDefault);
         Assert.False(configured.PersistSidebarState);

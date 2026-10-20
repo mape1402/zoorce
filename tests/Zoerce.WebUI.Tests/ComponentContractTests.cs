@@ -219,6 +219,42 @@ public sealed class ComponentContractTests
     }
 
     [Fact]
+    public void Chart_supports_visual_options_and_rejects_an_inverted_value_range()
+    {
+        var normalized = CreateChart() with
+        {
+            Kind = ZoorceChartKind.Bullet,
+            BarMode = ZoorceChartBarMode.Stacked100,
+            Curve = ZoorceChartCurve.Step,
+            ShowLegend = false,
+            ShowGrid = false,
+            ShowAxes = false,
+            ShowTooltip = false,
+            MinimumValue = 0,
+            MaximumValue = 100,
+            TargetValue = 72
+        };
+
+        normalized = normalized.Normalize();
+
+        Assert.Equal(ZoorceChartKind.Bullet, normalized.Kind);
+        Assert.Equal(ZoorceChartBarMode.Stacked100, normalized.BarMode);
+        Assert.Equal(ZoorceChartCurve.Step, normalized.Curve);
+        Assert.False(normalized.ShowLegend);
+        Assert.False(normalized.ShowGrid);
+        Assert.False(normalized.ShowAxes);
+        Assert.False(normalized.ShowTooltip);
+        Assert.Equal(0, normalized.MinimumValue);
+        Assert.Equal(100, normalized.MaximumValue);
+        Assert.Equal(72, normalized.TargetValue);
+        Assert.Equal(ZoorceChartKind.Gauge, Enum.GetValues<ZoorceChartKind>().Single(value => value == ZoorceChartKind.Gauge));
+        Assert.Equal(ZoorceChartKind.Waterfall, Enum.GetValues<ZoorceChartKind>().Single(value => value == ZoorceChartKind.Waterfall));
+
+        Assert.Equal(0, (CreateChart() with { MinimumValue = 0 }).Normalize().MinimumValue);
+        Assert.Throws<ArgumentException>(() => (CreateChart() with { MinimumValue = 100, MaximumValue = 0 }).Normalize());
+    }
+
+    [Fact]
     public void Chart_view_component_rejects_null_and_returns_normalized_model()
     {
         var component = new ZoorceChartViewComponent();
@@ -243,6 +279,24 @@ public sealed class ComponentContractTests
         Assert.Equal((0m, 100m), varied[0]);
         Assert.Equal((50m, 0m), varied[1]);
         Assert.Equal((100m, 50m), varied[2]);
+    }
+
+    [Fact]
+    public void Chart_points_preserve_optional_dimensions_for_specialized_visualizations()
+    {
+        var point = new ZoorceChartPoint("Account", 42, 18, 4, 52, 12, "North");
+        var series = new ZoorceChartSeries("Opportunity", [point], "#7c3aed");
+
+        Assert.Equal("Account", point.Label);
+        Assert.Equal(42, point.Value);
+        Assert.Equal(18, point.X);
+        Assert.Equal(4, point.Low);
+        Assert.Equal(52, point.High);
+        Assert.Equal(12, point.Size);
+        Assert.Equal("North", point.Group);
+        Assert.Equal("Opportunity", series.Name);
+        Assert.Same(point, series.Points.Single());
+        Assert.Equal("#7c3aed", series.Color);
     }
 
     private static ZoorceDataGridOptions CreateGrid() => new()

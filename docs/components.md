@@ -45,7 +45,29 @@ Use `ZoorceDataGridOptions.LoadMode` to select `Pagination` (previous/next contr
 })
 ```
 
-`ZoorceChart` renders Line, Area, Bar, Donut and Sparkline presentations with native SVG—there is no charting library dependency. Charts can be static, REST-backed, SignalR-backed, or all three. Its data contract is a collection of named series composed of `ZoorceChartPoint` values.
+`ZoorceChart` renders native SVG—there is no charting library dependency. Charts can be static, REST-backed, SignalR-backed, or all three. Its data contract is a collection of named series composed of `ZoorceChartPoint` values, and every root owns its own render loop, ResizeObserver, tooltip, hidden-series state and realtime subscription.
+
+The visual catalog includes Line, Area, Sparkline, vertical Bar, HorizontalBar, Donut, Gauge, Funnel, Heatmap, Scatter, Bubble, Bullet, Histogram and Waterfall. Vertical bars support `Grouped`, `Stacked`, and `Stacked100` composition; line-style charts support `Straight`, `Smooth`, and `Step` interpolation.
+
+`ZoorceChartPoint` keeps the simple `Label` / `Value` pair for normal categorical charts and exposes optional `X`, `Low`, `High`, `Size`, and `Group` dimensions for continuous, ranged, bubble and matrix data. `ZoorceChartSeries.Color` can override a series color; otherwise the component uses the analytical `DataPrimary` through `DataQuinary` palette from the configured theme. Those tokens are intentionally independent from `Primary`, so a product brand does not turn every data series into the same color.
+
+Use `ShowLegend`, `ShowGrid`, `ShowAxes`, and `ShowTooltip` to tune presentation per instance. `MinimumValue`, `MaximumValue`, and `TargetValue` make bounded metrics, gauges and bullet charts deterministic. The legend is keyboard accessible and toggles only its own component instance. SVG paths use CSS-pixel view boxes and non-scaling strokes, avoiding blurred lines at normal browser zoom levels.
+
+```cshtml
+@await Component.InvokeAsync("ZoorceChart", new ZoorceChartOptions
+{
+    Id = "release-confidence",
+    Title = "Release confidence",
+    Summary = "Confidence against the deployment target",
+    Kind = ZoorceChartKind.Bullet,
+    MinimumValue = 0,
+    MaximumValue = 100,
+    TargetValue = 92,
+    ValueSuffix = "%",
+    ShowLegend = false,
+    Series = [new ZoorceChartSeries("Confidence", [new("Current", 87)])]
+})
+```
 
 SignalR is deliberately an opt-in adapter rather than a global shell dependency. When a component is given both realtime options, load the official SignalR browser client and Zoorce's `zoerce-signalr.js` adapter on the page that uses it. Static and REST-only components require neither script.
 
@@ -71,4 +93,4 @@ For direct Razor use, add `@addTagHelper *, Zoerce.WebUI` and render an independ
 - Hints, validation/error presentation, checkboxes, radios and switches.
 - Tabs and tab panels.
 
-All visual colors consume `--z-*` semantic variables emitted by the Razor layout, including canvas, surfaces, code surfaces, overlay, shadow, foreground, and semantic success/warning/danger/info states. A host can brand both themes without editing Zoorce's generated Tailwind CSS.
+All visual colors consume `--z-*` semantic variables emitted by the Razor layout, including canvas, surfaces, code surfaces, overlay, shadow, foreground, and semantic success/warning/danger/info states. Configure `Light.DataPrimary` through `Light.DataQuinary` and their `Dark` equivalents in `AddZoerceWebUI` to establish a product's analytical palette independently from its brand accent. A host can brand both themes without editing Zoorce's generated Tailwind CSS.

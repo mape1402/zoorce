@@ -888,8 +888,8 @@
                 gradient.setAttribute("id", `z-chart-area-${suffix}`);
                 gradient.setAttribute("x1", "0"); gradient.setAttribute("x2", "0");
                 gradient.setAttribute("y1", "0"); gradient.setAttribute("y2", "1");
-                const start = createSvgElement("stop"); start.setAttribute("offset", "0%"); start.setAttribute("stop-color", "var(--z-primary)"); start.setAttribute("stop-opacity", ".32");
-                const end = createSvgElement("stop"); end.setAttribute("offset", "100%"); end.setAttribute("stop-color", "var(--z-primary)"); end.setAttribute("stop-opacity", "0");
+                const start = createSvgElement("stop"); start.setAttribute("offset", "0%"); start.setAttribute("stop-color", "var(--z-data-primary)"); start.setAttribute("stop-opacity", ".32");
+                const end = createSvgElement("stop"); end.setAttribute("offset", "100%"); end.setAttribute("stop-color", "var(--z-data-primary)"); end.setAttribute("stop-opacity", "0");
                 gradient.append(start, end); this.layers.definitions.append(gradient);
             }
             series.forEach((item, seriesIndex) => {
