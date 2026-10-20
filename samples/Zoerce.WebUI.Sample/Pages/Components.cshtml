@@ -6,9 +6,9 @@
     ViewData["Title"] = "Component lab";
     var starterRows = new IReadOnlyDictionary<string, string?>[]
     {
-        new Dictionary<string, string?> { ["name"] = "App shell", ["category"] = "Layout", ["theme"] = "Dark / Light", ["status"] = "Stable", ["adoption"] = "94%" },
-        new Dictionary<string, string?> { ["name"] = "Data grid", ["category"] = "Data", ["theme"] = "Dark / Light", ["status"] = "Stable", ["adoption"] = "91%" },
-        new Dictionary<string, string?> { ["name"] = "Markdown", ["category"] = "Content", ["theme"] = "Dark / Light", ["status"] = "Preview", ["adoption"] = "72%" }
+        new Dictionary<string, string?> { ["id"] = "shell-01", ["name"] = "Application shell", ["category"] = "Layout", ["theme"] = "Dark / Light", ["status"] = "Stable", ["adoption"] = "92" },
+        new Dictionary<string, string?> { ["id"] = "grid-01", ["name"] = "Data grid", ["category"] = "Data", ["theme"] = "Dark / Light", ["status"] = "Stable", ["adoption"] = "87" },
+        new Dictionary<string, string?> { ["id"] = "markdown-01", ["name"] = "Markdown reader", ["category"] = "Content", ["theme"] = "Dark / Light", ["status"] = "Preview", ["adoption"] = "68" }
     };
     var columns = new[]
     {
@@ -25,10 +25,23 @@
             new ZoorceChartPoint("May", 48), new ZoorceChartPoint("Jun", 56), new ZoorceChartPoint("Jul", 54),
             new ZoorceChartPoint("Aug", 67), new ZoorceChartPoint("Sep", 74), new ZoorceChartPoint("Oct", 82)
         }),
-        new ZoorceChartSeries("Quality", new[]
+        new ZoorceChartSeries("Target", new[]
         {
-            new ZoorceChartPoint("May", 41), new ZoorceChartPoint("Jun", 45), new ZoorceChartPoint("Jul", 51),
-            new ZoorceChartPoint("Aug", 55), new ZoorceChartPoint("Sep", 61), new ZoorceChartPoint("Oct", 68)
+            new ZoorceChartPoint("May", 52), new ZoorceChartPoint("Jun", 58), new ZoorceChartPoint("Jul", 64),
+            new ZoorceChartPoint("Aug", 68), new ZoorceChartPoint("Sep", 74), new ZoorceChartPoint("Oct", 80)
+        })
+    };
+    var releaseSeries = new[]
+    {
+        new ZoorceChartSeries("Passed", new[]
+        {
+            new ZoorceChartPoint("May", 58), new ZoorceChartPoint("Jun", 64), new ZoorceChartPoint("Jul", 61),
+            new ZoorceChartPoint("Aug", 70), new ZoorceChartPoint("Sep", 76), new ZoorceChartPoint("Oct", 82)
+        }),
+        new ZoorceChartSeries("Reviewed", new[]
+        {
+            new ZoorceChartPoint("May", 53), new ZoorceChartPoint("Jun", 59), new ZoorceChartPoint("Jul", 62),
+            new ZoorceChartPoint("Aug", 63), new ZoorceChartPoint("Sep", 68), new ZoorceChartPoint("Oct", 73)
         })
     };
     var markdown = """
@@ -51,7 +64,10 @@ This component is rendered **server-side** with advanced Markdown syntax, while 
             <h1>Independent by default.</h1>
             <p>Each module owns its markup, state and transport. The server-rendered fallback remains useful before JavaScript or a live connection is available.</p>
         </div>
-        <button class="z-button z-button-primary" type="button" data-z-toast="The component lab is ready for a new record." data-z-toast-title="New component">+ Add component</button>
+        <div class="z-page-heading-actions">
+            <button class="z-button z-button-ghost" type="button" data-z-live-demo data-z-live-endpoint="/api/demo/activity">Emit live change</button>
+            <button class="z-button z-button-primary" type="button" data-z-toast="The component lab is ready for a new record." data-z-toast-title="New component">+ Add component</button>
+        </div>
     </div>
 
     <section class="z-component-lab-section" aria-labelledby="paginated-grid-title">
@@ -62,15 +78,15 @@ This component is rendered **server-side** with advanced Markdown syntax, while 
             AriaLabel = "Component catalogue with pagination",
             SourceUrl = "/api/components",
             LoadMode = ZoorceDataLoadMode.Pagination,
-            PageSize = 5,
+            PageSize = 10,
             Columns = columns,
             InitialItems = starterRows,
-            InitialTotalCount = 20
+            InitialTotalCount = 280
         })
     </section>
 
     <section class="z-component-lab-section" aria-labelledby="live-grid-title">
-        <div class="z-component-lab-heading"><div><span class="z-section-kicker">REST + SignalR · infinite scroll</span><h2 id="live-grid-title">Live catalogue, no pagination chrome</h2></div><p>The observer requests further pages near the edge; new activity is merged into only this grid.</p></div>
+        <div class="z-component-lab-heading"><div><span class="z-section-kicker">REST + SignalR · infinite scroll</span><h2 id="live-grid-title">Live catalogue, no pagination chrome</h2></div><p>The observer watches this grid’s own viewport. Live changes wait for a deliberate refresh instead of moving the page.</p></div>
         @await Component.InvokeAsync("ZoorceDataGrid", new ZoorceDataGridOptions
         {
             Id = "component-grid-infinite",
@@ -79,20 +95,22 @@ This component is rendered **server-side** with advanced Markdown syntax, while 
             RealtimeHubUrl = "/hubs/component-activity",
             RealtimeEventName = "component-change",
             LoadMode = ZoorceDataLoadMode.InfiniteScroll,
-            PageSize = 4,
+            PageSize = 30,
             Virtualize = true,
+            ViewportHeight = 460,
+            RealtimeBehavior = ZoorceDataGridRealtimeBehavior.Badge,
             Columns = columns,
             InitialItems = starterRows,
-            InitialTotalCount = 20
+            InitialTotalCount = 280
         })
     </section>
 
     <section class="z-component-lab-section" aria-labelledby="chart-title">
         <div class="z-component-lab-heading"><div><span class="z-section-kicker">Native SVG · REST + SignalR</span><h2 id="chart-title">Charts without a charting dependency</h2></div><p>Line, area, bar, donut and sparkline presentations share the same small data contract.</p></div>
         <div class="z-component-lab-charts">
-            @await Component.InvokeAsync("ZoorceChart", new ZoorceChartOptions { Id = "adoption-line", Title = "Component adoption", Summary = "Live component adoption for the last six months", Kind = ZoorceChartKind.Area, SourceUrl = "/api/charts/adoption", RealtimeHubUrl = "/hubs/component-activity", RealtimeEventName = "adoption-update", Series = initialSeries })
-            @await Component.InvokeAsync("ZoorceChart", new ZoorceChartOptions { Id = "quality-bars", Title = "Quality trend", Summary = "Quality trends by month", Kind = ZoorceChartKind.Bar, Series = initialSeries })
-            @await Component.InvokeAsync("ZoorceChart", new ZoorceChartOptions { Id = "adoption-donut", Title = "Adoption signal", Summary = "Current adoption proportion", Kind = ZoorceChartKind.Donut, Series = initialSeries })
+            @await Component.InvokeAsync("ZoorceChart", new ZoorceChartOptions { Id = "adoption-line", Title = "Component adoption", Summary = "Adoption against its target over the last six months", Kind = ZoorceChartKind.Area, Size = ZoorceChartSize.Wide, ValueSuffix = "%", SourceUrl = "/api/charts/adoption", RealtimeHubUrl = "/hubs/component-activity", RealtimeEventName = "adoption-update", Series = initialSeries })
+            @await Component.InvokeAsync("ZoorceChart", new ZoorceChartOptions { Id = "quality-bars", Title = "Release checks", Summary = "Checks passed and checks reviewed by month", Kind = ZoorceChartKind.Bar, ValueSuffix = "%", Series = releaseSeries })
+            @await Component.InvokeAsync("ZoorceChart", new ZoorceChartOptions { Id = "adoption-donut", Title = "Adoption signal", Summary = "Current component adoption proportion", Kind = ZoorceChartKind.Donut, ValueSuffix = "%", Series = initialSeries })
         </div>
     </section>
 

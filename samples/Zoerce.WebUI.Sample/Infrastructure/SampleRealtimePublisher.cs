@@ -5,16 +5,17 @@ namespace Zoerce.WebUI.Sample.Infrastructure;
 
 public sealed class SampleRealtimePublisher(
     SampleComponentCatalog catalog,
-    IHubContext<ComponentActivityHub> hub) : BackgroundService
+    IHubContext<ComponentActivityHub> hub)
 {
-    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    /// <summary>
+    /// Emits one demonstrative update only when a person explicitly asks for it.
+    /// Keeping the sample quiet by default makes layout and data behaviour inspectable.
+    /// </summary>
+    public async Task<ComponentCatalogItem> PublishAsync(CancellationToken cancellationToken = default)
     {
-        while (!stoppingToken.IsCancellationRequested)
-        {
-            await Task.Delay(TimeSpan.FromSeconds(8), stoppingToken);
-            var item = catalog.AdvanceActivity();
-            await hub.Clients.All.SendAsync("component-change", new ZoorceDataChange<ComponentCatalogItem>(ZoorceDataChangeKind.Upsert, item.Id, item), stoppingToken);
-            await hub.Clients.All.SendAsync("adoption-update", SampleChartData.Create(), stoppingToken);
-        }
+        var item = catalog.AdvanceActivity();
+        await hub.Clients.All.SendAsync("component-change", new ZoorceDataChange<ComponentCatalogItem>(ZoorceDataChangeKind.Upsert, item.Id, item), cancellationToken);
+        await hub.Clients.All.SendAsync("adoption-update", SampleChartData.Create(), cancellationToken);
+        return item;
     }
 }

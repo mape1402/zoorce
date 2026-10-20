@@ -41,6 +41,21 @@ public sealed record ZoorceDataGridOptions
     /// <summary>Gets whether an additional virtual-window hint should be applied while appending rows.</summary>
     public bool Virtualize { get; init; }
 
+    /// <summary>Gets the field that uniquely identifies a row for stable updates and virtual scrolling.</summary>
+    public string RowKeyField { get; init; } = "id";
+
+    /// <summary>Gets the fixed height, in pixels, of the scroll viewport used by infinite mode.</summary>
+    public int ViewportHeight { get; init; } = 520;
+
+    /// <summary>Gets the distance from the end of the viewport that requests the next page.</summary>
+    public int PrefetchThreshold { get; init; } = 144;
+
+    /// <summary>Gets the number of additional virtual rows preserved before and after the visible window.</summary>
+    public int VirtualizationOverscan { get; init; } = 8;
+
+    /// <summary>Gets how this isolated grid handles optional realtime changes.</summary>
+    public ZoorceDataGridRealtimeBehavior RealtimeBehavior { get; init; } = ZoorceDataGridRealtimeBehavior.Badge;
+
     /// <summary>Validates and normalizes host-provided configuration.</summary>
     public ZoorceDataGridOptions Normalize()
     {
@@ -66,7 +81,11 @@ public sealed record ZoorceDataGridOptions
             SourceUrl = SourceUrl.Trim(),
             RealtimeHubUrl = string.IsNullOrWhiteSpace(RealtimeHubUrl) ? null : RealtimeHubUrl.Trim(),
             RealtimeEventName = string.IsNullOrWhiteSpace(RealtimeEventName) ? null : RealtimeEventName.Trim(),
-            PageSize = Math.Clamp(PageSize, 1, 100)
+            PageSize = Math.Clamp(PageSize, 1, 100),
+            RowKeyField = string.IsNullOrWhiteSpace(RowKeyField) ? "id" : RowKeyField.Trim(),
+            ViewportHeight = Math.Clamp(ViewportHeight, 240, 1_200),
+            PrefetchThreshold = Math.Clamp(PrefetchThreshold, 0, 1_000),
+            VirtualizationOverscan = Math.Clamp(VirtualizationOverscan, 0, 40)
         };
     }
 }

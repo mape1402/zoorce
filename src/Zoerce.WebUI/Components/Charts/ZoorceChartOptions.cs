@@ -15,6 +15,12 @@ public sealed record ZoorceChartOptions
     /// <summary>Gets the visualization type.</summary>
     public ZoorceChartKind Kind { get; init; } = ZoorceChartKind.Line;
 
+    /// <summary>Gets the responsive visual density of the chart.</summary>
+    public ZoorceChartSize Size { get; init; } = ZoorceChartSize.Standard;
+
+    /// <summary>Gets an optional suffix presented with the primary metric, for example <c>%</c>.</summary>
+    public string? ValueSuffix { get; init; }
+
     /// <summary>Gets an optional REST source that returns chart series.</summary>
     public string? SourceUrl { get; init; }
 
@@ -45,6 +51,7 @@ public sealed record ZoorceChartOptions
             Id = Id.Trim(),
             Title = string.IsNullOrWhiteSpace(Title) ? "Chart" : Title.Trim(),
             Summary = string.IsNullOrWhiteSpace(Summary) ? "Data visualization" : Summary.Trim(),
+            ValueSuffix = string.IsNullOrWhiteSpace(ValueSuffix) ? null : ValueSuffix.Trim(),
             SourceUrl = string.IsNullOrWhiteSpace(SourceUrl) ? null : SourceUrl.Trim(),
             RealtimeHubUrl = string.IsNullOrWhiteSpace(RealtimeHubUrl) ? null : RealtimeHubUrl.Trim(),
             RealtimeEventName = string.IsNullOrWhiteSpace(RealtimeEventName) ? null : RealtimeEventName.Trim()

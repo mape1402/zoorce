@@ -9,12 +9,22 @@ public static class SampleChartData
             new
             {
                 Name = "Adoption",
-                Points = Enumerable.Range(1, 12).Select(index => new { Label = $"W{index}", Value = 42 + index * 4 + Random.Shared.Next(0, 8) })
+                Points = new[]
+                {
+                    new { Label = "May", Value = 54 }, new { Label = "Jun", Value = 61 },
+                    new { Label = "Jul", Value = 63 }, new { Label = "Aug", Value = 70 },
+                    new { Label = "Sep", Value = 76 }, new { Label = "Oct", Value = 82 }
+                }
             },
             new
             {
-                Name = "Quality",
-                Points = Enumerable.Range(1, 12).Select(index => new { Label = $"W{index}", Value = 35 + index * 3 + Random.Shared.Next(0, 7) })
+                Name = "Target",
+                Points = new[]
+                {
+                    new { Label = "May", Value = 52 }, new { Label = "Jun", Value = 58 },
+                    new { Label = "Jul", Value = 64 }, new { Label = "Aug", Value = 68 },
+                    new { Label = "Sep", Value = 74 }, new { Label = "Oct", Value = 80 }
+                }
             }
         }
     };

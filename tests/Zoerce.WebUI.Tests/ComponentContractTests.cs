@@ -75,7 +75,12 @@ public sealed class ComponentContractTests
             SourceUrl = " /api/components ",
             RealtimeHubUrl = " /hubs/components ",
             RealtimeEventName = " component-change ",
-            PageSize = 1000
+            PageSize = 1000,
+            RowKeyField = " componentId ",
+            ViewportHeight = 5000,
+            PrefetchThreshold = 5000,
+            VirtualizationOverscan = 100,
+            RealtimeBehavior = ZoorceDataGridRealtimeBehavior.Patch
         };
 
         var normalized = options.Normalize();
@@ -90,6 +95,11 @@ public sealed class ComponentContractTests
         Assert.Empty(normalized.InitialItems);
         Assert.Null(normalized.InitialTotalCount);
         Assert.False(normalized.Virtualize);
+        Assert.Equal("componentId", normalized.RowKeyField);
+        Assert.Equal(1_200, normalized.ViewportHeight);
+        Assert.Equal(1_000, normalized.PrefetchThreshold);
+        Assert.Equal(40, normalized.VirtualizationOverscan);
+        Assert.Equal(ZoorceDataGridRealtimeBehavior.Patch, normalized.RealtimeBehavior);
     }
 
     [Fact]
@@ -101,6 +111,10 @@ public sealed class ComponentContractTests
             RealtimeHubUrl = " ",
             RealtimeEventName = " ",
             PageSize = 0,
+            RowKeyField = " ",
+            ViewportHeight = 0,
+            PrefetchThreshold = -1,
+            VirtualizationOverscan = -1,
             LoadMode = ZoorceDataLoadMode.InfiniteScroll,
             Virtualize = true,
             InitialItems = [new Dictionary<string, string?> { ["name"] = "Grid" }],
@@ -117,6 +131,11 @@ public sealed class ComponentContractTests
         Assert.True(normalized.Virtualize);
         Assert.Equal("Grid", normalized.InitialItems.Single()["name"]);
         Assert.Equal(1, normalized.InitialTotalCount);
+        Assert.Equal("id", normalized.RowKeyField);
+        Assert.Equal(240, normalized.ViewportHeight);
+        Assert.Equal(0, normalized.PrefetchThreshold);
+        Assert.Equal(0, normalized.VirtualizationOverscan);
+        Assert.Equal(ZoorceDataGridRealtimeBehavior.Badge, normalized.RealtimeBehavior);
     }
 
     [Theory]
@@ -154,6 +173,7 @@ public sealed class ComponentContractTests
             Id = " chart ",
             Title = " title ",
             Summary = " summary ",
+            ValueSuffix = " % ",
             SourceUrl = " /api/chart ",
             RealtimeHubUrl = " /hub ",
             RealtimeEventName = " update " 
@@ -163,6 +183,7 @@ public sealed class ComponentContractTests
         Assert.Equal("chart", normalized.Id);
         Assert.Equal("title", normalized.Title);
         Assert.Equal("summary", normalized.Summary);
+        Assert.Equal("%", normalized.ValueSuffix);
         Assert.Equal("/api/chart", normalized.SourceUrl);
         Assert.Equal("/hub", normalized.RealtimeHubUrl);
         Assert.Equal("update", normalized.RealtimeEventName);
@@ -178,7 +199,7 @@ public sealed class ComponentContractTests
     {
         var normalized = CreateChart() with
         {
-            Title = " ", Summary = " ", SourceUrl = " ", RealtimeHubUrl = " ", RealtimeEventName = " ", Kind = ZoorceChartKind.Sparkline
+            Title = " ", Summary = " ", ValueSuffix = " ", SourceUrl = " ", RealtimeHubUrl = " ", RealtimeEventName = " ", Kind = ZoorceChartKind.Sparkline, Size = ZoorceChartSize.Compact
         };
 
         normalized = normalized.Normalize();
@@ -188,10 +209,13 @@ public sealed class ComponentContractTests
         Assert.Null(normalized.SourceUrl);
         Assert.Null(normalized.RealtimeHubUrl);
         Assert.Null(normalized.RealtimeEventName);
+        Assert.Null(normalized.ValueSuffix);
         Assert.Equal(ZoorceChartKind.Sparkline, normalized.Kind);
+        Assert.Equal(ZoorceChartSize.Compact, normalized.Size);
         Assert.Contains(ZoorceChartKind.Line, Enum.GetValues<ZoorceChartKind>());
         Assert.Contains(ZoorceChartKind.Bar, Enum.GetValues<ZoorceChartKind>());
         Assert.Contains(ZoorceChartKind.Donut, Enum.GetValues<ZoorceChartKind>());
+        Assert.Contains(ZoorceChartSize.Wide, Enum.GetValues<ZoorceChartSize>());
     }
 
     [Fact]

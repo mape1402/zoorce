@@ -25,7 +25,7 @@ builder.Services.AddRazorPages().AddZoerceWebUI(options =>
 builder.Services.AddScoped<INavigationProvider, SampleNavigationProvider>();
 builder.Services.AddScoped<IUserMenuProvider, SampleUserMenuProvider>();
 builder.Services.AddSingleton<SampleComponentCatalog>();
-builder.Services.AddHostedService<SampleRealtimePublisher>();
+builder.Services.AddSingleton<SampleRealtimePublisher>();
 builder.Services.AddSignalR().AddJsonProtocol(options => options.PayloadSerializerOptions.Converters.Add(new JsonStringEnumConverter(JsonNamingPolicy.CamelCase)));
 
 var app = builder.Build();
@@ -65,5 +65,10 @@ app.MapGet("/api/components", async (string? search, string? sort, bool? descend
     return Results.Ok(await catalog.QueryAsync(query, request, cancellationToken));
 });
 app.MapGet("/api/charts/adoption", () => Results.Ok(SampleChartData.Create()));
+app.MapPost("/api/demo/activity", async (SampleRealtimePublisher publisher, CancellationToken cancellationToken) =>
+{
+    var changed = await publisher.PublishAsync(cancellationToken);
+    return Results.Ok(new { changed.Id, changed.Name });
+});
 
 app.Run();

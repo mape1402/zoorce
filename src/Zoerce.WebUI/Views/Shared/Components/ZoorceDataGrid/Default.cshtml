@@ -14,11 +14,17 @@
         columns = Model.Columns,
         realtimeHubUrl = Model.RealtimeHubUrl,
         realtimeEventName = Model.RealtimeEventName,
-        virtualize = Model.Virtualize
+        virtualize = Model.Virtualize,
+        rowKeyField = Model.RowKeyField,
+        viewportHeight = Model.ViewportHeight,
+        prefetchThreshold = Model.PrefetchThreshold,
+        virtualizationOverscan = Model.VirtualizationOverscan,
+        realtimeBehavior = Model.RealtimeBehavior
     }, serializerOptions);
     string? ValueFor(IReadOnlyDictionary<string, string?> item, string field) => item.TryGetValue(field, out var value) ? value : null;
+    var isInfinite = Model.LoadMode == ZoorceDataLoadMode.InfiniteScroll;
 }
-<section id="@Model.Id" class="z-component z-data-grid-component" data-z-data-grid aria-label="@Model.AriaLabel">
+<section id="@Model.Id" class="z-component z-data-grid-component @(isInfinite ? "is-infinite" : "is-paginated")" data-z-data-grid aria-label="@Model.AriaLabel">
     <script type="application/json" data-z-grid-config>@Html.Raw(configuration)</script>
     <div class="z-toolbar">
         @if (Model.EnableSearch)
@@ -27,44 +33,49 @@
         }
         <span class="z-component-state" data-z-grid-state aria-live="polite"></span>
     </div>
-    <div class="z-data-shell">
-        <table class="z-data-grid">
-            <thead><tr>
-                @foreach (var column in Model.Columns)
-                {
-                    <th scope="col">
-                        @if (column.Sortable)
-                        {
-                            <button type="button" data-z-grid-sort="@column.Field" aria-sort="none">@column.Title <span aria-hidden="true">↕</span></button>
-                        }
-                        else
-                        {
-                            @column.Title
-                        }
-                    </th>
-                }
-            </tr></thead>
-            <tbody data-z-grid-body>
-                @foreach (var item in Model.InitialItems)
-                {
-                    <tr>
-                        @foreach (var column in Model.Columns)
-                        {
-                            <td>@ValueFor(item, column.Field)</td>
-                        }
-                    </tr>
-                }
-            </tbody>
-        </table>
-        <div class="z-grid-empty" data-z-grid-empty hidden>No matching records.</div>
+    <div class="z-data-grid-viewport" data-z-grid-viewport tabindex="0" style="--z-grid-viewport-height:@(Model.ViewportHeight)px">
+        <div class="z-data-shell">
+            <table class="z-data-grid">
+                <thead><tr>
+                    @foreach (var column in Model.Columns)
+                    {
+                        <th scope="col">
+                            @if (column.Sortable)
+                            {
+                                <button type="button" data-z-grid-sort="@column.Field" aria-sort="none">@column.Title <span aria-hidden="true">↕</span></button>
+                            }
+                            else
+                            {
+                                @column.Title
+                            }
+                        </th>
+                    }
+                </tr></thead>
+                <tbody data-z-grid-body>
+                    @foreach (var item in Model.InitialItems)
+                    {
+                        <tr data-z-grid-key="@ValueFor(item, Model.RowKeyField)">
+                            @foreach (var column in Model.Columns)
+                            {
+                                <td>@ValueFor(item, column.Field)</td>
+                            }
+                        </tr>
+                    }
+                </tbody>
+            </table>
+            <div class="z-grid-empty" data-z-grid-empty hidden>No matching records.</div>
+        </div>
+        <div class="z-grid-sentinel" data-z-grid-sentinel hidden aria-hidden="true"></div>
+        <button type="button" class="z-button z-button-ghost z-grid-load-more" data-z-grid-load-more hidden>Load more</button>
+    </div>
+    <div class="z-grid-footer">
+        <span data-z-grid-summary>Showing @Model.InitialItems.Count@(Model.InitialTotalCount is int total ? $" of {total}" : string.Empty)</span>
+        <button type="button" class="z-grid-update-notice" data-z-grid-update-notice hidden></button>
         <div class="z-pagination" data-z-grid-pagination>
-            <span data-z-grid-summary>Showing @Model.InitialItems.Count@(Model.InitialTotalCount is int total ? $" of {total}" : string.Empty)</span>
             <div class="z-pagination-actions">
                 <button type="button" data-z-grid-previous aria-label="Previous page">←</button>
                 <button type="button" data-z-grid-next aria-label="Next page">→</button>
             </div>
         </div>
-        <div class="z-grid-sentinel" data-z-grid-sentinel hidden aria-hidden="true"></div>
-        <button type="button" class="z-button z-button-ghost z-grid-load-more" data-z-grid-load-more hidden>Load more</button>
     </div>
 </section>
