@@ -435,8 +435,11 @@
                 this.drag.positions.forEach(entry => {
                     const node = this.node(entry.id);
                     if (node) {
-                        node.position.x = clamp(entry.position.x + deltaX, -400, canvasWidth - 30);
-                        node.position.y = clamp(entry.position.y + deltaY, -300, canvasHeight - 30);
+                        const nextPosition = {
+                            x: clamp(entry.position.x + deltaX, -400, canvasWidth - 30),
+                            y: clamp(entry.position.y + deltaY, -300, canvasHeight - 30)
+                        };
+                        Object.assign(node.position, this.snapNodePosition(node, nextPosition));
                     }
                 });
                 this.renderScene();
@@ -474,9 +477,9 @@
                 const drag = this.drag;
                 const moved = drag.moved;
                 if (moved) {
-                    if (this.configuration.snapToGrid) this.document.nodes.forEach(node => {
-                        node.position.x = this.snap(node.position.x);
-                        node.position.y = this.snap(node.position.y);
+                    drag.positions.forEach(entry => {
+                        const node = this.node(entry.id);
+                        if (node) Object.assign(node.position, this.snapNodePosition(node, node.position));
                     });
                     this.history.push(drag.before);
                     this.future = [];
@@ -642,6 +645,14 @@
             return false;
         }
         snap(value) { return Math.round(value / number(this.configuration.gridSize, 24)) * number(this.configuration.gridSize, 24); }
+        snapNodePosition(node, position) {
+            if (!this.configuration.snapToGrid) return position;
+            const size = this.nodeSize(node);
+            return {
+                x: this.snap(position.x + size.width / 2) - size.width / 2,
+                y: this.snap(position.y + size.height / 2) - size.height / 2
+            };
+        }
         snapshot() { return clone(this.document); }
 
         change(message, mutation) {
@@ -881,13 +892,13 @@
             const index = this.document.nodes.length;
             const offset = index % 5;
             const size = this.nodeSize({ kind: normalizedKind });
-            const snap = value => this.configuration.snapToGrid ? this.snap(value) : Math.round(value);
             const position = droppedAt
                 ? {
-                    x: clamp(snap(number(droppedAt.x) - size.width / 2), 0, canvasWidth - size.width),
-                    y: clamp(snap(number(droppedAt.y) - size.height / 2), 0, canvasHeight - size.height)
+                    x: clamp(number(droppedAt.x) - size.width / 2, 0, canvasWidth - size.width),
+                    y: clamp(number(droppedAt.y) - size.height / 2, 0, canvasHeight - size.height)
                 }
-                : { x: this.snap(120 + offset * 190), y: this.snap(130 + Math.floor(index / 5) * 142) };
+                : { x: 120 + offset * 190, y: 130 + Math.floor(index / 5) * 142 };
+            Object.assign(position, this.snapNodePosition({ kind: normalizedKind }, position));
             this.change("New " + titleForKind(normalizedKind).toLowerCase() + " added.", () => {
                 this.document.nodes.push({
                     id: idFor(normalizedKind, this.document.nodes),
@@ -1271,10 +1282,12 @@
             const horizontalEnd = ["left", "right"].includes(toSide);
             const lane = (index - (count - 1) / 2) * 20;
             if (horizontalStart && horizontalEnd) {
+                if (Math.abs(start.y - end.y) < .01 && !lane) return "M " + start.x + " " + start.y + " H " + end.x;
                 const middle = (start.x + end.x) / 2 + lane;
                 return "M " + start.x + " " + start.y + " H " + middle + " V " + end.y + " H " + end.x;
             }
             if (!horizontalStart && !horizontalEnd) {
+                if (Math.abs(start.x - end.x) < .01 && !lane) return "M " + start.x + " " + start.y + " V " + end.y;
                 const middle = (start.y + end.y) / 2 + lane;
                 return "M " + start.x + " " + start.y + " V " + middle + " H " + end.x + " V " + end.y;
             }

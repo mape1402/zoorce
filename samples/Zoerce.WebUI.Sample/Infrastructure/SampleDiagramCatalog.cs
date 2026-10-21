@@ -10,12 +10,12 @@ public sealed class SampleDiagramCatalog
         ["flow"] = new ZoorceDiagramDocument(1,
         [
             Node("start", "start", "Request received", 70, 330, "Event trigger", ZoorceDiagramTone.Success),
-            Node("triage", "process", "Triage request", 300, 330, "Classify and enrich", ZoorceDiagramTone.Info),
-            Node("decision", "decision", "Ready to ship?", 545, 330, "Policy decision", ZoorceDiagramTone.Warning, style: new(FillColor: "#fff3d6", BorderColor: "#d78a19", TextColor: "#39230a", CornerRadius: 8m)),
+            Node("triage", "process", "Triage request", 300, 339, "Classify and enrich", ZoorceDiagramTone.Info),
+            Node("decision", "decision", "Ready to ship?", 545, 321, "Policy decision", ZoorceDiagramTone.Warning, style: new(FillColor: "#fff3d6", BorderColor: "#d78a19", TextColor: "#39230a", CornerRadius: 8m)),
             Node("release", "process", "Create release", 805, 178, "Publish change", ZoorceDiagramTone.Primary, new(ZoorceDiagramActionKind.Event, "flow-release"), new(Gradient: new("#7c5cff", "#2aa8ff", 132), TextColor: "#ffffff", BorderColor: "#9b8cff", FontWeight: 800)),
             Node("hold", "process", "Request changes", 805, 492, "Return to owner", ZoorceDiagramTone.Danger),
-            Node("done", "end", "Completed", 1080, 178, "Release is visible", ZoorceDiagramTone.Success),
-            Node("closed", "end", "Closed", 1080, 492, "Needs more work", ZoorceDiagramTone.Neutral)
+            Node("done", "end", "Completed", 1080, 169, "Release is visible", ZoorceDiagramTone.Success),
+            Node("closed", "end", "Closed", 1080, 483, "Needs more work", ZoorceDiagramTone.Neutral)
         ],
         [
             Edge("edge-start", "start", "triage"), Edge("edge-triage", "triage", "decision"),
