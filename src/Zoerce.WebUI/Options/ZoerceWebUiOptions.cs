@@ -1,3 +1,5 @@
+using Zoerce.WebUI.Components.Diagrams;
+
 namespace Zoerce.WebUI.Options;
 
 /// <summary>
@@ -40,6 +42,11 @@ public sealed class ZoerceWebUiOptions
     /// Gets or sets the vertical density used by the sidebar navigation.
     /// </summary>
     public ZoorceNavigationDensity NavigationDensity { get; set; } = ZoorceNavigationDensity.Compact;
+
+    /// <summary>
+    /// Gets or sets the default export policy used by diagrams that do not provide a local export configuration.
+    /// </summary>
+    public ZoorceDiagramExportOptions DiagramExport { get; set; } = new();
 
     /// <summary>
     /// Gets the light palette exposed as semantic CSS variables.

@@ -80,6 +80,33 @@ public enum ZoorceDiagramActionKind
     Endpoint
 }
 
+/// <summary>Identifies a portable representation that can be produced from a diagram document.</summary>
+public enum ZoorceDiagramExportFormat
+{
+    Json,
+    Svg,
+    Jpeg,
+    Html,
+    Pdf
+}
+
+/// <summary>Controls the background rendered behind an exported diagram.</summary>
+public enum ZoorceDiagramExportBackground
+{
+    Theme,
+    Transparent,
+    Solid
+}
+
+/// <summary>Controls how PDF output is produced for a diagram export.</summary>
+public enum ZoorceDiagramPdfMode
+{
+    /// <summary>Opens a print-ready vector view so the browser can save it as a PDF.</summary>
+    BrowserPrint,
+    /// <summary>Posts the export payload to a host-provided endpoint that returns a PDF file.</summary>
+    Server
+}
+
 /// <summary>Defines a point in the diagram's vector coordinate system.</summary>
 public sealed record ZoorceDiagramPoint(decimal X, decimal Y);
 
@@ -144,7 +171,9 @@ public sealed record ZoorceDiagramDocument(
     int SchemaVersion = 1,
     IReadOnlyList<ZoorceDiagramNode>? Nodes = null,
     IReadOnlyList<ZoorceDiagramEdge>? Edges = null,
-    string? Version = null)
+    string? Version = null,
+    string? Title = null,
+    string? Description = null)
 {
     /// <summary>Gets nodes as a never-null collection for hosts that build documents incrementally.</summary>
     [JsonIgnore]

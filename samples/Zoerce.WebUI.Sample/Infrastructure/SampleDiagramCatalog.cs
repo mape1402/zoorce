@@ -90,5 +90,7 @@ public sealed class SampleDiagramCatalog
         => new(document.SchemaVersion,
             document.NodeList.Select(node => node with { Position = node.Position with { }, Action = node.Action is null ? null : node.Action with { } }).ToArray(),
             document.EdgeList.Select(edge => edge with { }).ToArray(),
-            document.Version);
+            document.Version,
+            document.Title,
+            document.Description);
 }

@@ -6,8 +6,11 @@
 @{
     var serializerOptions = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
     serializerOptions.Converters.Add(new JsonStringEnumConverter());
+    var export = Model.Export ?? new ZoorceDiagramExportOptions().Normalize(Model.Title);
     var configuration = JsonSerializer.Serialize(new
     {
+        title = Model.Document.Title ?? Model.Title,
+        summary = Model.Document.Description ?? Model.Summary,
         profile = Model.Profile,
         mode = Model.Mode,
         layout = Model.Layout,
@@ -25,7 +28,21 @@
         gridSize = Model.GridSize,
         minimumZoom = Model.MinimumZoom,
         maximumZoom = Model.MaximumZoom,
-        initialZoom = Model.InitialZoom
+        initialZoom = Model.InitialZoom,
+        export = new
+        {
+            enabled = export.Enabled,
+            allowedFormats = export.AllowedFormats,
+            defaultFormat = export.DefaultFormat,
+            fileName = export.FileName,
+            defaultPadding = export.DefaultPadding,
+            defaultJpegScale = export.DefaultJpegScale,
+            jpegScales = export.JpegScales,
+            defaultBackground = export.DefaultBackground,
+            solidBackground = export.SolidBackground,
+            pdfMode = export.PdfMode,
+            pdfExportUrl = export.PdfExportUrl
+        }
     }, serializerOptions);
     var isEditor = Model.Mode == ZoorceDiagramMode.Editor;
     var palette = Model.Profile switch
@@ -68,7 +85,7 @@
 <section id="@Model.Id" class="z-component z-diagram" data-z-diagram data-z-diagram-profile="@Model.Profile" data-z-diagram-mode="@Model.Mode" aria-label="@Model.Summary">
     <script type="application/json" data-z-diagram-config>@Html.Raw(configuration)</script>
     <header class="z-diagram-header">
-        <div><span class="z-section-kicker">@Model.Profile diagram</span><h2>@Model.Title</h2><p>@Model.Summary</p></div>
+        <div><span class="z-section-kicker">@Model.Profile diagram</span><div class="z-diagram-title-row"><h2 data-z-diagram-document-title>@(Model.Document.Title ?? Model.Title)</h2>@if (isEditor) { <button class="z-icon-button z-diagram-title-edit" type="button" data-z-diagram-command="edit-title" data-z-diagram-edit-title aria-label="Rename diagram" title="Rename diagram"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 16.5-.8 4.3 4.3-.8L18.6 8.9l-3.5-3.5z" /><path d="m13.9 4.7 3.5 3.5" /></svg></button> }</div><p class="z-diagram-description-row"><span data-z-diagram-document-description>@(Model.Document.Description ?? Model.Summary)</span>@if (isEditor) { <button class="z-icon-button z-diagram-description-edit" type="button" data-z-diagram-command="edit-description" data-z-diagram-edit-description aria-label="Edit diagram description" title="Edit description"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 16.5-.8 4.3 4.3-.8L18.6 8.9l-3.5-3.5z" /><path d="m13.9 4.7 3.5 3.5" /></svg></button> }</p></div>
         <div class="z-diagram-state"><span data-z-diagram-status aria-live="polite">Ready</span><span class="z-badge z-badge-primary" data-z-diagram-dirty hidden>Unsaved</span></div>
     </header>
 
@@ -91,9 +108,18 @@
                 <button class="z-icon-button" type="button" data-z-diagram-command="toggle-overview" data-z-diagram-overview-toggle data-z-tooltip="Show diagram overview" aria-pressed="false" aria-label="Show diagram overview"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="4.5" width="17" height="15" rx="2" /><path d="M7 15.5 10 12l2.3 1.9 3.7-4 1 1.1" /><circle cx="8" cy="8.5" r="1" /></svg></button>
             }
         </div>
-        @if (isEditor)
+        @if (isEditor || export.Enabled)
         {
-            <div class="z-button-group z-diagram-toolbar-save"><button class="z-icon-button" type="button" data-z-diagram-command="save" data-z-tooltip="Save now" aria-label="Save now"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3h11l3 3v15H5z" /><path d="M8 3v6h8V3" /><path d="M8 21v-7h8v7" /></svg></button></div>
+            <div class="z-button-group z-diagram-toolbar-save">
+                @if (isEditor)
+                {
+                    <button class="z-icon-button" type="button" data-z-diagram-command="save" data-z-tooltip="Save now" aria-label="Save now"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3h11l3 3v15H5z" /><path d="M8 3v6h8V3" /><path d="M8 21v-7h8v7" /></svg></button>
+                }
+                @if (export.Enabled)
+                {
+                    <button class="z-icon-button" type="button" data-z-diagram-command="export" data-z-tooltip="Export diagram" aria-label="Export diagram"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v11" /><path d="m7.5 9 4.5 5 4.5-5" /><path d="M5 14v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5" /></svg></button>
+                }
+            </div>
         }
         <div class="z-button-group z-diagram-toolbar-focus"><button class="z-icon-button" type="button" data-z-diagram-command="focus" data-z-diagram-focus-toggle data-z-tooltip="Focus canvas" aria-pressed="false" aria-label="Enter focus mode"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H3v5M16 3h5v5M21 16v5h-5M3 16v5h5" /></svg></button></div>
     </div>
@@ -149,5 +175,19 @@
             }
         </ol>
     </footer>
+    @if (export.Enabled)
+    {
+        <section class="z-diagram-export-modal" data-z-diagram-export-modal hidden aria-hidden="true">
+            <div class="z-diagram-export-backdrop" data-z-diagram-export-close></div>
+            <div class="z-diagram-export-dialog" role="dialog" aria-modal="true" aria-labelledby="@Model.Id-export-title" tabindex="-1">
+                <header class="z-diagram-export-header"><div><span class="z-section-kicker">Portable diagram</span><h3 id="@Model.Id-export-title">Export diagram</h3><p>Choose a format, tune the output, then download a clean snapshot.</p></div><button class="z-icon-button" type="button" data-z-diagram-export-close aria-label="Close export dialog">×</button></header>
+                <div class="z-diagram-export-layout">
+                    <nav class="z-diagram-export-formats" data-z-diagram-export-formats aria-label="Export formats" role="tablist"></nav>
+                    <section class="z-diagram-export-settings" data-z-diagram-export-settings role="tabpanel" tabindex="0"></section>
+                </div>
+                <footer class="z-diagram-export-footer"><label>File name<input class="z-input" type="text" data-z-diagram-export-name autocomplete="off" /></label><div><button class="z-button" type="button" data-z-diagram-export-close>Cancel</button><button class="z-button z-button-primary" type="button" data-z-diagram-export-download>Download</button></div></footer>
+            </div>
+        </section>
+    }
     <noscript><div class="z-diagram-noscript"><strong>@Model.Title</strong><ol>@foreach (var node in Model.Document.NodeList){<li>@node.Title (@node.Kind)</li>}</ol></div></noscript>
 </section>

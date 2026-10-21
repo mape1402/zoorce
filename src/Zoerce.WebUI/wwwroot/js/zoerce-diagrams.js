@@ -19,6 +19,13 @@
     ]);
     const tones = new Set(["Neutral", "Primary", "Success", "Warning", "Danger", "Info"]);
     const actionKinds = new Set(["None", "Navigate", "Panel", "Modal", "Event", "Command", "Endpoint"]);
+    const exportFormats = new Map([
+        ["json", { label: "JSON", extension: "json", kind: "Source", icon: "{}", description: "Editable source document for saving, versioning, and reimporting." }],
+        ["svg", { label: "SVG", extension: "svg", kind: "Vector", icon: "◇", description: "Crisp vector artwork for documentation, slides, and design tools." }],
+        ["jpeg", { label: "JPG", extension: "jpg", kind: "Image", icon: "▧", description: "A shareable raster image with configurable resolution and quality." }],
+        ["html", { label: "HTML", extension: "html", kind: "Web", icon: "</>", description: "A standalone, offline visual document with the diagram embedded." }],
+        ["pdf", { label: "PDF", extension: "pdf", kind: "Print", icon: "▤", description: "A print-ready vector view for reports and archival." }]
+    ]);
     const enumValue = (values, value, fallback) => [...values].find(candidate => key(candidate) === key(value)) ?? fallback;
 
     const create = (name, className) => {
@@ -47,6 +54,31 @@
         return /^#[0-9a-f]{3,8}$/i.test(candidate) ? candidate : null;
     };
     const colorForInput = (value, fallback) => /^#[0-9a-f]{6}$/i.test(text(value)) ? text(value) : fallback;
+    const escapeXml = value => String(value ?? "").replace(/[&<>"']/g, character => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&apos;" })[character]);
+    const safeFileName = value => text(value).replace(/[<>:"/\\|?*\u0000-\u001f]/g, "-").replace(/[. ]+$/g, "").slice(0, 96) || "diagram";
+    const normalizeExport = source => {
+        const rawFormats = Array.isArray(source?.allowedFormats) ? source.allowedFormats : ["Json", "Svg", "Jpeg", "Html", "Pdf"];
+        const allowedFormats = [...new Set(rawFormats.map(key).filter(format => exportFormats.has(format)))];
+        const formats = allowedFormats.length ? allowedFormats : ["svg"];
+        const rawScales = Array.isArray(source?.jpegScales) ? source.jpegScales : [1, 2, 3];
+        const jpegScales = [...new Set(rawScales.map(value => Math.round(number(value, 0))).filter(value => value >= 1 && value <= 4))].sort((left, right) => left - right);
+        const scales = jpegScales.length ? jpegScales : [1, 2, 3];
+        const defaultFormat = key(source?.defaultFormat);
+        const requestedScale = Math.round(number(source?.defaultJpegScale, 2));
+        return {
+            enabled: source?.enabled !== false,
+            formats,
+            format: formats.includes(defaultFormat) ? defaultFormat : formats.includes("svg") ? "svg" : formats[0],
+            fileName: safeFileName(source?.fileName),
+            padding: clamp(Math.round(number(source?.defaultPadding, 48)), 0, 240),
+            jpegScales: scales,
+            jpegScale: scales.includes(requestedScale) ? requestedScale : scales.reduce((best, value) => Math.abs(value - requestedScale) < Math.abs(best - requestedScale) ? value : best, scales[0]),
+            background: ["theme", "transparent", "solid"].includes(key(source?.defaultBackground)) ? key(source.defaultBackground) : "transparent",
+            solidBackground: color(source?.solidBackground) || null,
+            pdfMode: key(source?.pdfMode) === "server" && text(source?.pdfExportUrl) ? "server" : "browserprint",
+            pdfExportUrl: text(source?.pdfExportUrl) || null
+        };
+    };
     const idFor = (prefix, values) => {
         let index = values.length + 1;
         let id = prefix + "-" + index;
@@ -145,7 +177,9 @@
             schemaVersion: Math.max(1, Math.floor(number(document?.schemaVersion, 1))),
             nodes: validNodes,
             edges,
-            version: text(document?.version) || null
+            version: text(document?.version) || null,
+            title: text(document?.title) || null,
+            description: text(document?.description) || null
         };
     };
 
@@ -160,6 +194,8 @@
             this.profile = profiles[this.configuration.profile] ?? key(this.configuration.profile);
             this.mode = modes[this.configuration.mode] ?? key(this.configuration.mode);
             this.document = normalizeDocument(this.configuration.document);
+            this.ensureDocumentTitle();
+            this.ensureDocumentDescription();
             this.canvas = root.querySelector("[data-z-diagram-canvas]");
             this.world = root.querySelector("[data-z-diagram-world]");
             this.edgesLayer = root.querySelector("[data-z-diagram-edges]");
@@ -171,9 +207,31 @@
             this.wheelZoomToggle = root.querySelector("[data-z-diagram-wheel-zoom-toggle]");
             this.panHelp = root.querySelector("[data-z-diagram-pan-help]");
             this.status = root.querySelector("[data-z-diagram-status]");
+            this.titleElement = root.querySelector("[data-z-diagram-document-title]");
+            this.titleEdit = root.querySelector("[data-z-diagram-edit-title]");
+            this.descriptionElement = root.querySelector("[data-z-diagram-document-description]");
+            this.descriptionEdit = root.querySelector("[data-z-diagram-edit-description]");
             this.zoomInput = root.querySelector("[data-z-diagram-zoom]");
             this.dirtyBadge = root.querySelector("[data-z-diagram-dirty]");
             this.announcer = root.querySelector("[data-z-diagram-announcer]");
+            this.exportOptions = normalizeExport(this.configuration.export);
+            this.exportModal = root.querySelector("[data-z-diagram-export-modal]");
+            this.exportFormats = root.querySelector("[data-z-diagram-export-formats]");
+            this.exportSettings = root.querySelector("[data-z-diagram-export-settings]");
+            this.exportName = root.querySelector("[data-z-diagram-export-name]");
+            this.exportDownload = root.querySelector("[data-z-diagram-export-download]");
+            this.exportState = {
+                format: this.exportOptions.format,
+                fileName: this.exportOptions.fileName || safeFileName(this.root.id || "diagram"),
+                padding: this.exportOptions.padding,
+                jpegScale: this.exportOptions.jpegScale,
+                background: this.exportOptions.background,
+                solidBackground: this.exportOptions.solidBackground,
+                includeSource: true,
+                pdfPage: "a4-landscape"
+            };
+            this.exportPreviewUrl = null;
+            this.exportReturn = null;
             this.abortController = new AbortController();
             this.selection = new Set();
             this.selectedEdge = null;
@@ -215,6 +273,10 @@
             this.pendingPointerAction = null;
             this.lastNodeTap = null;
             this.ignoreNativeDoubleClickUntil = 0;
+            this.titleInput = null;
+            this.titleBeforeEdit = null;
+            this.descriptionInput = null;
+            this.descriptionBeforeEdit = null;
             this.resizeObserver = globalThis.ResizeObserver ? new ResizeObserver(() => this.renderViewport()) : null;
             this.resizeObserver?.observe(this.canvas);
             this.bind();
@@ -231,6 +293,8 @@
             this.root.addEventListener("pointerdown", event => this.onToolbarTooltipPointerDown(event), { signal });
             this.root.addEventListener("click", event => this.onClick(event), { signal });
             this.root.addEventListener("dblclick", event => this.onDoubleClick(event), { signal });
+            this.root.addEventListener("keydown", event => this.onMetadataKeyDown(event), { signal });
+            this.root.addEventListener("focusout", event => this.onMetadataFocusOut(event), { signal });
             this.root.addEventListener("dragstart", event => this.onPaletteDragStart(event), { signal });
             this.root.addEventListener("dragend", () => {
                 this.paletteDragKind = null;
@@ -266,12 +330,33 @@
             this.root.addEventListener("change", event => {
                 this.onInspectorFieldChanged(event.target);
             }, { signal });
+            this.exportModal?.addEventListener("keydown", event => this.onExportKeyDown(event), { signal });
+            this.exportModal?.addEventListener("input", event => this.onExportInput(event), { signal });
+            this.exportModal?.addEventListener("change", event => this.onExportInput(event), { signal });
         }
 
         onClick(event) {
+            const exportClose = event.target.closest("[data-z-diagram-export-close]");
+            if (exportClose) {
+                this.closeExport();
+                return;
+            }
+            const exportFormat = event.target.closest("[data-z-diagram-export-format]")?.dataset.zDiagramExportFormat;
+            if (exportFormat) {
+                this.selectExportFormat(exportFormat);
+                return;
+            }
+            if (event.target.closest("[data-z-diagram-export-download]")) {
+                this.downloadExport();
+                return;
+            }
             const commandElement = event.target.closest("[data-z-diagram-command]");
             const command = commandElement?.dataset.zDiagramCommand;
             if (command) {
+                // The export dialog is rendered above the toolbar. Explicitly clear
+                // the tooltip state before opening it, because a pointer that remains
+                // stationary over the trigger does not reliably emit pointerleave.
+                if (command === "export") this.dismissToolbarTooltips();
                 this.command(command);
                 if (commandElement.classList.contains("is-tooltip-suppressed")) commandElement.blur();
                 return;
@@ -365,6 +450,17 @@
             if (!trigger) return;
             trigger.classList.add("is-tooltip-suppressed");
             trigger.addEventListener("pointerleave", () => trigger.classList.remove("is-tooltip-suppressed"), { once: true });
+        }
+
+        dismissToolbarTooltips() {
+            this.root.querySelectorAll(".z-diagram-toolbar [data-z-tooltip]").forEach(trigger => {
+                trigger.classList.add("is-tooltip-suppressed");
+                trigger.blur?.();
+            });
+        }
+
+        restoreToolbarTooltips() {
+            this.root.querySelectorAll(".z-diagram-toolbar [data-z-tooltip]").forEach(trigger => trigger.classList.remove("is-tooltip-suppressed"));
         }
 
         onDoubleClick(event) {
@@ -634,10 +730,102 @@
             if (command === "toggle-overview") this.toggleOverview();
             if (command === "toggle-wheel-zoom") this.toggleWheelZoom();
             if (command === "focus") this.toggleFocusMode();
+            if (command === "export") this.openExport();
+            if (command === "edit-title" && this.editable) this.beginTitleEdit();
+            if (command === "edit-description" && this.editable) this.beginDescriptionEdit();
         }
 
         node(id) { return this.document.nodes.find(node => key(node.id) === key(id)); }
         edge(id) { return this.document.edges.find(edge => key(edge.id) === key(id)); }
+        ensureDocumentTitle() {
+            const title = text(this.document?.title) || text(this.configuration.title) || "Diagram";
+            this.document.title = title;
+            this.configuration.title = title;
+            return title;
+        }
+        ensureDocumentDescription() {
+            const description = text(this.document?.description) || text(this.configuration.summary) || "Interactive diagram";
+            this.document.description = description;
+            this.configuration.summary = description;
+            return description;
+        }
+        beginTitleEdit() {
+            if (!this.editable || !this.titleElement || this.titleInput) return;
+            this.titleBeforeEdit = this.ensureDocumentTitle();
+            const input = create("input", "z-diagram-title-input");
+            input.type = "text";
+            input.value = this.titleBeforeEdit;
+            input.maxLength = 140;
+            input.dataset.zDiagramTitleInput = "";
+            input.setAttribute("aria-label", "Diagram title");
+            this.titleInput = input;
+            this.titleElement.replaceChildren(input);
+            this.titleEdit?.setAttribute("aria-label", "Finish renaming diagram");
+            input.focus();
+            input.select();
+        }
+        finishTitleEdit(commit) {
+            const input = this.titleInput;
+            if (!input || !this.titleElement) return;
+            const previous = this.titleBeforeEdit || this.ensureDocumentTitle();
+            const next = commit ? text(input.value) || previous : previous;
+            this.titleInput = null;
+            this.titleBeforeEdit = null;
+            this.titleElement.textContent = next;
+            this.titleEdit?.setAttribute("aria-label", "Rename diagram");
+            if (next === this.document.title) return;
+            this.change("Diagram renamed.", () => {
+                this.document.title = next;
+                this.configuration.title = next;
+            });
+        }
+        beginDescriptionEdit() {
+            if (!this.editable || !this.descriptionElement || this.descriptionInput) return;
+            this.descriptionBeforeEdit = this.ensureDocumentDescription();
+            const input = create("input", "z-diagram-description-input");
+            input.type = "text";
+            input.value = this.descriptionBeforeEdit;
+            input.maxLength = 280;
+            input.dataset.zDiagramDescriptionInput = "";
+            input.setAttribute("aria-label", "Diagram description");
+            this.descriptionInput = input;
+            this.descriptionElement.replaceChildren(input);
+            this.descriptionEdit?.setAttribute("aria-label", "Finish editing diagram description");
+            input.focus();
+            input.select();
+        }
+        finishDescriptionEdit(commit) {
+            const input = this.descriptionInput;
+            if (!input || !this.descriptionElement) return;
+            const previous = this.descriptionBeforeEdit || this.ensureDocumentDescription();
+            const next = commit ? text(input.value) || previous : previous;
+            this.descriptionInput = null;
+            this.descriptionBeforeEdit = null;
+            this.descriptionElement.textContent = next;
+            this.descriptionEdit?.setAttribute("aria-label", "Edit diagram description");
+            if (next === this.document.description) return;
+            this.change("Diagram description updated.", () => {
+                this.document.description = next;
+                this.configuration.summary = next;
+            });
+        }
+        onMetadataKeyDown(event) {
+            if (event.target !== this.titleInput && event.target !== this.descriptionInput) return;
+            if (event.key === "Enter") {
+                event.preventDefault();
+                if (event.target === this.titleInput) this.finishTitleEdit(true);
+                else this.finishDescriptionEdit(true);
+            }
+            if (event.key === "Escape") {
+                event.preventDefault();
+                if (event.target === this.titleInput) this.finishTitleEdit(false);
+                else this.finishDescriptionEdit(false);
+            }
+        }
+        onMetadataFocusOut(event) {
+            if (event.target === this.titleInput) this.finishTitleEdit(true);
+            if (event.target === this.descriptionInput) this.finishDescriptionEdit(true);
+        }
         canPan(event) {
             if (event.button === 1) return this.panMode !== "disabled";
             if (this.panMode === "background") return true;
@@ -986,6 +1174,8 @@
             }
             this.future.push(this.snapshot());
             this.document = previous;
+            this.ensureDocumentTitle();
+            this.ensureDocumentDescription();
             this.selection.clear();
             this.selectedEdge = null;
             this.markDirty("Undid the latest edit.");
@@ -1001,6 +1191,8 @@
             }
             this.history.push(this.snapshot());
             this.document = next;
+            this.ensureDocumentTitle();
+            this.ensureDocumentDescription();
             this.selection.clear();
             this.selectedEdge = null;
             this.markDirty("Restored the latest edit.");
@@ -1025,9 +1217,21 @@
         }
 
         render() {
+            this.renderTitle();
+            this.renderDescription();
             this.renderViewport();
             this.renderNavigator();
             this.renderInspector();
+        }
+
+        renderTitle() {
+            if (!this.titleElement || this.titleInput) return;
+            this.titleElement.textContent = this.ensureDocumentTitle();
+        }
+
+        renderDescription() {
+            if (!this.descriptionElement || this.descriptionInput) return;
+            this.descriptionElement.textContent = this.ensureDocumentDescription();
         }
 
         renderViewport() {
@@ -1142,7 +1346,7 @@
             return source ? (to.position.y >= from.position.y ? "bottom" : "top") : (to.position.y >= from.position.y ? "top" : "bottom");
         }
 
-        portPoint(node, side, offset = 0) {
+        portPoint(node, side, offset = 0, projected = true) {
             const size = this.nodeSize(node);
             const centerX = node.position.x + size.width / 2;
             const centerY = node.position.y + size.height / 2;
@@ -1150,7 +1354,7 @@
                 : side === "bottom" ? { x: centerX + offset, y: node.position.y + size.height }
                     : side === "left" ? { x: node.position.x, y: centerY + offset }
                         : { x: node.position.x + size.width, y: centerY + offset };
-            return this.project(logical);
+            return projected ? this.project(logical) : logical;
         }
 
         nodeSize(node) {
@@ -1161,7 +1365,7 @@
             return { width: nodeWidth, height: nodeHeight };
         }
 
-        edgeAnchors(edge, edges) {
+        edgeAnchors(edge, edges, projected = true) {
             const from = this.node(edge.fromNodeId);
             const to = this.node(edge.toNodeId);
             if (!from || !to) return null;
@@ -1173,8 +1377,8 @@
             const sourceOffset = ["left", "right"].includes(fromSide) ? offsetFor(outgoing) : 0;
             const targetOffset = ["left", "right"].includes(toSide) ? offsetFor(incoming) : 0;
             return {
-                start: this.portPoint(from, fromSide, sourceOffset),
-                end: this.portPoint(to, toSide, targetOffset),
+                start: this.portPoint(from, fromSide, sourceOffset, projected),
+                end: this.portPoint(to, toSide, targetOffset, projected),
                 fromSide,
                 toSide,
                 index: outgoing.findIndex(candidate => candidate.id === edge.id),
@@ -1388,7 +1592,7 @@
                 ["--z-node-font-family", this.fontFamily(style?.fontFamily)]
             ];
             values.forEach(([name, value]) => value ? element.style.setProperty(name, value) : element.style.removeProperty(name));
-            if (style?.opacity) element.style.opacity = String(style.opacity);
+            if (style?.opacity !== null && style?.opacity !== undefined) element.style.opacity = String(style.opacity);
             else element.style.removeProperty("opacity");
             this.renderNodeSurface(element, node, style);
         }
@@ -1434,21 +1638,23 @@
             surface.setAttribute("viewBox", "0 0 " + size.width + " " + size.height);
             const defs = svg("defs");
             const path = svg("path", "z-diagram-node-shape");
-            path.setAttribute("d", this.shapePath(node.kind, clamp(number(style?.cornerRadius, 13), 0, 38), size.width, size.height));
+            path.setAttribute("d", this.shapePath(node.kind, clamp(number(style?.cornerRadius ?? 13, 13), 0, 38), size.width, size.height));
             const fill = style?.fillColor;
             const stroke = style?.borderColor;
             if (style?.gradient) {
                 const gradient = svg("linearGradient");
                 const id = this.root.id + "-gradient-" + node.id.replace(/[^a-z0-9_-]/gi, "-");
                 gradient.id = id;
-                gradient.setAttribute("x1", "0%"); gradient.setAttribute("y1", "0%");
-                gradient.setAttribute("x2", "100%"); gradient.setAttribute("y2", "100%");
+                gradient.setAttribute("gradientTransform", "rotate(" + number(style.gradient.angle ?? 135, 135) + ")");
                 const first = svg("stop"); first.setAttribute("offset", "0%"); first.setAttribute("stop-color", style.gradient.startColor);
                 const last = svg("stop"); last.setAttribute("offset", "100%"); last.setAttribute("stop-color", style.gradient.endColor);
-                gradient.append(first, last); defs.append(gradient); path.setAttribute("fill", "url(#" + id + ")");
-            } else if (fill) path.setAttribute("fill", fill);
-            if (stroke) path.setAttribute("stroke", stroke);
-            if (style?.borderWidth) path.setAttribute("stroke-width", String(style.borderWidth));
+                gradient.append(first, last); defs.append(gradient); path.style.fill = "url(#" + id + ")";
+            } else if (fill) path.style.fill = fill;
+            else path.style.removeProperty("fill");
+            if (stroke) path.style.stroke = stroke;
+            else path.style.removeProperty("stroke");
+            if (style?.borderWidth !== null && style?.borderWidth !== undefined) path.style.strokeWidth = String(style.borderWidth);
+            else path.style.removeProperty("stroke-width");
             if (node.kind === "vacancy" || node.kind === "boundary") path.setAttribute("stroke-dasharray", "6 4");
             surface.replaceChildren(defs, path);
         }
@@ -2036,7 +2242,11 @@
 
         completeSave(detail, revision, document, automatic) {
             if (this.revision !== revision) return;
-            if (document) this.document = normalizeDocument(document);
+            if (document) {
+                this.document = normalizeDocument(document);
+                this.ensureDocumentTitle();
+                this.ensureDocumentDescription();
+            }
             this.dirty = false;
             if (this.dirtyBadge) this.dirtyBadge.hidden = true;
             this.setStatus(automatic ? "Changes saved." : "Diagram saved.");
@@ -2059,6 +2269,8 @@
 
         replace(document, message) {
             this.document = normalizeDocument(document);
+            this.ensureDocumentTitle();
+            this.ensureDocumentDescription();
             this.selection.clear();
             this.selectedEdge = null;
             this.history = [];
@@ -2085,8 +2297,502 @@
             }, update => this.replace(update?.document ?? update, "Diagram updated in real time."));
         }
 
+        openExport() {
+            if (!this.exportOptions.enabled || !this.exportModal) return;
+            this.dismissToolbarTooltips();
+            this.root.classList.add("is-exporting");
+            this.exportReturn = document.activeElement;
+            this.exportModal.hidden = false;
+            this.exportModal.setAttribute("aria-hidden", "false");
+            this.renderExportModal();
+            globalThis.requestAnimationFrame(() => this.exportModal?.querySelector("[data-z-diagram-export-format].is-active")?.focus());
+        }
+
+        closeExport() {
+            this.root.classList.remove("is-exporting");
+            this.restoreToolbarTooltips();
+            if (!this.exportModal || this.exportModal.hidden) return;
+            this.exportModal.hidden = true;
+            this.exportModal.setAttribute("aria-hidden", "true");
+            if (this.exportPreviewUrl) globalThis.URL?.revokeObjectURL?.(this.exportPreviewUrl);
+            this.exportPreviewUrl = null;
+            this.exportReturn?.focus?.({ preventScroll: true });
+            this.exportReturn = null;
+        }
+
+        selectExportFormat(format) {
+            if (!this.exportOptions.formats.includes(format)) return;
+            this.exportState.format = format;
+            this.renderExportModal();
+            this.exportFormats?.querySelector("[data-z-diagram-export-format='" + CSS.escape(format) + "']")?.focus();
+        }
+
+        onExportKeyDown(event) {
+            if (event.key === "Escape") {
+                event.preventDefault();
+                this.closeExport();
+                return;
+            }
+            if (event.key !== "Tab" || !this.exportModal) return;
+            const focusable = [...this.exportModal.querySelectorAll("button:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex='0']")]
+                .filter(element => !element.hidden && element.getClientRects().length);
+            if (!focusable.length) return;
+            const first = focusable[0];
+            const last = focusable.at(-1);
+            if (event.shiftKey && document.activeElement === first) {
+                event.preventDefault();
+                last.focus();
+            } else if (!event.shiftKey && document.activeElement === last) {
+                event.preventDefault();
+                first.focus();
+            }
+        }
+
+        onExportInput(event) {
+            const target = event.target;
+            if (target === this.exportName) {
+                this.exportState.fileName = safeFileName(target.value);
+                return;
+            }
+            const field = target?.dataset?.zDiagramExportSetting;
+            if (!field) return;
+            const value = target.type === "checkbox" ? target.checked : target.value;
+            if (field === "padding") this.exportState.padding = clamp(Math.round(number(value, this.exportState.padding)), 0, 240);
+            if (field === "jpeg-scale") this.exportState.jpegScale = Number(value);
+            if (field === "jpeg-quality") this.exportState.jpegQuality = clamp(number(value, .92), .6, 1);
+            if (field === "background") this.exportState.background = value;
+            if (field === "solid-background") this.exportState.solidBackground = color(value) || this.exportState.solidBackground;
+            if (field === "include-source") this.exportState.includeSource = Boolean(value);
+            if (field === "pdf-page") this.exportState.pdfPage = value;
+            if (field === "background") this.renderExportModal();
+            else this.renderExportPreview();
+        }
+
+        renderExportModal() {
+            if (!this.exportModal || !this.exportFormats || !this.exportSettings) return;
+            const formatHeading = create("span", "z-diagram-export-format-heading");
+            formatHeading.textContent = "Output format";
+            this.exportFormats.replaceChildren(formatHeading, ...this.exportOptions.formats.map(format => {
+                const meta = exportFormats.get(format);
+                const button = create("button", "z-diagram-export-format" + (format === this.exportState.format ? " is-active" : ""));
+                button.type = "button";
+                button.dataset.zDiagramExportFormat = format;
+                button.setAttribute("role", "tab");
+                button.setAttribute("aria-selected", String(format === this.exportState.format));
+                const icon = create("span", "z-diagram-export-format-icon"); icon.setAttribute("aria-hidden", "true"); icon.textContent = meta.icon;
+                const copy = create("span", "z-diagram-export-format-copy");
+                const title = create("strong"); title.textContent = meta.label;
+                const detail = create("small"); detail.textContent = meta.kind;
+                copy.append(title, detail);
+                const extension = create("span", "z-diagram-export-format-extension"); extension.textContent = meta.extension.toUpperCase();
+                button.append(icon, copy, extension);
+                return button;
+            }));
+            if (this.exportName) this.exportName.value = this.exportState.fileName;
+            if (this.exportDownload) this.exportDownload.textContent = this.exportState.format === "pdf" && this.exportOptions.pdfMode === "browserprint"
+                ? "Open print view"
+                : "Download " + exportFormats.get(this.exportState.format).label;
+
+            const meta = exportFormats.get(this.exportState.format);
+            const intro = create("div", "z-diagram-export-intro");
+            const title = create("h4"); title.textContent = meta.label + " export";
+            const description = create("p"); description.textContent = meta.description;
+            intro.append(title, description);
+            const preview = create("div", "z-diagram-export-preview");
+            preview.dataset.zDiagramExportPreview = "";
+            const controls = create("div", "z-diagram-export-controls");
+            if (this.exportState.format === "json") {
+                controls.append(this.exportToggle("Include document metadata", "include-source", this.exportState.includeSource));
+                controls.append(this.exportNote("JSON preserves nodes, edges, styles and the current schema version for a later import."));
+            } else {
+                controls.append(this.exportSelect("Background", "background", this.exportState.background, this.exportState.format === "jpeg"
+                    ? [["theme", "Theme canvas"], ["solid", "Solid color"]]
+                    : [["theme", "Theme canvas"], ["transparent", "Transparent"], ["solid", "Solid color"]]));
+                if (this.exportState.background === "solid") controls.append(this.exportColor("Background color", "solid-background", this.exportState.solidBackground || "#ffffff"));
+                controls.append(this.exportNumber("Padding", "padding", this.exportState.padding, 0, 240, "px"));
+                if (this.exportState.format === "jpeg") {
+                    controls.append(this.exportSelect("Resolution", "jpeg-scale", String(this.exportState.jpegScale), this.exportOptions.jpegScales.map(scale => [String(scale), scale + "× density"])));
+                    controls.append(this.exportRange("JPG quality", "jpeg-quality", this.exportState.jpegQuality ?? .92, .6, 1, .01));
+                }
+                if (this.exportState.format === "html") controls.append(this.exportToggle("Embed the source JSON", "include-source", this.exportState.includeSource));
+                if (this.exportState.format === "pdf") {
+                    controls.append(this.exportSelect("Page", "pdf-page", this.exportState.pdfPage, [["a4-landscape", "A4 landscape"], ["a4-portrait", "A4 portrait"], ["letter-landscape", "Letter landscape"]]));
+                    controls.append(this.exportNote(this.exportOptions.pdfMode === "server"
+                        ? "The host will render and return a downloadable PDF."
+                        : "A clean vector print view opens next. Choose Save as PDF in your browser."));
+                }
+            }
+            this.exportSettings.replaceChildren(intro, preview, controls);
+            this.renderExportPreview();
+        }
+
+        exportField(label, control) {
+            const field = create("label", "z-diagram-export-field");
+            const textNode = create("span"); textNode.textContent = label;
+            field.append(textNode, control);
+            return field;
+        }
+
+        exportSelect(label, setting, value, options) {
+            const select = create("select", "z-input");
+            select.dataset.zDiagramExportSetting = setting;
+            options.forEach(([optionValue, optionLabel]) => {
+                const option = create("option"); option.value = optionValue; option.textContent = optionLabel; option.selected = optionValue === value; select.append(option);
+            });
+            return this.exportField(label, select);
+        }
+
+        exportNumber(label, setting, value, min, max, suffix) {
+            const input = create("input", "z-input");
+            input.type = "number"; input.min = String(min); input.max = String(max); input.step = "1"; input.value = String(value); input.dataset.zDiagramExportSetting = setting;
+            const holder = create("div", "z-diagram-export-number"); holder.append(input);
+            const unit = create("span"); unit.textContent = suffix; holder.append(unit);
+            return this.exportField(label, holder);
+        }
+
+        exportColor(label, setting, value) {
+            const input = create("input");
+            input.type = "color"; input.value = colorForInput(value, "#ffffff"); input.dataset.zDiagramExportSetting = setting;
+            return this.exportField(label, input);
+        }
+
+        exportRange(label, setting, value, min, max, step) {
+            const input = create("input");
+            input.type = "range"; input.min = String(min); input.max = String(max); input.step = String(step); input.value = String(value); input.dataset.zDiagramExportSetting = setting;
+            const holder = create("div", "z-diagram-export-range"); holder.append(input);
+            const output = create("output"); output.textContent = Math.round(Number(value) * 100) + "%"; holder.append(output);
+            return this.exportField(label, holder);
+        }
+
+        exportToggle(label, setting, checked) {
+            const input = create("input"); input.type = "checkbox"; input.checked = checked; input.dataset.zDiagramExportSetting = setting;
+            const field = create("label", "z-diagram-export-toggle"); field.append(input);
+            const textNode = create("span"); textNode.textContent = label; field.append(textNode);
+            return field;
+        }
+
+        exportNote(message) {
+            const note = create("p", "z-diagram-export-note"); note.textContent = message;
+            return note;
+        }
+
+        renderExportPreview() {
+            const preview = this.exportSettings?.querySelector("[data-z-diagram-export-preview]");
+            if (!preview) return;
+            if (this.exportPreviewUrl) globalThis.URL?.revokeObjectURL?.(this.exportPreviewUrl);
+            if (this.exportState.format === "html" || this.exportState.format === "pdf") {
+                const frame = create("iframe", "z-diagram-export-document-preview");
+                frame.title = "Preview of the " + exportFormats.get(this.exportState.format).label + " document";
+                frame.setAttribute("sandbox", "");
+                frame.srcdoc = this.exportHtml(true);
+                preview.replaceChildren(frame);
+                return;
+            }
+            const image = create("img");
+            image.alt = "Preview of the " + exportFormats.get(this.exportState.format).label + " export";
+            const blob = new Blob([this.exportSvg()], { type: "image/svg+xml" });
+            this.exportPreviewUrl = globalThis.URL?.createObjectURL?.(blob) ?? null;
+            if (this.exportPreviewUrl) image.src = this.exportPreviewUrl;
+            preview.replaceChildren(image);
+        }
+
+        exportTheme() {
+            const styles = globalThis.getComputedStyle?.(this.root);
+            const value = (name, fallback) => text(styles?.getPropertyValue(name)) || fallback;
+            return {
+                canvas: value("--z-canvas", "#ffffff"),
+                surface: value("--z-surface", "#ffffff"),
+                border: value("--z-border", "#b8bfd0"),
+                shadow: value("--z-shadow", "#101828"),
+                text: value("--z-text", "#172033"),
+                muted: value("--z-muted", "#5d687d"),
+                primary: value("--z-primary", "#6d35df"),
+                success: value("--z-success", "#078a69"),
+                warning: value("--z-warning", "#bb7800"),
+                danger: value("--z-danger", "#d03558"),
+                info: value("--z-info", "#2566bf")
+            };
+        }
+
+        exportTone(tone, theme) {
+            return ({ primary: theme.primary, success: theme.success, warning: theme.warning, danger: theme.danger, info: theme.info })[key(tone)] ?? theme.border;
+        }
+
+        exportBackground(forceOpaque = false) {
+            if (this.exportState.background === "transparent" && !forceOpaque) return null;
+            if (this.exportState.background === "solid") return this.exportState.solidBackground || "#ffffff";
+            return this.exportTheme().canvas;
+        }
+
+        exportTitle() {
+            return this.ensureDocumentTitle();
+        }
+
+        exportDescription() {
+            return this.ensureDocumentDescription();
+        }
+
+        exportBounds() {
+            if (!this.document.nodes.length) return { minX: 0, minY: 0, width: 560, height: 320 };
+            const padding = this.exportState.padding;
+            const minX = Math.min(...this.document.nodes.map(node => node.position.x)) - padding;
+            const minY = Math.min(...this.document.nodes.map(node => node.position.y)) - padding;
+            const maxX = Math.max(...this.document.nodes.map(node => node.position.x + this.nodeSize(node).width)) + padding;
+            const maxY = Math.max(...this.document.nodes.map(node => node.position.y + this.nodeSize(node).height)) + padding;
+            return { minX, minY, width: Math.max(1, maxX - minX), height: Math.max(1, maxY - minY) };
+        }
+
+        exportEdgeMarkup(edge, path, labelPoint, marker = true, theme = this.exportTheme()) {
+            const stroke = edge.style?.strokeColor || this.exportTone(edge.tone, theme);
+            const width = edge.style?.strokeWidth || 2;
+            const dashed = edge.style?.dashed ? " stroke-dasharray=\"7 5\"" : "";
+            const arrow = marker ? " marker-end=\"url(#zoorce-export-arrow)\"" : "";
+            const line = "<path d=\"" + escapeXml(path) + "\" fill=\"none\" stroke=\"" + escapeXml(stroke) + "\" stroke-width=\"" + width + "\" stroke-linecap=\"round\" stroke-linejoin=\"round\"" + dashed + arrow + "/>";
+            const label = edge.label && labelPoint
+                ? "<text x=\"" + labelPoint.x + "\" y=\"" + labelPoint.y + "\" text-anchor=\"middle\" fill=\"" + escapeXml(stroke) + "\" font-family=\"Inter, Segoe UI, sans-serif\" font-size=\"12\" font-weight=\"700\" paint-order=\"stroke\" stroke=\"" + escapeXml(theme.canvas) + "\" stroke-width=\"5\">" + escapeXml(edge.label) + "</text>"
+                : "";
+            return line + label;
+        }
+
+        exportEdges(theme) {
+            const edges = this.document.edges;
+            if (this.profile !== "orgchart") return edges.map(edge => {
+                const anchors = this.edgeAnchors(edge, edges, false);
+                if (!anchors) return "";
+                const curve = this.profile === "mindmap"
+                    ? this.curvePath(anchors.start, anchors.end, anchors.fromSide, anchors.toSide)
+                    : this.orthogonalPath(anchors.start, anchors.end, anchors.fromSide, anchors.toSide, anchors.index, anchors.count);
+                return this.exportEdgeMarkup(edge, curve, this.edgeLabelPoint(anchors.start, anchors.end, anchors.index, anchors.count), true, theme);
+            }).join("");
+
+            const groups = new Map();
+            const markup = [];
+            edges.forEach(edge => {
+                const explicit = key(edge.fromPort) !== "auto" || key(edge.toPort) !== "auto";
+                if (explicit) {
+                    const anchors = this.edgeAnchors(edge, edges, false);
+                    if (anchors) markup.push(this.exportEdgeMarkup(edge, this.orthogonalPath(anchors.start, anchors.end, anchors.fromSide, anchors.toSide, anchors.index, anchors.count), this.edgeLabelPoint(anchors.start, anchors.end, anchors.index, anchors.count), true, theme));
+                    return;
+                }
+                const source = key(edge.fromNodeId);
+                if (!groups.has(source)) groups.set(source, []);
+                groups.get(source).push(edge);
+            });
+            groups.forEach(group => {
+                const anchored = group.map(edge => ({ edge, anchors: this.edgeAnchors(edge, edges, false) })).filter(item => item.anchors);
+                if (anchored.length < 2) {
+                    anchored.forEach(item => markup.push(this.exportEdgeMarkup(item.edge, this.orthogonalPath(item.anchors.start, item.anchors.end, item.anchors.fromSide, item.anchors.toSide, item.anchors.index, item.anchors.count), this.edgeLabelPoint(item.anchors.start, item.anchors.end, item.anchors.index, item.anchors.count), true, theme)));
+                    return;
+                }
+                const start = anchored[0].anchors.start;
+                const junctionY = (start.y + Math.min(...anchored.map(item => item.anchors.end.y))) / 2;
+                const busStart = Math.min(start.x, ...anchored.map(item => item.anchors.end.x));
+                const busEnd = Math.max(start.x, ...anchored.map(item => item.anchors.end.x));
+                markup.push(this.exportEdgeMarkup({ ...anchored[0].edge, label: null }, "M " + start.x + " " + start.y + " V " + junctionY + " H " + busStart + " M " + start.x + " " + junctionY + " H " + busEnd, null, false, theme));
+                anchored.forEach(item => {
+                    const end = item.anchors.end;
+                    markup.push(this.exportEdgeMarkup(item.edge, "M " + end.x + " " + junctionY + " V " + end.y, { x: end.x, y: (junctionY + end.y) / 2 - 8 }, false, theme));
+                });
+            });
+            return markup.join("");
+        }
+
+        exportText(value, maximumWidth, fontSize) {
+            const source = text(value);
+            const maximumCharacters = Math.max(1, Math.floor(maximumWidth / Math.max(fontSize * .56, 1)));
+            return source.length > maximumCharacters ? source.slice(0, Math.max(1, maximumCharacters - 1)).trimEnd() + "…" : source;
+        }
+
+        exportNodeLayout(node, size, fontSize) {
+            const isDecision = node.kind === "decision";
+            const isEllipse = ellipseKinds.has(node.kind);
+            const padding = isEllipse ? 32 : 19;
+            const iconSize = isDecision ? 24 : 28;
+            const gap = isDecision ? 8 : (isEllipse ? 8 : 9);
+            const iconX = isDecision ? 48 : padding;
+            const iconY = (size.height - iconSize) / 2;
+            const titleX = iconX + iconSize + gap;
+            const titleWidth = Math.max(42, size.width - titleX - padding);
+            return {
+                isDecision,
+                iconSize,
+                iconX,
+                iconY,
+                titleX,
+                titleWidth,
+                titleY: node.description && !isDecision ? size.height / 2 - 5 : size.height / 2 + 4,
+                title: this.exportText(node.title, titleWidth, fontSize),
+                description: this.exportText(node.description, titleWidth, 9.5)
+            };
+        }
+
+        exportNodeMarkup(node, theme, gradients) {
+            const size = this.nodeSize(node);
+            const style = node.style || {};
+            const tone = this.exportTone(node.tone, theme);
+            const gradientId = "zoorce-export-gradient-" + node.id.replace(/[^a-z0-9_-]/gi, "-");
+            let fill = style.fillColor || theme.surface;
+            if (style.gradient) {
+                gradients.push("<linearGradient id=\"" + gradientId + "\" gradientTransform=\"rotate(" + number(style.gradient.angle, 135) + ")\"><stop offset=\"0%\" stop-color=\"" + escapeXml(style.gradient.startColor) + "\"/><stop offset=\"100%\" stop-color=\"" + escapeXml(style.gradient.endColor) + "\"/></linearGradient>");
+                fill = "url(#" + gradientId + ")";
+            }
+            const stroke = style.borderColor || (key(node.tone) === "neutral" ? theme.border : tone);
+            const font = this.fontFamily(style.fontFamily) || 'Inter, "Segoe UI", sans-serif';
+            const textColor = style.textColor || theme.text;
+            const fontSize = number(style.fontSize ?? 11, 11);
+            const layout = this.exportNodeLayout(node, size, fontSize);
+            const descriptionColor = style.textColor || theme.muted;
+            const descriptionOpacity = style.textColor ? ".72" : "1";
+            const icon = "<rect x=\"" + layout.iconX + "\" y=\"" + layout.iconY + "\" width=\"" + layout.iconSize + "\" height=\"" + layout.iconSize + "\" rx=\"" + Math.min(8, layout.iconSize / 3) + "\" fill=\"" + escapeXml(tone) + "\" fill-opacity=\".14\"/><text x=\"" + (layout.iconX + layout.iconSize / 2) + "\" y=\"" + (layout.iconY + layout.iconSize / 2 + 4.5) + "\" text-anchor=\"middle\" fill=\"" + escapeXml(tone) + "\" font-family=\"Inter, Segoe UI Symbol, sans-serif\" font-size=\"14\" font-weight=\"800\">" + escapeXml(iconForKind(node.kind)) + "</text>";
+            const title = "<text x=\"" + layout.titleX + "\" y=\"" + layout.titleY + "\" fill=\"" + escapeXml(textColor) + "\" font-family=\"" + escapeXml(font) + "\" font-size=\"" + fontSize + "\" font-weight=\"" + number(style.fontWeight ?? 800, 800) + "\">" + escapeXml(layout.title) + "</text>";
+            const description = node.description && !layout.isDecision
+                ? "<text x=\"" + layout.titleX + "\" y=\"" + (size.height / 2 + 15) + "\" fill=\"" + escapeXml(descriptionColor) + "\" fill-opacity=\"" + descriptionOpacity + "\" font-family=\"" + escapeXml(font) + "\" font-size=\"9.5\">" + escapeXml(layout.description) + "</text>"
+                : "";
+            const dash = node.kind === "vacancy" || node.kind === "boundary" ? " stroke-dasharray=\"6 4\"" : "";
+            return "<g transform=\"translate(" + node.position.x + " " + node.position.y + ")\" opacity=\"" + number(style.opacity ?? 1, 1) + "\"><path d=\"" + escapeXml(this.shapePath(node.kind, number(style.cornerRadius ?? 13, 13), size.width, size.height)) + "\" fill=\"" + escapeXml(fill) + "\" stroke=\"" + escapeXml(stroke) + "\" stroke-width=\"" + number(style.borderWidth ?? 1.15, 1.15) + "\" stroke-linejoin=\"round\" filter=\"url(#zoorce-export-node-shadow)\"" + dash + "/>" + icon + title + description + "</g>";
+        }
+
+        exportSvg(forceOpaque = false) {
+            const bounds = this.exportBounds();
+            const theme = this.exportTheme();
+            const gradients = [];
+            const nodes = this.document.nodes.map(node => this.exportNodeMarkup(node, theme, gradients)).join("");
+            const background = this.exportBackground(forceOpaque);
+            const backgroundMarkup = background
+                ? "<rect x=\"" + bounds.minX + "\" y=\"" + bounds.minY + "\" width=\"" + bounds.width + "\" height=\"" + bounds.height + "\" fill=\"" + escapeXml(background) + "\"/><rect x=\"" + bounds.minX + "\" y=\"" + bounds.minY + "\" width=\"" + bounds.width + "\" height=\"" + bounds.height + "\" fill=\"url(#zoorce-export-grid)\" opacity=\".58\"/><rect x=\"" + bounds.minX + "\" y=\"" + bounds.minY + "\" width=\"" + bounds.width + "\" height=\"" + bounds.height + "\" fill=\"url(#zoorce-export-aura)\"/>"
+                : "";
+            const defs = "<marker id=\"zoorce-export-arrow\" viewBox=\"0 0 10 10\" refX=\"8\" refY=\"5\" markerWidth=\"6\" markerHeight=\"6\" orient=\"auto\"><path d=\"M 0 0 L 10 5 L 0 10 z\" fill=\"context-stroke\"/></marker><pattern id=\"zoorce-export-grid\" width=\"24\" height=\"24\" patternUnits=\"userSpaceOnUse\"><path d=\"M 24 0 H 0 V 24\" fill=\"none\" stroke=\"" + escapeXml(theme.border) + "\" stroke-width=\"1\" opacity=\".42\"/></pattern><radialGradient id=\"zoorce-export-aura\" cx=\"74%\" cy=\"8%\" r=\"72%\"><stop offset=\"0%\" stop-color=\"" + escapeXml(theme.primary) + "\" stop-opacity=\".1\"/><stop offset=\"72%\" stop-color=\"" + escapeXml(theme.primary) + "\" stop-opacity=\"0\"/></radialGradient><filter id=\"zoorce-export-node-shadow\" x=\"-20%\" y=\"-26%\" width=\"140%\" height=\"160%\"><feDropShadow dx=\"0\" dy=\"6\" stdDeviation=\"6\" flood-color=\"#101828\" flood-opacity=\".15\"/></filter>";
+            return "<?xml version=\"1.0\" encoding=\"UTF-8\"?><svg xmlns=\"http://www.w3.org/2000/svg\" role=\"img\" aria-labelledby=\"zoorce-export-title\" width=\"" + bounds.width + "\" height=\"" + bounds.height + "\" viewBox=\"" + bounds.minX + " " + bounds.minY + " " + bounds.width + " " + bounds.height + "\"><title id=\"zoorce-export-title\">" + escapeXml(this.exportTitle()) + "</title><defs>" + defs + gradients.join("") + "</defs>" + backgroundMarkup + "<g>" + this.exportEdges(theme) + "</g><g>" + nodes + "</g></svg>";
+        }
+
+        exportEnvelope() {
+            return { formatVersion: 1, generatedAtUtc: new Date().toISOString(), title: this.exportTitle(), description: this.exportDescription(), profile: this.configuration.profile, document: this.snapshot() };
+        }
+
+        exportHtml(preview = false) {
+            const source = this.exportState.includeSource
+                ? "<script type=\"application/json\" id=\"zoorce-diagram-source\">" + JSON.stringify(this.exportEnvelope()).replace(/</g, "\\u003c") + "</scr" + "ipt>"
+                : "";
+            const theme = this.exportTheme();
+            const titleValue = this.exportTitle();
+            const title = escapeXml(titleValue);
+            const description = escapeXml(this.exportDescription());
+            const profile = escapeXml(text(this.configuration.profile || "Diagram").replace(/([a-z])([A-Z])/g, "$1 $2"));
+            const page = ({ "a4-landscape": "A4 landscape", "a4-portrait": "A4 portrait", "letter-landscape": "letter landscape" })[this.exportState.pdfPage] ?? "A4 landscape";
+            const visualBackground = this.exportState.background === "solid"
+                ? this.exportBackground(true)
+                : theme.canvas;
+            const style = "@page{size:" + page + ";margin:0}" +
+                ":root{color-scheme:light dark}" +
+                "*{box-sizing:border-box}" +
+                "body{margin:0;background:" + escapeXml(theme.canvas) + ";color:" + escapeXml(theme.text) + ";font-family:Inter,Segoe UI,Arial,sans-serif;-webkit-print-color-adjust:exact;print-color-adjust:exact}" +
+                ".sheet{width:min(100%,1520px);min-height:100vh;margin:auto;padding:clamp(28px,5vw,72px);background:" + escapeXml(theme.canvas) + "}" +
+                ".masthead{display:flex;align-items:flex-start;justify-content:space-between;gap:28px;padding:0 4px 24px;border-bottom:1px solid " + escapeXml(theme.border) + "}" +
+                ".masthead{display:flex;align-items:flex-start;justify-content:space-between;gap:28px;padding:0 4px 24px;border-bottom:1px solid " + escapeXml(theme.border) + "}" +
+                ".eyebrow{margin:0 0 9px;color:" + escapeXml(theme.primary) + ";font-size:11px;font-weight:800;letter-spacing:.13em;text-transform:uppercase}" +
+                "h1{margin:0;color:" + escapeXml(theme.text) + ";font-size:clamp(24px,3vw,38px);letter-spacing:-.045em;line-height:1.06}" +
+                ".subline{margin:9px 0 0;color:" + escapeXml(theme.muted) + ";font-size:13px;line-height:1.5}" +
+                ".stamp{flex:0 0 auto;display:grid;gap:3px;min-width:130px;padding:10px 13px;border:1px solid " + escapeXml(theme.border) + ";border-radius:12px;background:" + escapeXml(theme.surface) + ";color:" + escapeXml(theme.text) + ";font-size:11px;font-weight:750;text-align:right}" +
+                ".stamp small{color:" + escapeXml(theme.muted) + ";font-size:9px;font-weight:650;letter-spacing:.08em;text-transform:uppercase}" +
+                ".visual{position:relative;margin-top:28px;padding:clamp(16px,2.5vw,36px);overflow:hidden;border:1px solid " + escapeXml(theme.border) + ";border-radius:24px;background:" + escapeXml(visualBackground) + ";box-shadow:0 20px 48px color-mix(in srgb," + escapeXml(theme.shadow) + " 22%,transparent)}" +
+                ".visual:before{position:absolute;inset:0;background:radial-gradient(circle at 78% 0," + escapeXml(theme.primary) + "18,transparent 38%);content:\"\";pointer-events:none}" +
+                ".visual svg{position:relative;z-index:1;display:block;width:100%;height:auto;overflow:visible}" +
+                ".footer{display:flex;justify-content:space-between;gap:16px;margin-top:17px;padding:0 4px;color:" + escapeXml(theme.muted) + ";font-size:10px;font-weight:650}" +
+                ".footer strong{color:" + escapeXml(theme.text) + "}" +
+                ".sheet--preview{height:100vh;min-height:0;padding:8px;overflow:hidden}.sheet--preview .masthead{min-height:35px;gap:9px;padding:0 0 5px}.sheet--preview .eyebrow{margin-bottom:1px;font-size:6px}.sheet--preview h1{overflow:hidden;max-width:410px;font-size:15px;line-height:1.06;text-overflow:ellipsis;white-space:nowrap}.sheet--preview .subline{margin-top:2px;font-size:7px}.sheet--preview .stamp{min-width:70px;padding:4px 5px;font-size:7px}.sheet--preview .stamp small{font-size:6px}.sheet--preview .visual{display:grid;height:calc(100vh - 56px);min-height:0;margin-top:4px;padding:3px;border-radius:12px;place-items:center}.sheet--preview .visual svg{width:auto!important;height:calc(100vh - 64px)!important;max-width:100%;max-height:100%;object-fit:contain}.sheet--preview .footer{display:none}" +
+                "@media print{.sheet{width:auto;min-height:0;padding:12mm}.masthead{padding-bottom:7mm}.visual{margin-top:8mm;padding:8mm;border-radius:15px;box-shadow:none}.footer{margin-top:5mm}.stamp{padding:7px 9px}.visual svg{max-height:165mm}}";
+            const generated = new Date().toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+            return "<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"><title>" + title + "</title><style>" + style + "</style></head><body><main class=\"sheet" + (preview ? " sheet--preview" : "") + "\"><header class=\"masthead\"><div><p class=\"eyebrow\">" + profile + "</p><h1>" + title + "</h1><p class=\"subline\">" + description + "</p></div><div class=\"stamp\"><small>Vector export</small><span>" + escapeXml(generated) + "</span></div></header><section class=\"visual\">" + this.exportSvg() + "</section><footer class=\"footer\"><span>Generated visual document</span><span>Editable source " + (this.exportState.includeSource ? "included" : "not embedded") + "</span></footer></main>" + source + "</body></html>";
+        }
+
+        async exportJpeg() {
+            const svgSource = this.exportSvg(true);
+            const blob = new Blob([svgSource], { type: "image/svg+xml" });
+            const sourceUrl = globalThis.URL.createObjectURL(blob);
+            try {
+                const image = new Image();
+                await new Promise((resolve, reject) => { image.onload = resolve; image.onerror = reject; image.src = sourceUrl; });
+                const bounds = this.exportBounds();
+                const maxPixels = 24000000;
+                const requestedScale = this.exportState.jpegScale;
+                const safeScale = Math.min(requestedScale, Math.sqrt(maxPixels / Math.max(1, bounds.width * bounds.height)));
+                const canvas = document.createElement("canvas");
+                canvas.width = Math.max(1, Math.floor(bounds.width * safeScale));
+                canvas.height = Math.max(1, Math.floor(bounds.height * safeScale));
+                const context = canvas.getContext("2d");
+                if (!context) throw new Error("The browser could not create an image canvas.");
+                context.drawImage(image, 0, 0, canvas.width, canvas.height);
+                if (safeScale < requestedScale) this.setStatus("JPG resolution was limited to protect browser memory.");
+                const result = await new Promise(resolve => canvas.toBlob(resolve, "image/jpeg", this.exportState.jpegQuality ?? .92));
+                if (!result) throw new Error("The browser could not encode the JPG image.");
+                return result;
+            } finally {
+                globalThis.URL.revokeObjectURL(sourceUrl);
+            }
+        }
+
+        downloadBlob(blob, extension) {
+            const anchor = create("a");
+            anchor.href = globalThis.URL.createObjectURL(blob);
+            const base = safeFileName(this.exportState.fileName).replace(/\.(json|svg|jpe?g|html?|pdf)$/i, "");
+            anchor.download = base + "." + extension;
+            anchor.hidden = true;
+            document.body.append(anchor);
+            anchor.click();
+            anchor.remove();
+            globalThis.setTimeout(() => globalThis.URL.revokeObjectURL(anchor.href), 0);
+            return anchor.download;
+        }
+
+        openPrintExport() {
+            // Keep the window handle: requesting `noopener` makes Chromium return null,
+            // which prevents us from reliably starting the native print dialog.
+            const printWindow = globalThis.open("about:blank", "_blank", "popup");
+            if (!printWindow) {
+                throw new Error("The browser blocked the print window.");
+            }
+            printWindow.opener = null;
+            printWindow.document.open();
+            printWindow.document.write(this.exportHtml());
+            printWindow.document.close();
+            globalThis.setTimeout(() => {
+                printWindow.focus();
+                printWindow.print();
+            }, 280);
+        }
+
+        async downloadExport() {
+            const format = this.exportState.format;
+            const detail = { format, options: clone(this.exportState), document: this.snapshot() };
+            if (!dispatch(this.root, "zoerce:diagram:export-request", detail, true)) return;
+            if (this.exportDownload) this.exportDownload.disabled = true;
+            try {
+                let fileName = null;
+                if (format === "json") fileName = this.downloadBlob(new Blob([JSON.stringify(this.exportState.includeSource ? this.exportEnvelope() : this.snapshot(), null, 2)], { type: "application/json" }), "json");
+                if (format === "svg") fileName = this.downloadBlob(new Blob([this.exportSvg()], { type: "image/svg+xml" }), "svg");
+                if (format === "jpeg") fileName = this.downloadBlob(await this.exportJpeg(), "jpg");
+                if (format === "html") fileName = this.downloadBlob(new Blob([this.exportHtml()], { type: "text/html" }), "html");
+                if (format === "pdf" && this.exportOptions.pdfMode === "server") {
+                    const response = await fetch(this.exportOptions.pdfExportUrl, { method: "POST", headers: { "Content-Type": "application/json", Accept: "application/pdf" }, body: JSON.stringify({ title: this.exportTitle(), svg: this.exportSvg(), html: this.exportHtml(), document: this.exportEnvelope(), page: this.exportState.pdfPage, fileName: this.exportState.fileName }), signal: this.abortController.signal });
+                    if (!response.ok) throw new Error("The PDF service could not render this diagram.");
+                    fileName = this.downloadBlob(await response.blob(), "pdf");
+                }
+                if (format === "pdf" && this.exportOptions.pdfMode !== "server") this.openPrintExport();
+                const action = format === "pdf" && this.exportOptions.pdfMode !== "server" ? "opened" : "downloaded";
+                this.setStatus("Diagram " + action + " as " + exportFormats.get(format).label + ".");
+                dispatch(this.root, "zoerce:diagram:exported", { ...detail, fileName, action });
+                if (format !== "pdf" || this.exportOptions.pdfMode === "server") this.closeExport();
+            } catch (error) {
+                this.setStatus("Diagram export could not be completed.");
+                dispatch(this.root, "zoerce:diagram:export-failed", { ...detail, error });
+            } finally {
+                if (this.exportDownload) this.exportDownload.disabled = false;
+            }
+        }
+
         dispose() {
             if (this.autoSaveTimer) globalThis.clearTimeout(this.autoSaveTimer);
+            if (this.exportPreviewUrl) globalThis.URL?.revokeObjectURL?.(this.exportPreviewUrl);
             if (this.focusMode) {
                 this.root.classList.remove("is-focus-mode");
                 if (this.focusPlaceholder?.parentNode) this.focusPlaceholder.parentNode.replaceChild(this.root, this.focusPlaceholder);

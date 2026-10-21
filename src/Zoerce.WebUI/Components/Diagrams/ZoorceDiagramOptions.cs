@@ -66,8 +66,11 @@ public sealed record ZoorceDiagramOptions
     /// <summary>Gets the initial zoom level.</summary>
     public decimal InitialZoom { get; init; } = 1m;
 
+    /// <summary>Gets the file export capabilities offered by this diagram.</summary>
+    public ZoorceDiagramExportOptions? Export { get; init; }
+
     /// <summary>Validates and normalizes host-supplied diagram configuration.</summary>
-    public ZoorceDiagramOptions Normalize()
+    public ZoorceDiagramOptions Normalize(ZoorceDiagramExportOptions? exportDefaults = null)
     {
         if (string.IsNullOrWhiteSpace(Id))
         {
@@ -80,13 +83,20 @@ public sealed record ZoorceDiagramOptions
         var mode = Enum.IsDefined(Mode) ? Mode : ZoorceDiagramMode.Viewer;
         var layout = Enum.IsDefined(Layout) ? Layout : ZoorceDiagramLayout.Manual;
         var panMode = Enum.IsDefined(PanMode) ? PanMode : ZoorceDiagramPanMode.Background;
-        var document = NormalizeDocument(Document ?? new ZoorceDiagramDocument(), profile);
+        var normalizedTitle = string.IsNullOrWhiteSpace(Title) ? "Diagram" : Title.Trim();
+        var normalizedSummary = string.IsNullOrWhiteSpace(Summary) ? "Interactive diagram" : Summary.Trim();
+        var document = NormalizeDocument(Document ?? new ZoorceDiagramDocument(), profile) with
+        {
+            Title = TrimOrNull(Document?.Title) ?? normalizedTitle,
+            Description = TrimOrNull(Document?.Description) ?? normalizedSummary
+        };
+        var export = (Export ?? exportDefaults ?? new ZoorceDiagramExportOptions()).Normalize(document.Title!);
 
         return this with
         {
             Id = Id.Trim(),
-            Title = string.IsNullOrWhiteSpace(Title) ? "Diagram" : Title.Trim(),
-            Summary = string.IsNullOrWhiteSpace(Summary) ? "Interactive diagram" : Summary.Trim(),
+            Title = document.Title!,
+            Summary = document.Description!,
             Profile = profile,
             Mode = mode,
             Layout = layout,
@@ -100,7 +110,8 @@ public sealed record ZoorceDiagramOptions
             GridSize = Math.Clamp(GridSize, 8, 80),
             MinimumZoom = minimumZoom,
             MaximumZoom = maximumZoom,
-            InitialZoom = Math.Clamp(InitialZoom, minimumZoom, maximumZoom)
+            InitialZoom = Math.Clamp(InitialZoom, minimumZoom, maximumZoom),
+            Export = export
         };
     }
 
@@ -172,7 +183,7 @@ public sealed record ZoorceDiagramOptions
         }
 
         ValidateProfile(profile, nodes, edges);
-        return new ZoorceDiagramDocument(Math.Max(1, document.SchemaVersion), nodes, edges, TrimOrNull(document.Version));
+        return new ZoorceDiagramDocument(Math.Max(1, document.SchemaVersion), nodes, edges, TrimOrNull(document.Version), TrimOrNull(document.Title), TrimOrNull(document.Description));
     }
 
     private static ZoorceDiagramAction? NormalizeAction(ZoorceDiagramAction? action) => action is null || action.Kind == ZoorceDiagramActionKind.None
