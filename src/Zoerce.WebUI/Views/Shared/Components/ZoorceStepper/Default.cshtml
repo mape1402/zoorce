@@ -23,6 +23,9 @@
     }, serializerOptions);
     var currentIndex = Model.Steps.ToList().FindIndex(step => string.Equals(step.Id, Model.CurrentStepId, StringComparison.OrdinalIgnoreCase));
     var rootClasses = $"z-component z-stepper z-stepper--{Model.Variant.ToString().ToLowerInvariant()} z-stepper--{Model.Density.ToString().ToLowerInvariant()}";
+    var markerStyle = Model.Variant == ZoorceStepperVariant.NumberedRail
+        ? ZoorceStepperMarkerStyle.Number
+        : Model.Presentation.MarkerStyle;
     string StateText(ZoorceStepperStep step) => step.StatusText ?? step.State switch
     {
         ZoorceStepperState.Active => "In progress",
@@ -33,7 +36,7 @@
         _ => "Pending"
     };
 }
-<section id="@Model.Id" class="@rootClasses" data-z-stepper data-z-stepper-variant="@Model.Variant" data-z-stepper-orientation="@Model.Orientation" data-z-stepper-current="@Model.CurrentStepId" data-z-stepper-show-connectors="@Model.ShowConnector.ToString().ToLowerInvariant()" data-z-stepper-marker-style="@Model.Presentation.MarkerStyle" data-z-stepper-active-indicator="@Model.Presentation.ActiveIndicator" data-z-stepper-active-motion="@Model.Presentation.ActiveMotion" data-z-stepper-label-placement="@Model.Presentation.LabelPlacement" data-z-stepper-connector-style="@Model.Presentation.ConnectorStyle" style="--z-step-count:@Model.Steps.Count" aria-label="@Model.AriaLabel">
+<section id="@Model.Id" class="@rootClasses" data-z-stepper data-z-stepper-variant="@Model.Variant" data-z-stepper-orientation="@Model.Orientation" data-z-stepper-current="@Model.CurrentStepId" data-z-stepper-show-connectors="@Model.ShowConnector.ToString().ToLowerInvariant()" data-z-stepper-marker-style="@markerStyle" data-z-stepper-active-indicator="@Model.Presentation.ActiveIndicator" data-z-stepper-active-motion="@Model.Presentation.ActiveMotion" data-z-stepper-label-placement="@Model.Presentation.LabelPlacement" data-z-stepper-connector-style="@Model.Presentation.ConnectorStyle" style="--z-step-count:@Model.Steps.Count" aria-label="@Model.AriaLabel">
     <script type="application/json" data-z-stepper-config>@Html.Raw(configuration)</script>
     <nav class="z-stepper-nav" aria-label="@Model.AriaLabel">
         <ol class="z-stepper-list" data-z-stepper-list>
@@ -43,7 +46,7 @@
                 var isCurrent = index == currentIndex;
                 var isDisabled = step.State == ZoorceStepperState.Disabled || !step.IsNavigable;
                 var stepClasses = $"z-stepper-step is-{step.State.ToString().ToLowerInvariant()}" + (step.Tone != ZoorceStepperTone.Auto ? $" has-tone tone-{step.Tone.ToString().ToLowerInvariant()}" : string.Empty) + (isCurrent ? " is-current" : string.Empty);
-                var markerText = Model.Presentation.MarkerStyle switch
+                var markerText = markerStyle switch
                 {
                     ZoorceStepperMarkerStyle.None or ZoorceStepperMarkerStyle.Dot => null,
                     ZoorceStepperMarkerStyle.Number => Model.ShowNumbers ? (index + 1).ToString() : null,
@@ -79,7 +82,7 @@
                     }
                     else
                     {
-                        <button class="z-stepper-trigger" type="button" data-z-stepper-trigger aria-current="@(isCurrent ? "step" : null)" aria-controls="@step.PanelId" aria-disabled="@isDisabled.ToString().ToLowerInvariant()" tabindex="@(isCurrent ? "0" : "-1")" @(isDisabled ? "disabled" : null)>
+                        <button class="z-stepper-trigger" type="button" data-z-stepper-trigger aria-label="@step.Title" aria-current="@(isCurrent ? "step" : null)" aria-controls="@step.PanelId" aria-disabled="@isDisabled.ToString().ToLowerInvariant()" tabindex="@(isCurrent ? "0" : "-1")" @(isDisabled ? "disabled" : null)>
                             <span class="z-stepper-marker" data-z-stepper-marker data-z-stepper-marker-default="@markerText" aria-hidden="true">
                                 @if (markerText is not null)
                                 {
@@ -106,6 +109,13 @@
     {
         <div class="z-stepper-actions" data-z-stepper-actions>
             <button type="button" class="z-button z-button-ghost z-stepper-previous" data-z-stepper-previous>@Model.PreviousLabel</button>
+            @if (Model.Variant == ZoorceStepperVariant.WizardHeader)
+            {
+                <span class="z-stepper-header-current" aria-live="polite">
+                    <small data-z-stepper-current-index>Step @(currentIndex + 1) of @Model.Steps.Count</small>
+                    <strong data-z-stepper-current-title>@Model.Steps[currentIndex].Title</strong>
+                </span>
+            }
             <button type="button" class="z-button z-button-primary z-stepper-next" data-z-stepper-next data-z-stepper-next-label="@Model.NextLabel" data-z-stepper-complete-label="@Model.CompleteLabel">@Model.NextLabel</button>
         </div>
     }

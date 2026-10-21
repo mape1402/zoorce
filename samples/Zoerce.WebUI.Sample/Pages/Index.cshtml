@@ -7,7 +7,7 @@
 <section id="dashboard">
     <div class="z-page-heading">
         <div><span class="z-section-kicker">Live design system</span><h1>Build interfaces with signal.</h1><p>Every element in this workspace is provided by Zoorce: a dark-first Razor Pages UI foundation with configurable colors, accessible interactions, and responsive surfaces.</p></div>
-        <div class="z-page-actions"><button class="z-button z-button-ghost" type="button" data-z-command-open>⌕ Explore</button><button class="z-button z-button-primary" type="button" data-z-toast="The sample is ready for your next component." data-z-toast-title="Workspace synced">✦ Create component</button></div>
+        <div class="z-page-actions"><button class="z-button z-button-ghost" type="button" data-z-command-open>⌕ Explore</button><button class="z-button z-button-primary" type="button" data-z-static-catalogue-insert>✦ Create component</button></div>
     </div>
 
     <div class="z-metric-grid" aria-label="Dashboard metrics">
@@ -52,3 +52,7 @@
 
 <div class="z-dialog-layer" data-z-modal-layer id="demo-modal" hidden><section class="z-dialog" role="dialog" aria-modal="true" aria-labelledby="demo-modal-title" data-z-modal-focus tabindex="-1"><div class="z-dialog-icon" aria-hidden="true">✦</div><div class="z-dialog-copy"><h2 id="demo-modal-title">Modal component</h2><p>Use this surface for focused decisions or small, self-contained workflows.</p></div><div class="z-dialog-actions"><button class="z-button z-button-ghost" type="button" data-z-modal-close>Close</button><button class="z-button z-button-primary" type="button" data-z-modal-close data-z-toast="The modal action completed." data-z-toast-title="Modal confirmed">Confirm</button></div></section></div>
 <div class="z-drawer-layer" data-z-drawer-layer id="demo-drawer" hidden><aside class="z-drawer" role="dialog" aria-modal="true" aria-labelledby="demo-drawer-title" data-z-modal-focus tabindex="-1"><div class="z-drawer-header"><div><span class="z-section-kicker">Inspector</span><h2 id="demo-drawer-title">Drawer component</h2></div><button class="z-icon-button" type="button" data-z-drawer-close aria-label="Close drawer">×</button></div><div class="z-drawer-body"><p class="z-card-caption">Drawers preserve the page context while exposing filters, details or rapid editing.</p><div class="z-drawer-item"><span>Theme</span><strong>Semantic tokens</strong></div><div class="z-drawer-item"><span>Motion</span><strong>Reduced motion aware</strong></div><div class="z-drawer-item"><span>Focus</span><strong>Keyboard ready</strong></div><button class="z-button z-button-primary" style="margin-top:20px" type="button" data-z-drawer-close>Done</button></div></aside></div>
+
+@section Scripts {
+    <script src="/js/sample-demos.js" asp-append-version="true"></script>
+}

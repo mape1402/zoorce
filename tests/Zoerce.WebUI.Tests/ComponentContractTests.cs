@@ -348,6 +348,20 @@ public sealed class ComponentContractTests
         Assert.Null(normalized.Steps[1].Icon);
         Assert.Null(normalized.Steps[1].StatusText);
         Assert.Null(normalized.Steps[1].PanelId);
+
+        var flatSegments = (CreateStepper() with
+        {
+            Variant = ZoorceStepperVariant.FlatSegments,
+            Orientation = ZoorceStepperOrientation.Vertical
+        }).Normalize();
+        var wizardHeader = (CreateStepper() with
+        {
+            Variant = ZoorceStepperVariant.WizardHeader,
+            Orientation = ZoorceStepperOrientation.Vertical
+        }).Normalize();
+
+        Assert.Equal(ZoorceStepperOrientation.Horizontal, flatSegments.Orientation);
+        Assert.Equal(ZoorceStepperOrientation.Horizontal, wizardHeader.Orientation);
     }
 
     [Fact]
@@ -548,6 +562,10 @@ public sealed class ComponentContractTests
         var model = Assert.IsType<ZoorceStepperOptions>(result.ViewData!.Model);
         Assert.Equal("stepper-view", model.Id);
         Assert.Contains(ZoorceStepperVariant.Workflow, Enum.GetValues<ZoorceStepperVariant>());
+        Assert.Contains(ZoorceStepperVariant.NumberedRail, Enum.GetValues<ZoorceStepperVariant>());
+        Assert.Contains(ZoorceStepperVariant.FlatSegments, Enum.GetValues<ZoorceStepperVariant>());
+        Assert.Contains(ZoorceStepperVariant.WizardHeader, Enum.GetValues<ZoorceStepperVariant>());
+        Assert.Contains(ZoorceStepperVariant.MinimalRail, Enum.GetValues<ZoorceStepperVariant>());
         Assert.Contains(ZoorceStepperOrientation.Auto, Enum.GetValues<ZoorceStepperOrientation>());
         Assert.Contains(ZoorceStepperInteraction.Wizard, Enum.GetValues<ZoorceStepperInteraction>());
         Assert.Contains(ZoorceStepperDensity.Compact, Enum.GetValues<ZoorceStepperDensity>());

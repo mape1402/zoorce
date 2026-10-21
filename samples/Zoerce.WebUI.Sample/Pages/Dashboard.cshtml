@@ -3,24 +3,28 @@
     ViewData["Title"] = "Workspace dashboard";
 }
 
-<section>
+<section data-z-demo-dashboard>
     <div class="z-page-heading">
         <div><span class="z-section-kicker">Workspace</span><h1>Keep product signals in view.</h1><p>A dedicated Razor Page with the same shell, theme tokens and navigation state as every other host page.</p></div>
-        <div class="z-page-actions"><button class="z-button z-button-ghost" type="button" data-z-command-open>⌕ Explore</button><button class="z-button z-button-primary" type="button" data-z-toast="The dashboard snapshot is ready." data-z-toast-title="Workspace synced">Refresh view</button></div>
+        <div class="z-page-actions"><button class="z-button z-button-ghost" type="button" data-z-command-open>⌕ Explore</button><button class="z-button z-button-primary" type="button" data-z-demo-dashboard-refresh>Refresh view</button></div>
     </div>
 
     <div class="z-metric-grid" aria-label="Dashboard metrics">
-        <article class="z-card z-metric-card"><span class="z-metric-label">Active workspaces</span><strong class="z-metric-value">12</strong><span class="z-metric-trend">↗ 2 this week</span></article>
-        <article class="z-card z-metric-card"><span class="z-metric-label">Component adoption</span><strong class="z-metric-value">76%</strong><span class="z-metric-trend">↗ 8% this sprint</span></article>
-        <article class="z-card z-metric-card"><span class="z-metric-label">Review queue</span><strong class="z-metric-value">04</strong><span class="z-metric-trend">✓ In control</span></article>
-        <article class="z-card z-metric-card"><span class="z-metric-label">System health</span><strong class="z-metric-value">99.99</strong><span class="z-metric-trend">✓ All services ready</span></article>
+        <article class="z-card z-metric-card"><span class="z-metric-label">Active workspaces</span><strong class="z-metric-value" data-z-demo-metric>12</strong><span class="z-metric-trend">↗ 2 this week</span></article>
+        <article class="z-card z-metric-card"><span class="z-metric-label">Component adoption</span><strong class="z-metric-value" data-z-demo-metric>76%</strong><span class="z-metric-trend">↗ 8% this sprint</span></article>
+        <article class="z-card z-metric-card"><span class="z-metric-label">Review queue</span><strong class="z-metric-value" data-z-demo-metric>04</strong><span class="z-metric-trend">✓ In control</span></article>
+        <article class="z-card z-metric-card"><span class="z-metric-label">System health</span><strong class="z-metric-value" data-z-demo-metric>99.99</strong><span class="z-metric-trend">✓ All services ready</span></article>
     </div>
 
     <div class="z-dashboard-grid z-section">
         <article class="z-card z-chart-card">
-            <div class="z-chart-header"><div><p class="z-card-title">Delivery momentum</p><p class="z-card-caption">Shipped work across the last 30 days</p><div class="z-chart-total">18,492 <span class="z-metric-trend">↗ 24.8%</span></div></div><div class="z-button-group" data-z-selection-group aria-label="Chart range"><button class="is-active" type="button" aria-pressed="true">30d</button><button type="button" aria-pressed="false">90d</button><button type="button" aria-pressed="false">Year</button></div></div>
-            <svg class="z-chart" viewBox="0 0 650 180" role="img" aria-label="A rising line chart representing delivery momentum"><defs><linearGradient id="z-dashboard-gradient" x1="0" x2="0" y1="0" y2="1"><stop stop-color="var(--z-primary)" stop-opacity=".48" /><stop offset="1" stop-color="var(--z-primary)" stop-opacity="0" /></linearGradient></defs><path class="z-chart-grid" d="M0 25H650M0 75H650M0 125H650M0 175H650" /><path class="z-chart-fill" d="M0 148 C55 140 70 102 118 115 S188 139 222 93 S296 47 338 82 S396 120 433 71 S508 53 545 41 S610 61 650 16 V180 H0 Z" /><path class="z-chart-line" d="M0 148 C55 140 70 102 118 115 S188 139 222 93 S296 47 338 82 S396 120 433 71 S508 53 545 41 S610 61 650 16" /><circle class="z-chart-dot" cx="545" cy="41" r="5" /></svg>
+            <div class="z-chart-header"><div><p class="z-card-title">Delivery momentum</p><p class="z-card-caption" data-z-demo-chart-caption>Shipped work across the last 30 days</p><div class="z-chart-total" data-z-demo-chart-total>18,492 <span class="z-metric-trend">↗ 24.8%</span></div></div><div class="z-button-group" data-z-selection-group data-z-demo-range aria-label="Chart range"><button class="is-active" type="button" aria-pressed="true" data-z-demo-range-value="30d">30d</button><button type="button" aria-pressed="false" data-z-demo-range-value="90d">90d</button><button type="button" aria-pressed="false" data-z-demo-range-value="Year">Year</button></div></div>
+            <svg class="z-chart" viewBox="0 0 650 180" role="img" aria-label="A rising line chart representing delivery momentum"><defs><linearGradient id="z-dashboard-gradient" x1="0" x2="0" y1="0" y2="1"><stop stop-color="var(--z-primary)" stop-opacity=".48" /><stop offset="1" stop-color="var(--z-primary)" stop-opacity="0" /></linearGradient></defs><path class="z-chart-grid" d="M0 25H650M0 75H650M0 125H650M0 175H650" /><path class="z-chart-fill" data-z-demo-chart-fill d="M0 148 C55 140 70 102 118 115 S188 139 222 93 S296 47 338 82 S396 120 433 71 S508 53 545 41 S610 61 650 16 V180 H0 Z" /><path class="z-chart-line" data-z-demo-chart-line d="M0 148 C55 140 70 102 118 115 S188 139 222 93 S296 47 338 82 S396 120 433 71 S508 53 545 41 S610 61 650 16" /><circle class="z-chart-dot" cx="545" cy="41" r="5" /></svg>
         </article>
         <div class="z-insight-stack"><article class="z-card"><div class="z-card-header"><div><h2 class="z-card-title">Design consistency</h2><p class="z-card-caption">System health score</p></div><span class="z-status z-status-success">Excellent</span></div><div class="z-donut-wrap"><div class="z-donut"></div><div class="z-insight-copy"><strong>Visual rhythm is stable.</strong><p>Tokens, motion and spacing remain aligned across the workspace.</p></div></div></article><article class="z-card"><div class="z-card-header"><div><h2 class="z-card-title">Next release</h2><p class="z-card-caption">Component package</p></div><span class="z-badge z-badge-primary">v0.1.0</span></div><p class="z-card-caption" style="margin-top:16px">A compact workspace view that still carries the full system language.</p><div class="z-progress" aria-label="Release progress"><span style="width:78%"></span></div></article></div>
     </div>
 </section>
+
+@section Scripts {
+    <script src="/js/sample-demos.js" asp-append-version="true"></script>
+}

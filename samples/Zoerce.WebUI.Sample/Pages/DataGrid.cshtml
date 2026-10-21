@@ -26,7 +26,7 @@
             <h1 id="infinite-grid-title">Infinite scroll, in its own space.</h1>
             <p>This is an inner, fixed-height data viewport. Scroll inside it to fetch the next slice; the surrounding page never grows while the grid streams records.</p>
         </div>
-        <span class="z-infinite-grid-status">Live catalogue</span>
+        <div class="z-page-actions"><span class="z-infinite-grid-status">Live catalogue</span><button class="z-button z-button-secondary z-button-sm" type="button" data-z-live-demo data-z-live-endpoint="/api/demo/activity">Simulate catalogue update</button></div>
     </div>
 
     @await Component.InvokeAsync("ZoorceDataGrid", new ZoorceDataGridOptions
@@ -50,4 +50,5 @@
 @section Scripts {
     <script src="/vendor/signalr/signalr.min.js"></script>
     <script src="~/_content/Zoerce.WebUI/js/zoerce-signalr.js" asp-append-version="true"></script>
+    <script src="/js/sample-demos.js" asp-append-version="true"></script>
 }

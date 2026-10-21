@@ -13,5 +13,17 @@ public enum ZoorceStepperVariant
     Sidebar,
 
     /// <summary>Renders expressive markers, supporting text, and status badges.</summary>
-    Workflow
+    Workflow,
+
+    /// <summary>Renders square, numbered milestones linked by a dotted progress rail.</summary>
+    NumberedRail,
+
+    /// <summary>Renders contiguous, rectangular status segments without chevrons.</summary>
+    FlatSegments,
+
+    /// <summary>Renders wizard controls with the current step summarized in the header.</summary>
+    WizardHeader,
+
+    /// <summary>Renders a compact marker rail that exposes the active step label.</summary>
+    MinimalRail
 }

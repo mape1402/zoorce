@@ -129,6 +129,8 @@ public sealed record ZoorceStepperOptions
         var orientation = Variant switch
         {
             ZoorceStepperVariant.Segmented when Orientation == ZoorceStepperOrientation.Vertical => ZoorceStepperOrientation.Horizontal,
+            ZoorceStepperVariant.FlatSegments when Orientation == ZoorceStepperOrientation.Vertical => ZoorceStepperOrientation.Horizontal,
+            ZoorceStepperVariant.WizardHeader when Orientation == ZoorceStepperOrientation.Vertical => ZoorceStepperOrientation.Horizontal,
             ZoorceStepperVariant.Sidebar when Orientation == ZoorceStepperOrientation.Horizontal => ZoorceStepperOrientation.Vertical,
             _ => Orientation
         };

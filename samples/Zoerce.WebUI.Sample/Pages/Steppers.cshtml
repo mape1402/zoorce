@@ -159,6 +159,131 @@
         </article>
     </div>
 
+    <section class="z-stepper-variant-lab" aria-labelledby="stepper-variant-lab-title">
+        <header class="z-stepper-variant-lab-heading">
+            <span>Additional layouts · same workflow API</span>
+            <h2 id="stepper-variant-lab-title">Choose the structure that fits the journey.</h2>
+            <p>These four visual variants retain the same state model, navigation rules, theme tokens, and isolated event lifecycle as the existing steppers.</p>
+        </header>
+        <div class="z-stepper-variant-grid">
+            <article class="z-stepper-example z-stepper-example--numbered">
+                <header><span>Numbered rail · ordered milestones</span><h2>Account handoff</h2><p>Square numerals and a dotted connector work well when sequence is the main signal.</p></header>
+                @await Component.InvokeAsync("ZoorceStepper", new ZoorceStepperOptions
+                {
+                    Id = "numbered-rail-stepper",
+                    AriaLabel = "Account handoff milestones",
+                    Steps = new[]
+                    {
+                        Step("account", "Account", state: ZoorceStepperState.Completed),
+                        Step("security", "Security", state: ZoorceStepperState.Active),
+                        Step("confirm", "Confirm")
+                    },
+                    CurrentStepId = "security",
+                    Variant = ZoorceStepperVariant.NumberedRail,
+                    Orientation = ZoorceStepperOrientation.Horizontal,
+                    Interaction = ZoorceStepperInteraction.Navigation,
+                    Density = ZoorceStepperDensity.Compact,
+                    ShowStatus = false,
+                    AllowFutureNavigation = false,
+                    Presentation = new ZoorceStepperPresentation
+                    {
+                        MarkerStyle = ZoorceStepperMarkerStyle.Number,
+                        ActiveIndicator = ZoorceStepperActiveIndicator.Solid,
+                        ConnectorStyle = ZoorceStepperConnectorStyle.Dotted
+                    }
+                })
+            </article>
+
+            <article class="z-stepper-example z-stepper-example--flat-segments">
+                <header><span>Flat segments · compact stage switcher</span><h2>Launch phases</h2><p>A contiguous bar keeps short peer-level phases readable without the chevron language.</p></header>
+                @await Component.InvokeAsync("ZoorceStepper", new ZoorceStepperOptions
+                {
+                    Id = "flat-segment-stepper",
+                    AriaLabel = "Launch phases",
+                    Steps = new[]
+                    {
+                        Step("plan", "Plan", state: ZoorceStepperState.Completed),
+                        Step("configure", "Configure", state: ZoorceStepperState.Active),
+                        Step("launch", "Launch")
+                    },
+                    CurrentStepId = "configure",
+                    Variant = ZoorceStepperVariant.FlatSegments,
+                    Orientation = ZoorceStepperOrientation.Horizontal,
+                    Interaction = ZoorceStepperInteraction.Navigation,
+                    Density = ZoorceStepperDensity.Compact,
+                    ShowStatus = false,
+                    AllowFutureNavigation = false,
+                    Presentation = new ZoorceStepperPresentation
+                    {
+                        MarkerStyle = ZoorceStepperMarkerStyle.None,
+                        ActiveIndicator = ZoorceStepperActiveIndicator.Solid,
+                        ConnectorStyle = ZoorceStepperConnectorStyle.None
+                    }
+                })
+            </article>
+
+            <article class="z-stepper-example z-stepper-example--wide z-stepper-example--header-wizard">
+                <header><span>Wizard header · action-led progression</span><h2>Identity verification</h2><p>The persistent action bar names the active step, while the compact rail maintains orientation and completion context.</p></header>
+                @await Component.InvokeAsync("ZoorceStepper", new ZoorceStepperOptions
+                {
+                    Id = "header-wizard-stepper",
+                    AriaLabel = "Identity verification wizard",
+                    Steps = new[]
+                    {
+                        Step("profile", "Profile", state: ZoorceStepperState.Completed),
+                        Step("verify", "Verification", state: ZoorceStepperState.Active),
+                        Step("complete", "Complete")
+                    },
+                    CurrentStepId = "verify",
+                    Variant = ZoorceStepperVariant.WizardHeader,
+                    Orientation = ZoorceStepperOrientation.Horizontal,
+                    Interaction = ZoorceStepperInteraction.Wizard,
+                    Density = ZoorceStepperDensity.Compact,
+                    ShowStatus = false,
+                    PreviousLabel = "Previous",
+                    NextLabel = "Next",
+                    CompleteLabel = "Finish verification",
+                    Presentation = new ZoorceStepperPresentation
+                    {
+                        MarkerStyle = ZoorceStepperMarkerStyle.Dot,
+                        ActiveIndicator = ZoorceStepperActiveIndicator.Halo,
+                        ActiveMotion = ZoorceStepperActiveMotion.RingPulse,
+                        ConnectorStyle = ZoorceStepperConnectorStyle.Progress
+                    }
+                })
+            </article>
+
+            <article class="z-stepper-example z-stepper-example--wide z-stepper-example--minimal-rail">
+                <header><span>Minimal rail · low-chrome progression</span><h2>Brief submission</h2><p>The active label floats above its marker; the rest of the rail remains intentionally quiet.</p></header>
+                @await Component.InvokeAsync("ZoorceStepper", new ZoorceStepperOptions
+                {
+                    Id = "minimal-rail-stepper",
+                    AriaLabel = "Brief submission progress",
+                    Steps = new[]
+                    {
+                        Step("start", "Start", state: ZoorceStepperState.Completed, tone: ZoorceStepperTone.Primary),
+                        Step("details", "Details", state: ZoorceStepperState.Active, tone: ZoorceStepperTone.Primary),
+                        Step("confirm-brief", "Confirm")
+                    },
+                    CurrentStepId = "details",
+                    Variant = ZoorceStepperVariant.MinimalRail,
+                    Orientation = ZoorceStepperOrientation.Horizontal,
+                    Interaction = ZoorceStepperInteraction.Navigation,
+                    Density = ZoorceStepperDensity.Compact,
+                    ShowStatus = false,
+                    AllowFutureNavigation = false,
+                    Presentation = new ZoorceStepperPresentation
+                    {
+                        MarkerStyle = ZoorceStepperMarkerStyle.Number,
+                        ActiveIndicator = ZoorceStepperActiveIndicator.Ring,
+                        LabelPlacement = ZoorceStepperLabelPlacement.Above,
+                        ConnectorStyle = ZoorceStepperConnectorStyle.Solid
+                    }
+                })
+            </article>
+        </div>
+    </section>
+
     <article class="z-stepper-example z-stepper-example--wizard">
         <header><span>Wizard · controlled progression</span><h2>First workspace setup</h2><p>The action buttons move one adjacent step at a time. Consumers can intercept <code>zoerce:stepper:request-change</code> to validate server state before permitting a transition.</p></header>
         <div class="z-stepper-wizard-layout">

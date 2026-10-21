@@ -32,6 +32,8 @@ The host owns the backend implementation through transport-neutral contracts in 
 
 Use `ZoorceDataGridOptions.LoadMode` to select `Pagination` (previous/next controls) or `InfiniteScroll` (intersection observer plus a keyboard-accessible fallback). Both send the same query and page parameters; the difference is entirely presentational. `Virtualize` bounds appended DOM rows for long streams.
 
+For isolated local integrations, a grid root also accepts `zoerce:grid:insert` with an `{ item }` detail and `zoerce:grid:refresh`. These events update only that grid instance; they are useful for a host action, a modal workflow, or a SignalR adapter without coupling the rest of the document.
+
 ```cshtml
 @await Component.InvokeAsync("ZoorceDataGrid", new ZoorceDataGridOptions
 {
@@ -52,6 +54,8 @@ The visual catalog includes Line, Area, Sparkline, vertical Bar, HorizontalBar, 
 `ZoorceChartPoint` keeps the simple `Label` / `Value` pair for normal categorical charts and exposes optional `X`, `Low`, `High`, `Size`, and `Group` dimensions for continuous, ranged, bubble and matrix data. `ZoorceChartSeries.Color` can override a series color; otherwise the component uses the analytical `DataPrimary` through `DataQuinary` palette from the configured theme. Those tokens are intentionally independent from `Primary`, so a product brand does not turn every data series into the same color.
 
 Use `ShowLegend`, `ShowGrid`, `ShowAxes`, and `ShowTooltip` to tune presentation per instance. `MinimumValue`, `MaximumValue`, and `TargetValue` make bounded metrics, gauges and bullet charts deterministic. The legend is keyboard accessible and toggles only its own component instance. SVG paths use CSS-pixel view boxes and non-scaling strokes, avoiding blurred lines at normal browser zoom levels.
+
+A chart root can receive `zoerce:chart:replace` with `{ series }` for an instance-only data update, or `zoerce:chart:refresh` to reload its configured source. Both preserve the rest of the host page and make local, REST, and realtime demos follow the same boundary.
 
 ```cshtml
 @await Component.InvokeAsync("ZoorceChart", new ZoorceChartOptions
@@ -75,7 +79,7 @@ SignalR is deliberately an opt-in adapter rather than a global shell dependency.
 
 `ZoorceStepper` is a Razor View Component for server-rendered progress, navigation and wizard flows. Every instance carries its own state payload, keyboard handling, optional REST refresh, and optional SignalR subscription; an update changes only that root and never reconstructs the surrounding page.
 
-Choose `Rail`, `Segmented`, `Sidebar`, or `Workflow` through `ZoorceStepperVariant`. `Orientation` can be `Horizontal`, `Vertical`, or `Auto`; auto rails switch to a vertical arrangement when their own container becomes narrow. `ZoorceStepperInteraction` separates a passive `Progress` display from direct `Navigation` and one-step-at-a-time `Wizard` behavior. The normalizer deliberately keeps segmented controls horizontal and sidebar journeys vertical.
+Choose `Rail`, `Segmented`, `Sidebar`, `Workflow`, `NumberedRail`, `FlatSegments`, `WizardHeader`, or `MinimalRail` through `ZoorceStepperVariant`. `NumberedRail` uses square ordered milestones; `FlatSegments` is a rectangular, non-chevron stage bar; `WizardHeader` binds previous/next actions to a named current-stage header; and `MinimalRail` reveals only the active label above a compact marker rail. `Orientation` can be `Horizontal`, `Vertical`, or `Auto`; auto rails switch to a vertical arrangement when their own container becomes narrow. The normalizer deliberately keeps segmented, flat-segment, and header-wizard controls horizontal, while sidebar journeys stay vertical. `ZoorceStepperInteraction` separates a passive `Progress` display from direct `Navigation` and one-step-at-a-time `Wizard` behavior.
 
 Each `ZoorceStepperStep` has an id, title, optional supporting text or icon, semantic state (`Pending`, `Active`, `Completed`, `Attention`, `Error`, or `Disabled`), optional status text, target URL, panel id, and an optional `Tone` (`Neutral`, `Primary`, `Success`, `Warning`, `Danger`, or `Info`). `AllowCompletedNavigation` and `AllowFutureNavigation` define the basic navigation policy instead of baking product rules into the component.
 

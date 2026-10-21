@@ -117,6 +117,12 @@
             this.series = normalizeSeries(configuration.series);
             this.lastSize = "";
             this.renderHandle = 0;
+            this.root.addEventListener("zoerce:chart:replace", event => {
+                this.hiddenSeries.clear();
+                this.render(event.detail?.series ?? this.series);
+                this.root.dispatchEvent(new CustomEvent("zoerce:chart:updated", { bubbles: true, detail: { series: this.series } }));
+            }, { signal: this.abortController.signal });
+            this.root.addEventListener("zoerce:chart:refresh", () => this.load(), { signal: this.abortController.signal });
             this.initializeCanvas();
             this.render(this.series);
             this.observeSize();

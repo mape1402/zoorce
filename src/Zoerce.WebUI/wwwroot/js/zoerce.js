@@ -354,12 +354,12 @@
 
     document.querySelectorAll("[data-z-filter-input]").forEach(input => {
         const panel = input.closest(".z-panel") ?? document;
-        const rows = [...panel.querySelectorAll(input.dataset.zFilterInput)];
+        const rows = () => [...panel.querySelectorAll(input.dataset.zFilterInput)];
         const chips = [...panel.querySelectorAll("[data-z-filter-chip]")];
         const applyFilter = () => {
             const query = input.value.trim().toLowerCase();
             const status = chips.find(chip => chip.classList.contains("is-active"))?.dataset.zFilterChip ?? "all";
-            rows.forEach(row => {
+            rows().forEach(row => {
                 const matchesQuery = row.textContent.toLowerCase().includes(query);
                 const matchesStatus = status === "all" || row.dataset.zFilterStatus === status;
                 row.hidden = !matchesQuery || !matchesStatus;
@@ -482,6 +482,8 @@
 
         bind() {
             const signal = this.abortController.signal;
+            this.root.addEventListener("zoerce:grid:insert", event => this.insert(event.detail?.item), { signal });
+            this.root.addEventListener("zoerce:grid:refresh", () => this.load(1, { reset: true }), { signal });
             this.root.querySelector("[data-z-grid-search]")?.addEventListener("input", event => {
                 const value = event.currentTarget.value.trim();
                 window.clearTimeout(this.searchTimer);
@@ -658,6 +660,19 @@
                 cell.textContent = displayValue(item[cell.dataset.zGridField]);
             });
             return true;
+        }
+
+        insert(item) {
+            const key = displayValue(item?.[this.configuration.rowKeyField]);
+            if (!key) return;
+            const existing = this.items.findIndex(candidate => displayValue(candidate[this.configuration.rowKeyField]) === key);
+            if (existing >= 0) this.items.splice(existing, 1);
+            this.items.unshift(item);
+            if (this.totalCount !== null) this.totalCount += existing < 0 ? 1 : 0;
+            this.renderRows(true);
+            this.updateControls();
+            this.setState("A local sample record was added.");
+            dispatch(this.root, "zoerce:grid:inserted", { item });
         }
 
         setState(message) {

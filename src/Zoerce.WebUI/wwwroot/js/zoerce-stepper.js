@@ -200,7 +200,8 @@
             const marker = item.querySelector("[data-z-stepper-marker]");
             const markerStyle = this.root.dataset.zStepperMarkerStyle;
             if (marker && markerStyle !== "Dot" && markerStyle !== "None") {
-                marker.textContent = normalized === "Completed" ? "✓" : (marker.dataset.zStepperMarkerDefault ?? "");
+                const completionMark = markerStyle === "Auto" || markerStyle === "Check";
+                marker.textContent = normalized === "Completed" && completionMark ? "✓" : (marker.dataset.zStepperMarkerDefault ?? "");
             }
         }
 
@@ -227,8 +228,13 @@
                     if (trigger.tagName === "BUTTON") trigger.tabIndex = current ? 0 : -1;
                 }
             });
+            const currentTitle = item.querySelector("[data-z-stepper-title]")?.textContent ?? "Step";
+            const currentIndex = this.root.querySelector("[data-z-stepper-current-index]");
+            const currentTitleElement = this.root.querySelector("[data-z-stepper-current-title]");
+            if (currentIndex) currentIndex.textContent = `Step ${index + 1} of ${items.length}`;
+            if (currentTitleElement) currentTitleElement.textContent = currentTitle;
             this.syncControls();
-            this.announce(`${item.querySelector("[data-z-stepper-title]")?.textContent ?? "Step"} is current.`);
+            this.announce(`${currentTitle} is current.`);
             if (options.focus) item.querySelector("[data-z-stepper-trigger]")?.focus({ preventScroll: true });
         }
 
@@ -251,11 +257,13 @@
             const configured = this.configuration.orientation ?? "Auto";
             const width = this.root.getBoundingClientRect().width;
             let orientation = configured;
+            const compactHorizontalVariant = ["Segmented", "FlatSegments", "NumberedRail", "WizardHeader", "MinimalRail"].includes(this.configuration.variant);
             if (configured === "Auto") orientation = width < Math.max(560, this.items().length * 142) ? "Vertical" : "Horizontal";
-            if (width <= 700) orientation = "Vertical";
+            if (width <= 700 && !compactHorizontalVariant) orientation = "Vertical";
             if (this.configuration.variant === "Sidebar") orientation = "Vertical";
             this.root.dataset.zStepperEffectiveOrientation = orientation;
-            this.root.dataset.zStepperEffectiveVariant = this.configuration.variant === "Segmented" && orientation === "Vertical" ? "Rail" : this.configuration.variant;
+            const usesHorizontalSegments = ["Segmented", "FlatSegments"].includes(this.configuration.variant);
+            this.root.dataset.zStepperEffectiveVariant = usesHorizontalSegments && orientation === "Vertical" ? "Rail" : this.configuration.variant;
         }
 
         applySnapshot(snapshot) {
