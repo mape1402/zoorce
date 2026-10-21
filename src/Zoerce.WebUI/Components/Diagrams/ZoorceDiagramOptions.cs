@@ -149,7 +149,9 @@ public sealed record ZoorceDiagramOptions
                 Label = TrimOrNull(edge.Label),
                 Kind = TrimOrNull(edge.Kind),
                 Tone = Enum.IsDefined(edge.Tone) ? edge.Tone : ZoorceDiagramTone.Neutral,
-                Style = NormalizeEdgeStyle(edge.Style)
+                Style = NormalizeEdgeStyle(edge.Style),
+                FromPort = Enum.IsDefined(edge.FromPort) ? edge.FromPort : ZoorceDiagramPortSide.Auto,
+                ToPort = Enum.IsDefined(edge.ToPort) ? edge.ToPort : ZoorceDiagramPortSide.Auto
             };
             if (!nodeIds.Contains(normalized.FromNodeId) || !nodeIds.Contains(normalized.ToNodeId) || string.Equals(normalized.FromNodeId, normalized.ToNodeId, StringComparison.OrdinalIgnoreCase))
             {

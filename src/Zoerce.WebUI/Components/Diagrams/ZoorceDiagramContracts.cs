@@ -42,6 +42,21 @@ public enum ZoorceDiagramPanMode
     Disabled
 }
 
+/// <summary>Defines a connection anchor on one of the four sides of a diagram node.</summary>
+public enum ZoorceDiagramPortSide
+{
+    /// <summary>Lets the diagram choose the most appropriate anchor for the profile and relative position.</summary>
+    Auto,
+    /// <summary>Uses the top-center anchor.</summary>
+    Top,
+    /// <summary>Uses the right-center anchor.</summary>
+    Right,
+    /// <summary>Uses the bottom-center anchor.</summary>
+    Bottom,
+    /// <summary>Uses the left-center anchor.</summary>
+    Left
+}
+
 /// <summary>Provides semantic visual tones for nodes and connections.</summary>
 public enum ZoorceDiagramTone
 {
@@ -120,7 +135,9 @@ public sealed record ZoorceDiagramEdge(
     string? Label = null,
     ZoorceDiagramTone Tone = ZoorceDiagramTone.Neutral,
     string? Kind = null,
-    ZoorceDiagramEdgeStyle? Style = null);
+    ZoorceDiagramEdgeStyle? Style = null,
+    ZoorceDiagramPortSide FromPort = ZoorceDiagramPortSide.Auto,
+    ZoorceDiagramPortSide ToPort = ZoorceDiagramPortSide.Auto);
 
 /// <summary>Defines a serializable, versioned diagram document.</summary>
 public sealed record ZoorceDiagramDocument(

@@ -5,11 +5,18 @@
     const canvasWidth = 1400;
     const canvasHeight = 780;
     const nodeWidth = 176;
-    const nodeHeight = 78;
+    const nodeHeight = 86;
+    const ellipseKinds = new Set(["start", "end", "topic"]);
     const instances = new WeakMap();
     const profiles = { Flowchart: "flowchart", MindMap: "mindmap", OrgChart: "orgchart", Architecture: "architecture" };
     const modes = { Editor: "editor", Viewer: "viewer", ReadOnly: "readonly" };
     const panModes = { Background: "background", SpaceKey: "spacekey", MiddleButton: "middlebutton", Disabled: "disabled" };
+    const portSides = new Set(["Auto", "Top", "Right", "Bottom", "Left"]);
+    const portOrder = ["top", "right", "bottom", "left"];
+    const nodeKinds = new Set([
+        "start", "end", "process", "decision", "input-output", "subprocess", "document", "data-store", "delay", "connector", "annotation",
+        "root", "branch", "topic", "note", "person", "team", "vacancy", "user", "service", "database", "queue", "external", "boundary"
+    ]);
     const tones = new Set(["Neutral", "Primary", "Success", "Warning", "Danger", "Info"]);
     const actionKinds = new Set(["None", "Navigate", "Panel", "Modal", "Event", "Command", "Endpoint"]);
     const enumValue = (values, value, fallback) => [...values].find(candidate => key(candidate) === key(value)) ?? fallback;
@@ -114,7 +121,9 @@
         label: text(edge?.label) || null,
         tone: enumValue(tones, edge?.tone, "Neutral"),
         kind: text(edge?.kind) || null,
-        style: normalizeEdgeStyle(edge?.style)
+        style: normalizeEdgeStyle(edge?.style),
+        fromPort: enumValue(portSides, edge?.fromPort, "Auto"),
+        toPort: enumValue(portSides, edge?.toPort, "Auto")
     });
     const normalizeDocument = document => {
         const nodes = Array.isArray(document?.nodes) ? document.nodes.map(normalizeNode) : [];
@@ -168,9 +177,24 @@
             this.selection = new Set();
             this.selectedEdge = null;
             this.connectingFrom = null;
+            this.connectionMode = false;
+            this.portDrag = null;
+            this.connectionPreview = null;
+            this.ignoreNextPortClick = false;
+            this.connectToggle = root.querySelector("[data-z-diagram-connect-toggle]");
+            this.focusToggle = root.querySelector("[data-z-diagram-focus-toggle]");
             this.history = [];
             this.future = [];
             this.dirty = false;
+            this.revision = 0;
+            this.saveInFlight = false;
+            this.saveQueued = false;
+            this.autoSaveTimer = null;
+            this.focusMode = false;
+            this.focusReturn = null;
+            this.focusPlaceholder = null;
+            this.inspectorEditTarget = null;
+            this.inspectorEditCaptured = false;
             this.inspectorTab = "content";
             this.overviewVisible = false;
             const requestedPanMode = panModes[this.configuration.panMode] ?? key(this.configuration.panMode);
@@ -185,6 +209,7 @@
             this.view = { x: 0, y: 0, zoom: clamp(number(this.configuration.initialZoom, 1), number(this.configuration.minimumZoom, .4), number(this.configuration.maximumZoom, 2.4)) };
             this.drag = null;
             this.pan = null;
+            this.paletteDragKind = null;
             this.pendingPointerAction = null;
             this.lastNodeTap = null;
             this.ignoreNativeDoubleClickUntil = 0;
@@ -203,6 +228,11 @@
             const signal = this.abortController.signal;
             this.root.addEventListener("click", event => this.onClick(event), { signal });
             this.root.addEventListener("dblclick", event => this.onDoubleClick(event), { signal });
+            this.root.addEventListener("dragstart", event => this.onPaletteDragStart(event), { signal });
+            this.root.addEventListener("dragend", () => {
+                this.paletteDragKind = null;
+                this.canvas?.classList.remove("is-drop-ready", "is-drop-target");
+            }, { signal });
             this.canvas?.addEventListener("pointerdown", event => this.onPointerDown(event), { signal });
             this.canvas?.addEventListener("pointermove", event => this.onPointerMove(event), { signal });
             this.canvas?.addEventListener("pointerup", event => this.onPointerUp(event), { signal });
@@ -210,6 +240,9 @@
             this.canvas?.addEventListener("wheel", event => this.onWheel(event), { signal, passive: false });
             this.canvas?.addEventListener("keydown", event => this.onKeyDown(event), { signal });
             this.canvas?.addEventListener("keyup", event => this.onKeyUp(event), { signal });
+            this.canvas?.addEventListener("dragover", event => this.onCanvasDragOver(event), { signal });
+            this.canvas?.addEventListener("dragleave", event => this.onCanvasDragLeave(event), { signal });
+            this.canvas?.addEventListener("drop", event => this.onCanvasDrop(event), { signal });
             this.canvas?.addEventListener("blur", () => { this.spacePan = false; }, { signal });
             this.minimap?.addEventListener("pointerdown", event => this.onOverviewPointerDown(event), { signal });
             this.minimap?.addEventListener("pointermove", event => this.onOverviewPointerMove(event), { signal });
@@ -219,11 +252,14 @@
             this.root.addEventListener("zoerce:diagram:focus", event => this.focus(event.detail?.nodeId), { signal });
             this.root.addEventListener("zoerce:diagram:validate", () => this.validate(true), { signal });
             this.root.addEventListener("zoerce:diagram:save", () => this.save(), { signal });
+            this.root.addEventListener("focusin", event => {
+                if (event.target.matches("[data-z-diagram-field], [data-z-diagram-style-field]")) this.beginInspectorEdit(event.target);
+            }, { signal });
             this.root.addEventListener("input", event => {
-                if (event.target.matches("[data-z-diagram-style-field]")) this.previewNodeStyle();
+                this.onInspectorFieldChanged(event.target);
             }, { signal });
             this.root.addEventListener("change", event => {
-                if (event.target.matches("[data-z-diagram-style-field]")) this.previewNodeStyle();
+                this.onInspectorFieldChanged(event.target);
             }, { signal });
         }
 
@@ -245,7 +281,8 @@
                 const input = this.inspector?.querySelector("[data-z-diagram-style-field='" + CSS.escape(field) + "']");
                 if (input) {
                     input.value = swatch.dataset.zDiagramStyleValue;
-                    this.previewNodeStyle();
+                    this.beginInspectorEdit(swatch);
+                    this.commitInspectorAppearance();
                 }
                 return;
             }
@@ -267,6 +304,10 @@
             const port = event.target.closest("[data-z-diagram-port]");
             if (port && this.editable) {
                 event.stopPropagation();
+                if (this.ignoreNextPortClick) {
+                    this.ignoreNextPortClick = false;
+                    return;
+                }
                 this.handlePort(port);
                 return;
             }
@@ -282,6 +323,24 @@
             }
             if (node) {
                 const nodeId = node.dataset.zDiagramNodeId;
+                if (this.connectionMode) {
+                    if (!this.connectingFrom) {
+                        if (!this.canConnectFrom(nodeId)) {
+                            this.setStatus("An end node cannot start a connection.");
+                            return;
+                        }
+                        this.connectingFrom = { nodeId, side: "auto" };
+                        this.setStatus("Source selected. Click any target node to finish the connection.");
+                        this.renderScene();
+                        return;
+                    }
+                    if (key(this.connectingFrom.nodeId) !== key(nodeId)) {
+                        const source = this.node(this.connectingFrom.nodeId);
+                        const target = this.node(nodeId);
+                        this.connectNodes(this.connectingFrom.nodeId, this.connectingFrom.side, nodeId, this.autoPort(source, target, false));
+                        return;
+                    }
+                }
                 const actionHandledOnPointerUp = pointerNode === nodeId;
                 this.selectNode(nodeId, event.ctrlKey || event.metaKey, !actionHandledOnPointerUp);
                 return;
@@ -304,7 +363,22 @@
 
         onPointerDown(event) {
             if (event.button !== 0 && event.button !== 1) return;
+            const port = event.target.closest("[data-z-diagram-port]");
+            if (port && this.editable && event.button === 0) {
+                const nodeId = port.closest("[data-z-diagram-node]")?.dataset.zDiagramNodeId;
+                if (!nodeId) return;
+                this.portDrag = { nodeId, side: port.dataset.zDiagramPortSide || "right", x: event.clientX, y: event.clientY, moved: false };
+                this.canvas.setPointerCapture?.(event.pointerId);
+                event.preventDefault();
+                return;
+            }
             const nodeElement = event.target.closest("[data-z-diagram-node]");
+            if (nodeElement && this.editable && this.connectionMode && !event.target.closest("[data-z-diagram-port]")) {
+                // Do not select and re-render a node before its click reaches the connection handler.
+                // Replacing it during pointerdown would detach the eventual click target.
+                event.preventDefault();
+                return;
+            }
             if (nodeElement && this.editable && !event.target.closest("[data-z-diagram-port]")) {
                 const nodeId = nodeElement.dataset.zDiagramNodeId;
                 if (!this.selection.has(nodeId)) this.selectNode(nodeId, event.ctrlKey || event.metaKey, false);
@@ -328,6 +402,18 @@
         }
 
         onPointerMove(event) {
+            if (this.portDrag) {
+                const distance = Math.abs(event.clientX - this.portDrag.x) + Math.abs(event.clientY - this.portDrag.y);
+                if (distance > 4) {
+                    this.portDrag.moved = true;
+                    const targetId = document.elementFromPoint(event.clientX, event.clientY)?.closest("[data-z-diagram-node]")?.dataset.zDiagramNodeId;
+                    const target = this.node(targetId);
+                    const source = this.node(this.portDrag.nodeId);
+                    this.connectionPreview = { ...this.portDrag, x: event.clientX, y: event.clientY, targetId: target?.id ?? null, targetSide: target ? this.autoPort(source, target, false) : null };
+                    this.renderScene();
+                }
+                return;
+            }
             if (this.drag) {
                 const deltaX = (event.clientX - this.drag.x) / this.view.zoom;
                 const deltaY = (event.clientY - this.drag.y) / this.view.zoom;
@@ -349,7 +435,27 @@
             }
         }
 
-        onPointerUp() {
+        onPointerUp(event) {
+            if (this.portDrag) {
+                const drag = this.portDrag;
+                this.portDrag = null;
+                this.connectionPreview = null;
+                if (drag.moved) {
+                    const targetElement = document.elementFromPoint(event.clientX, event.clientY)?.closest("[data-z-diagram-node]");
+                    if (targetElement) {
+                        const targetId = targetElement.dataset.zDiagramNodeId;
+                        const targetPort = document.elementFromPoint(event.clientX, event.clientY)?.closest("[data-z-diagram-port]");
+                        const source = this.node(drag.nodeId);
+                        const target = this.node(targetId);
+                        this.connectNodes(drag.nodeId, drag.side, targetId, targetPort?.dataset.zDiagramPortSide || this.autoPort(source, target, false));
+                    } else {
+                        this.setStatus("Connection drag cancelled.");
+                    }
+                    this.ignoreNextPortClick = true;
+                }
+                this.renderScene();
+                return;
+            }
             if (this.drag) {
                 const drag = this.drag;
                 const moved = drag.moved;
@@ -406,19 +512,32 @@
                 }
                 return;
             }
+            if ((event.ctrlKey || event.metaKey) && key(event.key) === "c" && this.editable && !event.target.matches("input, textarea, select")) {
+                event.preventDefault();
+                this.copySelection();
+                return;
+            }
+            if ((event.ctrlKey || event.metaKey) && key(event.key) === "v" && this.editable && !event.target.matches("input, textarea, select")) {
+                event.preventDefault();
+                this.pasteSelection();
+                return;
+            }
             if ((event.ctrlKey || event.metaKey) && key(event.key) === "z") {
                 event.preventDefault();
                 event.shiftKey ? this.redo() : this.undo();
                 return;
             }
-            if ((event.ctrlKey || event.metaKey) && key(event.key) === "d" && this.editable) {
-                event.preventDefault();
-                this.duplicateSelection();
-                return;
-            }
             if (event.key === "Escape") {
-                this.connectingFrom = null;
-                this.setStatus("Connection cancelled.");
+                if (this.connectingFrom) {
+                    this.connectingFrom = null;
+                    this.setStatus("Connection source cleared.");
+                } else if (this.connectionMode) {
+                    this.connectionMode = false;
+                    this.setStatus("Connection mode closed.");
+                } else if (this.focusMode) {
+                    this.toggleFocusMode(false);
+                    return;
+                }
                 this.renderScene();
             }
         }
@@ -429,6 +548,48 @@
             this.canvas?.classList.remove("is-pan-ready");
         }
 
+        paletteKind(event) {
+            const transferred = event.dataTransfer?.getData("application/x-zoorce-diagram-node")
+                || event.dataTransfer?.getData("text/plain")
+                || this.paletteDragKind;
+            const kind = key(transferred);
+            return nodeKinds.has(kind) ? kind : null;
+        }
+
+        onPaletteDragStart(event) {
+            const kind = key(event.target.closest("[data-z-diagram-add]")?.dataset.zDiagramAdd);
+            if (!this.editable || !nodeKinds.has(kind) || !event.dataTransfer) return;
+            this.paletteDragKind = kind;
+            event.dataTransfer.effectAllowed = "copy";
+            event.dataTransfer.setData("application/x-zoorce-diagram-node", kind);
+            event.dataTransfer.setData("text/plain", kind);
+            this.canvas?.classList.add("is-drop-ready");
+        }
+
+        onCanvasDragOver(event) {
+            if (!this.editable || !this.paletteKind(event)) return;
+            event.preventDefault();
+            event.dataTransfer.dropEffect = "copy";
+            this.canvas?.classList.add("is-drop-target");
+        }
+
+        onCanvasDragLeave(event) {
+            if (!event.relatedTarget || !this.canvas?.contains(event.relatedTarget)) this.canvas?.classList.remove("is-drop-target");
+        }
+
+        onCanvasDrop(event) {
+            const kind = this.paletteKind(event);
+            this.paletteDragKind = null;
+            this.canvas?.classList.remove("is-drop-ready", "is-drop-target");
+            if (!this.editable || !kind || !this.canvas) return;
+            event.preventDefault();
+            const bounds = this.canvas.getBoundingClientRect();
+            this.addNode(kind, {
+                x: (event.clientX - bounds.left - this.view.x) / this.view.zoom,
+                y: (event.clientY - bounds.top - this.view.y) / this.view.zoom
+            });
+        }
+
         command(command) {
             if (command === "zoom-in") this.setZoom(this.view.zoom + .15);
             if (command === "zoom-out") this.setZoom(this.view.zoom - .15);
@@ -436,9 +597,11 @@
             if (command === "undo") this.undo();
             if (command === "redo") this.redo();
             if (command === "layout" && this.editable) this.applyLayout();
+            if (command === "connect" && this.editable) this.toggleConnectionMode();
             if (command === "validate") this.validate(true);
             if (command === "save") this.save();
             if (command === "toggle-overview") this.toggleOverview();
+            if (command === "focus") this.toggleFocusMode();
         }
 
         node(id) { return this.document.nodes.find(node => key(node.id) === key(id)); }
@@ -462,9 +625,20 @@
         }
 
         markDirty(message) {
+            this.revision += 1;
             this.dirty = true;
             if (this.dirtyBadge) this.dirtyBadge.hidden = false;
             this.setStatus(message);
+            this.scheduleAutoSave();
+        }
+
+        scheduleAutoSave(delay = 480) {
+            if (!this.editable) return;
+            if (this.autoSaveTimer) globalThis.clearTimeout(this.autoSaveTimer);
+            this.autoSaveTimer = globalThis.setTimeout(() => {
+                this.autoSaveTimer = null;
+                this.save(true);
+            }, delay);
         }
 
         setStatus(message) {
@@ -476,6 +650,72 @@
             dispatch(this.root, "zoerce:diagram:changed", { document: this.snapshot(), reason });
         }
 
+        beginInspectorEdit(target) {
+            if (this.inspectorEditTarget === target) return;
+            this.inspectorEditTarget = target;
+            this.inspectorEditCaptured = false;
+        }
+
+        prepareInspectorChange() {
+            if (this.inspectorEditCaptured) return;
+            this.history.push(this.snapshot());
+            this.future = [];
+            this.inspectorEditCaptured = true;
+        }
+
+        onInspectorFieldChanged(target) {
+            if (!this.editable) return;
+            if (target.matches("[data-z-diagram-field]")) this.commitInspectorContent();
+            if (target.matches("[data-z-diagram-style-field]")) {
+                const edge = this.selectedEdge ? this.edge(this.selectedEdge) : null;
+                if (edge) this.commitInspectorEdge();
+                else this.commitInspectorAppearance();
+            }
+        }
+
+        commitInspectorContent() {
+            const selected = this.document.nodes.find(node => this.selection.has(node.id));
+            if (!selected || !this.inspector) return;
+            const title = this.inspector.querySelector("[data-z-diagram-field='title']")?.value;
+            const description = this.inspector.querySelector("[data-z-diagram-field='description']")?.value;
+            const tone = this.inspector.querySelector("[data-z-diagram-field='tone']")?.value;
+            const actionKind = this.inspector.querySelector("[data-z-diagram-field='action-kind']")?.value;
+            const target = this.inspector.querySelector("[data-z-diagram-field='action-target']")?.value;
+            this.prepareInspectorChange();
+            selected.title = text(title) || "Untitled node";
+            selected.description = text(description) || null;
+            selected.tone = tones.has(tone) ? tone : "Neutral";
+            selected.action = actionKinds.has(actionKind) && actionKind !== "None" ? { kind: actionKind, target: text(target) || null, payload: null } : null;
+            this.markDirty("Node details updated.");
+            this.emitChange("edit");
+            this.renderScene();
+            this.renderNavigator();
+        }
+
+        commitInspectorAppearance() {
+            const selected = this.document.nodes.find(node => this.selection.has(node.id));
+            if (!selected) return;
+            this.prepareInspectorChange();
+            selected.style = this.styleFromInspector();
+            this.markDirty("Node appearance updated.");
+            this.emitChange("edit");
+            this.renderScene();
+            const advice = this.inspector?.querySelector("[data-z-diagram-contrast]");
+            if (advice) advice.textContent = this.contrastAdvice(selected.style ?? {});
+        }
+
+        commitInspectorEdge() {
+            const edge = this.selectedEdge ? this.edge(this.selectedEdge) : null;
+            if (!edge || !this.inspector) return;
+            const label = this.inspector.querySelector("[data-z-diagram-field='edge-label']")?.value;
+            this.prepareInspectorChange();
+            edge.label = text(label) || null;
+            edge.style = normalizeEdgeStyle({ strokeColor: this.styleValue("edgeStroke"), strokeWidth: this.styleValue("edgeWidth"), dashed: this.styleChecked("edgeDashed") });
+            this.markDirty("Connection style updated.");
+            this.emitChange("edit");
+            this.renderScene();
+        }
+
         selectNode(nodeId, append = false, invokeAction = true) {
             const node = this.node(nodeId);
             if (!node) return;
@@ -484,6 +724,10 @@
             else this.selection.add(node.id);
             this.selectedEdge = null;
             this.render();
+            // Rendering replaces the node that was clicked. Return focus to the
+            // persistent canvas so Delete / Ctrl+C / Ctrl+V keep working after
+            // a selection instead of leaving focus on the detached node.
+            this.canvas?.focus({ preventScroll: true });
             dispatch(this.root, "zoerce:diagram:selectionchanged", { nodeIds: [...this.selection], edgeId: null });
             dispatch(this.root, "zoerce:diagram:nodeclick", { node, document: this.snapshot() });
             if (invokeAction && node.action) this.invokeAction(node);
@@ -495,6 +739,7 @@
             this.selection.clear();
             this.selectedEdge = edge.id;
             this.render();
+            this.canvas?.focus({ preventScroll: true });
             dispatch(this.root, "zoerce:diagram:selectionchanged", { nodeIds: [], edgeId: edge.id });
             dispatch(this.root, "zoerce:diagram:edgeclick", { edge, document: this.snapshot() });
         }
@@ -523,55 +768,108 @@
             }
         }
 
+        toggleConnectionMode() {
+            this.connectionMode = !this.connectionMode;
+            this.connectingFrom = null;
+            this.setStatus(this.connectionMode ? "Connection mode is on. Choose a source anchor, then a target anchor." : "Connection mode is off.");
+            this.renderScene();
+        }
+
+        preferredPort(nodeId, source = true) {
+            const node = this.node(nodeId);
+            if (!node) return source ? "right" : "left";
+            if (this.profile === "orgchart") return source ? "bottom" : "top";
+            return source ? "right" : "left";
+        }
+
+        canConnectFrom(nodeId) {
+            const node = this.node(nodeId);
+            if (!node) return false;
+            if (this.profile === "flowchart" && node.kind === "end") return false;
+            return true;
+        }
+
+        canConnectTo(nodeId) {
+            const node = this.node(nodeId);
+            if (!node) return false;
+            if (this.profile === "flowchart" && node.kind === "start") return false;
+            return true;
+        }
+
         handlePort(port) {
             const nodeId = port.closest("[data-z-diagram-node]")?.dataset.zDiagramNodeId;
+            const side = key(port.dataset.zDiagramPortSide) || "right";
             if (!nodeId) return;
-            if (port.dataset.zDiagramPort === "out") {
-                this.connectingFrom = nodeId;
-                this.setStatus("Choose an input port to create the connection.");
+            if (!this.connectingFrom) {
+                if (!this.canConnectFrom(nodeId)) {
+                    this.setStatus("An end node cannot start a connection.");
+                    return;
+                }
+                this.connectingFrom = { nodeId, side };
+                this.connectionMode = true;
+                this.setStatus("Source selected. Choose any anchor on the target node.");
                 this.renderScene();
                 return;
             }
-            if (!this.connectingFrom) {
-                this.setStatus("Choose an output port first.");
-                return;
-            }
-            if (key(this.connectingFrom) === key(nodeId)) {
+            this.connectNodes(this.connectingFrom.nodeId, this.connectingFrom.side, nodeId, side);
+        }
+
+        connectNodes(sourceId, sourceSide, targetId, targetSide) {
+            if (!sourceId || !targetId) return;
+            if (key(sourceId) === key(targetId)) {
                 this.setStatus("A node cannot connect to itself.");
                 return;
             }
-            if (this.document.edges.some(edge => key(edge.fromNodeId) === key(this.connectingFrom) && key(edge.toNodeId) === key(nodeId))) {
+            if (!this.canConnectFrom(sourceId) || !this.canConnectTo(targetId)) {
+                this.setStatus("That connection is not allowed for this diagram.");
+                return;
+            }
+            if (this.document.edges.some(edge => key(edge.fromNodeId) === key(sourceId) && key(edge.toNodeId) === key(targetId))) {
                 this.connectingFrom = null;
                 this.setStatus("That connection already exists.");
                 this.renderScene();
                 return;
             }
-            const source = this.connectingFrom;
+            if ((this.profile === "mindmap" || this.profile === "orgchart") && this.document.edges.some(edge => key(edge.toNodeId) === key(targetId))) {
+                this.setStatus("Tree nodes can only have one parent.");
+                return;
+            }
             this.connectingFrom = null;
             this.change("Connection added.", () => this.document.edges.push({
                 id: idFor("edge", this.document.edges),
-                fromNodeId: source,
-                toNodeId: nodeId,
+                fromNodeId: sourceId,
+                toNodeId: targetId,
                 label: null,
                 tone: "Neutral",
-                kind: null
+                kind: null,
+                fromPort: (sourceSide || this.preferredPort(sourceId, true)).replace(/^./, value => value.toUpperCase()),
+                toPort: (targetSide || this.preferredPort(targetId, false)).replace(/^./, value => value.toUpperCase())
             }));
         }
 
-        addNode(kind) {
+        addNode(kind, droppedAt = null) {
+            const normalizedKind = nodeKinds.has(key(kind)) ? key(kind) : "process";
             const index = this.document.nodes.length;
             const offset = index % 5;
-            this.change("New " + titleForKind(kind).toLowerCase() + " added.", () => {
+            const size = this.nodeSize({ kind: normalizedKind });
+            const snap = value => this.configuration.snapToGrid ? this.snap(value) : Math.round(value);
+            const position = droppedAt
+                ? {
+                    x: clamp(snap(number(droppedAt.x) - size.width / 2), 0, canvasWidth - size.width),
+                    y: clamp(snap(number(droppedAt.y) - size.height / 2), 0, canvasHeight - size.height)
+                }
+                : { x: this.snap(120 + offset * 190), y: this.snap(130 + Math.floor(index / 5) * 142) };
+            this.change("New " + titleForKind(normalizedKind).toLowerCase() + " added.", () => {
                 this.document.nodes.push({
-                    id: idFor(key(kind) || "node", this.document.nodes),
-                    kind: key(kind) || "process",
-                    title: titleForKind(key(kind)),
+                    id: idFor(normalizedKind, this.document.nodes),
+                    kind: normalizedKind,
+                    title: titleForKind(normalizedKind),
                     description: null,
                     tone: "Neutral",
                     collapsed: false,
                     action: null,
                     data: null,
-                    position: { x: this.snap(120 + offset * 190), y: this.snap(130 + Math.floor(index / 5) * 142) }
+                    position
                 });
             });
             const node = this.document.nodes.at(-1);
@@ -594,12 +892,49 @@
         }
 
         duplicateSelection() {
-            if (!this.selection.size) return;
+            this.copySelection();
+            this.pasteSelection();
+        }
+
+        copySelection() {
             const selected = this.document.nodes.filter(node => this.selection.has(node.id));
-            this.change("Selected nodes duplicated.", () => {
-                const copies = selected.map(node => ({ ...clone(node), id: idFor(node.kind || "node", this.document.nodes), title: node.title + " copy", position: { x: node.position.x + 32, y: node.position.y + 32 } }));
+            if (!selected.length) {
+                this.setStatus("Select one or more nodes to copy.");
+                return;
+            }
+            const ids = new Set(selected.map(node => key(node.id)));
+            this.nodeClipboard = {
+                nodes: clone(selected),
+                edges: clone(this.document.edges.filter(edge => ids.has(key(edge.fromNodeId)) && ids.has(key(edge.toNodeId))))
+            };
+            this.pasteSequence = 0;
+            this.setStatus(selected.length === 1 ? "Node copied. Use Ctrl+V to paste." : selected.length + " nodes copied. Use Ctrl+V to paste.");
+        }
+
+        pasteSelection() {
+            const clipboard = this.nodeClipboard;
+            if (!clipboard?.nodes?.length) {
+                this.setStatus("Copy nodes before pasting.");
+                return;
+            }
+            this.pasteSequence = (this.pasteSequence || 0) + 1;
+            const offset = this.pasteSequence * 32;
+            this.change("Nodes pasted.", () => {
+                const copies = [];
+                const idMap = new Map();
+                clipboard.nodes.forEach(node => {
+                    const id = idFor(node.kind || "node", [...this.document.nodes, ...copies]);
+                    idMap.set(node.id, id);
+                    copies.push({ ...clone(node), id, title: node.title + " copy", position: { x: node.position.x + offset, y: node.position.y + offset } });
+                });
+                const copiedEdges = [];
+                clipboard.edges
+                    .filter(edge => idMap.has(edge.fromNodeId) && idMap.has(edge.toNodeId))
+                    .forEach(edge => copiedEdges.push({ ...clone(edge), id: idFor("edge", [...this.document.edges, ...copiedEdges]), fromNodeId: idMap.get(edge.fromNodeId), toNodeId: idMap.get(edge.toNodeId) }));
                 this.document.nodes.push(...copies);
+                this.document.edges.push(...copiedEdges);
                 this.selection = new Set(copies.map(node => node.id));
+                this.selectedEdge = null;
             });
         }
 
@@ -687,6 +1022,12 @@
 
         renderScene() {
             if (!this.world || !this.edgesLayer) return;
+            this.canvas?.classList.toggle("is-connection-mode", this.connectionMode);
+            if (this.connectToggle) {
+                this.connectToggle.classList.toggle("is-active", this.connectionMode);
+                this.connectToggle.setAttribute("aria-pressed", String(this.connectionMode));
+                this.connectToggle.textContent = this.connectionMode ? "Connecting…" : "Connect";
+            }
             const visible = this.visibleNodeIds();
             const nodes = this.document.nodes.filter(node => visible.has(node.id));
             const edges = this.document.edges.filter(edge => visible.has(edge.fromNodeId) && visible.has(edge.toNodeId));
@@ -696,7 +1037,9 @@
             this.edgesLayer.setAttribute("viewBox", "0 0 " + width + " " + height);
             this.edgesLayer.setAttribute("width", String(width));
             this.edgesLayer.setAttribute("height", String(height));
-            edges.forEach(edge => this.renderEdge(edge, edges));
+            if (this.profile === "orgchart") this.renderOrgEdges(edges);
+            else edges.forEach(edge => this.renderEdge(edge, edges));
+            this.renderConnectionPreview();
             const existing = new Map([...this.world.querySelectorAll("[data-z-diagram-node]")].map(element => [element.dataset.zDiagramNodeId, element]));
             nodes.forEach(node => {
                 let element = existing.get(node.id);
@@ -729,6 +1072,32 @@
             return defs;
         }
 
+        autoPort(from, to, source) {
+            if (this.profile === "orgchart") return source ? "bottom" : "top";
+            const horizontal = Math.abs(to.position.x - from.position.x) >= Math.abs(to.position.y - from.position.y);
+            if (horizontal) return source ? (to.position.x >= from.position.x ? "right" : "left") : (to.position.x >= from.position.x ? "left" : "right");
+            return source ? (to.position.y >= from.position.y ? "bottom" : "top") : (to.position.y >= from.position.y ? "top" : "bottom");
+        }
+
+        portPoint(node, side, offset = 0) {
+            const size = this.nodeSize(node);
+            const centerX = node.position.x + size.width / 2;
+            const centerY = node.position.y + size.height / 2;
+            const logical = side === "top" ? { x: centerX + offset, y: node.position.y }
+                : side === "bottom" ? { x: centerX + offset, y: node.position.y + size.height }
+                    : side === "left" ? { x: node.position.x, y: centerY + offset }
+                        : { x: node.position.x + size.width, y: centerY + offset };
+            return this.project(logical);
+        }
+
+        nodeSize(node) {
+            if (node?.kind === "decision") return { width: 216, height: 122 };
+            // Elliptical nodes need a broader interior than a rectangular node:
+            // their curved shoulders visually consume the available copy space.
+            if (ellipseKinds.has(node?.kind)) return { width: 226, height: 104 };
+            return { width: nodeWidth, height: nodeHeight };
+        }
+
         edgeAnchors(edge, edges) {
             const from = this.node(edge.fromNodeId);
             const to = this.node(edge.toNodeId);
@@ -736,9 +1105,15 @@
             const outgoing = edges.filter(candidate => key(candidate.fromNodeId) === key(edge.fromNodeId)).sort((left, right) => left.id.localeCompare(right.id));
             const incoming = edges.filter(candidate => key(candidate.toNodeId) === key(edge.toNodeId)).sort((left, right) => left.id.localeCompare(right.id));
             const offsetFor = collection => clamp((collection.findIndex(candidate => candidate.id === edge.id) - (collection.length - 1) / 2) * 14, -22, 22);
+            const fromSide = key(edge.fromPort) === "auto" || !edge.fromPort ? this.autoPort(from, to, true) : key(edge.fromPort);
+            const toSide = key(edge.toPort) === "auto" || !edge.toPort ? this.autoPort(from, to, false) : key(edge.toPort);
+            const sourceOffset = ["left", "right"].includes(fromSide) ? offsetFor(outgoing) : 0;
+            const targetOffset = ["left", "right"].includes(toSide) ? offsetFor(incoming) : 0;
             return {
-                start: this.project({ x: from.position.x + nodeWidth, y: from.position.y + nodeHeight / 2 + offsetFor(outgoing) }),
-                end: this.project({ x: to.position.x, y: to.position.y + nodeHeight / 2 + offsetFor(incoming) }),
+                start: this.portPoint(from, fromSide, sourceOffset),
+                end: this.portPoint(to, toSide, targetOffset),
+                fromSide,
+                toSide,
                 index: outgoing.findIndex(candidate => candidate.id === edge.id),
                 count: outgoing.length
             };
@@ -747,20 +1122,24 @@
         renderEdge(edge, edges) {
             const anchors = this.edgeAnchors(edge, edges);
             if (!anchors) return;
-            const { start, end, index, count } = anchors;
+            const { start, end, index, count, fromSide, toSide } = anchors;
+            const curve = this.profile === "mindmap"
+                ? this.curvePath(start, end, fromSide, toSide)
+                : this.orthogonalPath(start, end, fromSide, toSide, index, count);
+            this.renderEdgePath(edge, curve, this.edgeLabelPoint(start, end, index, count));
+        }
+
+        renderEdgePath(edge, curve, labelPoint, marker = true) {
             const line = svg("path", "z-diagram-edge z-diagram-edge--" + key(edge.tone));
             line.dataset.zDiagramEdge = "";
             line.dataset.zDiagramEdgeId = edge.id;
-            const curve = this.profile === "mindmap" || this.profile === "orgchart"
-                ? "M " + start.x + " " + start.y + " C " + (start.x + 70) + " " + start.y + ", " + (end.x - 70) + " " + end.y + ", " + end.x + " " + end.y
-                : this.flowPath(start, end, index, count);
             const hitArea = svg("path", "z-diagram-edge-hit");
             hitArea.dataset.zDiagramEdge = "";
             hitArea.dataset.zDiagramEdgeId = edge.id;
             hitArea.setAttribute("d", curve);
             this.edgesLayer.append(hitArea);
             line.setAttribute("d", curve);
-            line.setAttribute("marker-end", "url(#" + this.root.id + "-arrow)");
+            if (marker) line.setAttribute("marker-end", "url(#" + this.root.id + "-arrow)");
             if (edge.style?.strokeColor) line.style.setProperty("--z-edge-stroke", edge.style.strokeColor);
             if (edge.style?.strokeWidth) line.style.setProperty("--z-edge-width", String(edge.style.strokeWidth));
             if (edge.style?.dashed) line.classList.add("is-dashed");
@@ -770,9 +1149,8 @@
                 const label = svg("text", "z-diagram-edge-label");
                 label.dataset.zDiagramEdge = "";
                 label.dataset.zDiagramEdgeId = edge.id;
-                const point = this.edgeLabelPoint(start, end, index, count);
-                label.setAttribute("x", String(point.x));
-                label.setAttribute("y", String(point.y));
+                label.setAttribute("x", String(labelPoint.x));
+                label.setAttribute("y", String(labelPoint.y));
                 label.setAttribute("text-anchor", "middle");
                 if (edge.style?.strokeColor) label.style.setProperty("--z-edge-stroke", edge.style.strokeColor);
                 label.textContent = edge.label;
@@ -780,12 +1158,82 @@
             }
         }
 
-        flowPath(start, end, index, count) {
-            const direction = end.x >= start.x ? 1 : -1;
-            const lane = (index - (count - 1) / 2) * 22;
-            const midpoint = (start.x + end.x) / 2 + lane;
-            const laneX = start.x + direction * Math.max(42, Math.abs(midpoint - start.x));
-            return "M " + start.x + " " + start.y + " H " + laneX + " V " + end.y + " H " + end.x;
+        curvePath(start, end, fromSide, toSide) {
+            const handle = Math.max(46, Math.min(110, Math.abs(end.x - start.x) + Math.abs(end.y - start.y)) / 2);
+            const vector = side => side === "top" ? [0, -1] : side === "bottom" ? [0, 1] : side === "left" ? [-1, 0] : [1, 0];
+            const [sx, sy] = vector(fromSide);
+            const [ex, ey] = vector(toSide);
+            return "M " + start.x + " " + start.y + " C " + (start.x + sx * handle) + " " + (start.y + sy * handle) + ", " + (end.x + ex * handle) + " " + (end.y + ey * handle) + ", " + end.x + " " + end.y;
+        }
+
+        renderOrgEdges(edges) {
+            const grouped = new Map();
+            edges.forEach(edge => {
+                const explicit = key(edge.fromPort) !== "auto" || key(edge.toPort) !== "auto";
+                if (explicit) {
+                    this.renderEdge(edge, edges);
+                    return;
+                }
+                const keyId = key(edge.fromNodeId);
+                if (!grouped.has(keyId)) grouped.set(keyId, []);
+                grouped.get(keyId).push(edge);
+            });
+            grouped.forEach(group => {
+                const anchors = group.map(edge => ({ edge, anchors: this.edgeAnchors(edge, edges) })).filter(item => item.anchors);
+                if (anchors.length < 2) {
+                    anchors.forEach(item => this.renderEdge(item.edge, edges));
+                    return;
+                }
+                const start = anchors[0].anchors.start;
+                const junctionY = (start.y + Math.min(...anchors.map(item => item.anchors.end.y))) / 2;
+                const busStart = Math.min(start.x, ...anchors.map(item => item.anchors.end.x));
+                const busEnd = Math.max(start.x, ...anchors.map(item => item.anchors.end.x));
+                const trunk = "M " + start.x + " " + start.y + " V " + junctionY + " H " + busStart + " M " + start.x + " " + junctionY + " H " + busEnd;
+                const trunkEdge = { ...anchors[0].edge, id: anchors[0].edge.id + "-bus", label: null };
+                this.renderEdgePath(trunkEdge, trunk, { x: start.x, y: junctionY }, false);
+                anchors.forEach(item => {
+                    const end = item.anchors.end;
+                    const branch = "M " + end.x + " " + junctionY + " V " + end.y;
+                    this.renderEdgePath(item.edge, branch, { x: end.x, y: (junctionY + end.y) / 2 - 8 }, false);
+                });
+            });
+        }
+
+        renderConnectionPreview() {
+            if (!this.connectionPreview || !this.canvas) return;
+            const node = this.node(this.connectionPreview.nodeId);
+            if (!node) return;
+            const rect = this.canvas.getBoundingClientRect();
+            const start = this.portPoint(node, this.connectionPreview.side);
+            const target = this.node(this.connectionPreview.targetId);
+            const end = target
+                ? this.portPoint(target, this.connectionPreview.targetSide)
+                : { x: this.connectionPreview.x - rect.left, y: this.connectionPreview.y - rect.top };
+            const preview = svg("path", "z-diagram-edge z-diagram-edge--preview");
+            preview.setAttribute("d", this.orthogonalPath(start, end, this.connectionPreview.side, this.connectionPreview.targetSide || "left", 0, 1));
+            this.edgesLayer.append(preview);
+        }
+
+        orthogonalPath(start, end, fromSide, toSide, index, count) {
+            const horizontalStart = ["left", "right"].includes(fromSide);
+            const horizontalEnd = ["left", "right"].includes(toSide);
+            const lane = (index - (count - 1) / 2) * 20;
+            if (horizontalStart && horizontalEnd) {
+                const middle = (start.x + end.x) / 2 + lane;
+                return "M " + start.x + " " + start.y + " H " + middle + " V " + end.y + " H " + end.x;
+            }
+            if (!horizontalStart && !horizontalEnd) {
+                const middle = (start.y + end.y) / 2 + lane;
+                return "M " + start.x + " " + start.y + " V " + middle + " H " + end.x + " V " + end.y;
+            }
+            const outward = 42 + Math.abs(lane);
+            const sourceBend = horizontalStart
+                ? { x: start.x + (fromSide === "right" ? outward : -outward), y: start.y }
+                : { x: start.x, y: start.y + (fromSide === "bottom" ? outward : -outward) };
+            const targetBend = horizontalEnd
+                ? { x: end.x + (toSide === "right" ? outward : -outward), y: end.y }
+                : { x: end.x, y: end.y + (toSide === "bottom" ? outward : -outward) };
+            return "M " + start.x + " " + start.y + " L " + sourceBend.x + " " + sourceBend.y + " L " + targetBend.x + " " + targetBend.y + " L " + end.x + " " + end.y;
         }
 
         edgeLabelPoint(start, end, index, count) {
@@ -795,6 +1243,7 @@
         }
 
         renderNode(node) {
+            const size = this.nodeSize(node);
             const element = create("article", "z-diagram-node z-diagram-node--" + node.kind + " z-diagram-node--" + key(node.tone));
             element.dataset.zDiagramNode = "";
             element.dataset.zDiagramNodeId = node.id;
@@ -805,14 +1254,16 @@
             element.setAttribute("role", "button");
             element.setAttribute("aria-label", node.title);
             if (this.selection.has(node.id)) element.classList.add("is-selected");
-            if (this.connectingFrom === node.id) element.classList.add("is-connecting");
-            const incoming = create("button", "z-diagram-port z-diagram-port--in");
-            incoming.type = "button";
-            incoming.dataset.zDiagramPort = "in";
-            incoming.setAttribute("aria-label", "Connect into " + node.title);
+            if (this.connectingFrom?.nodeId === node.id) element.classList.add("is-connecting");
+            if (this.connectionPreview?.targetId === node.id) element.classList.add("is-connection-target");
+            const surface = svg("svg", "z-diagram-node-surface");
+            surface.setAttribute("viewBox", "0 0 " + size.width + " " + size.height);
+            surface.setAttribute("aria-hidden", "true");
+            const compact = node.kind === "connector";
             const icon = create("div", "z-diagram-node-icon");
             icon.textContent = iconForKind(node.kind);
             const copy = create("div", "z-diagram-node-copy");
+            if (compact) copy.classList.add("is-compact");
             const title = create("strong");
             title.dataset.zDiagramNodeTitle = "";
             title.textContent = node.title;
@@ -820,14 +1271,20 @@
             const description = create("small");
             description.dataset.zDiagramNodeDescription = "";
             description.textContent = node.description ?? "";
-            description.hidden = !node.description;
+            description.hidden = node.kind === "decision" || compact || !node.description;
             copy.append(description);
-            const outgoing = create("button", "z-diagram-port z-diagram-port--out");
-            outgoing.type = "button";
-            outgoing.dataset.zDiagramPort = "out";
-            outgoing.setAttribute("aria-label", "Connect from " + node.title);
-            if (this.editable) element.append(incoming, icon, copy, outgoing);
-            else element.append(icon, copy);
+            element.append(surface);
+            if (!compact) element.append(icon);
+            element.append(copy);
+            if (this.editable) portOrder.forEach(side => {
+                const port = create("button", "z-diagram-port z-diagram-port--" + side);
+                port.type = "button";
+                port.dataset.zDiagramPort = "";
+                port.dataset.zDiagramPortSide = side;
+                port.title = "Connect from or to the " + side + " side";
+                port.setAttribute("aria-label", "Connection anchor on the " + side + " side of " + node.title);
+                element.append(port);
+            });
             return element;
         }
 
@@ -837,13 +1294,14 @@
             element.dataset.zDiagramNodeKind = node.kind;
             element.setAttribute("aria-label", node.title);
             if (this.selection.has(node.id)) element.classList.add("is-selected");
-            if (this.connectingFrom === node.id) element.classList.add("is-connecting");
+            if (this.connectingFrom?.nodeId === node.id) element.classList.add("is-connecting");
+            if (this.connectionPreview?.targetId === node.id) element.classList.add("is-connection-target");
             const title = element.querySelector("[data-z-diagram-node-title]");
             const description = element.querySelector("[data-z-diagram-node-description]");
             if (title) title.textContent = node.title;
             if (description) {
                 description.textContent = node.description ?? "";
-                description.hidden = !node.description;
+                description.hidden = node.kind === "decision" || node.kind === "connector" || !node.description;
             }
             this.applyNodePresentation(element, node, node.style);
         }
@@ -851,9 +1309,12 @@
         applyNodePresentation(element, node, style) {
             const point = this.project(node.position);
             const scale = this.view.zoom;
+            const size = this.nodeSize(node);
             element.style.setProperty("--z-node-x", point.x + "px");
             element.style.setProperty("--z-node-y", point.y + "px");
             element.style.setProperty("--z-node-scale", String(scale));
+            element.style.setProperty("--z-node-width", size.width * scale + "px");
+            element.style.setProperty("--z-node-height", size.height * scale + "px");
             const values = [
                 ["--z-node-border-color", style?.borderColor],
                 ["--z-node-text-color", style?.textColor],
@@ -862,17 +1323,69 @@
                 ["--z-node-font-family", this.fontFamily(style?.fontFamily)]
             ];
             values.forEach(([name, value]) => value ? element.style.setProperty(name, value) : element.style.removeProperty(name));
-            if (style?.borderWidth) element.style.borderWidth = Math.max(1, this.pixel(style.borderWidth * scale)) + "px";
-            else element.style.removeProperty("border-width");
-            if (style?.cornerRadius !== null && style?.cornerRadius !== undefined) element.style.borderRadius = this.pixel(style.cornerRadius * scale) + "px";
-            else element.style.removeProperty("border-radius");
             if (style?.opacity) element.style.opacity = String(style.opacity);
             else element.style.removeProperty("opacity");
-            const background = style?.gradient
-                ? "linear-gradient(" + style.gradient.angle + "deg, " + style.gradient.startColor + ", " + style.gradient.endColor + ")"
-                : style?.fillColor;
-            if (background) element.style.setProperty("--z-node-background", background);
-            else element.style.removeProperty("--z-node-background");
+            this.renderNodeSurface(element, node, style);
+        }
+
+        shapePath(kind, radius, width = nodeWidth, height = nodeHeight) {
+            const nodeWidth = width;
+            const nodeHeight = height;
+            const rounded = "M " + radius + " 2 H " + (nodeWidth - radius) + " Q " + (nodeWidth - 2) + " 2 " + (nodeWidth - 2) + " " + radius + " V " + (nodeHeight - radius) + " Q " + (nodeWidth - 2) + " " + (nodeHeight - 2) + " " + (nodeWidth - radius) + " " + (nodeHeight - 2) + " H " + radius + " Q 2 " + (nodeHeight - 2) + " 2 " + (nodeHeight - radius) + " V " + radius + " Q 2 2 " + radius + " 2 Z";
+            const capsuleRadius = Math.max(24, Math.min(nodeHeight / 2 - 2, 52));
+            const capsule = "M " + capsuleRadius + " 2 H " + (nodeWidth - capsuleRadius) + " A " + capsuleRadius + " " + capsuleRadius + " 0 0 1 " + (nodeWidth - capsuleRadius) + " " + (nodeHeight - 2) + " H " + capsuleRadius + " A " + capsuleRadius + " " + capsuleRadius + " 0 0 1 " + capsuleRadius + " 2 Z";
+            const shapes = {
+                start: capsule,
+                end: capsule,
+                decision: "M " + (nodeWidth / 2) + " 2 L " + (nodeWidth - 2) + " " + (nodeHeight / 2) + " L " + (nodeWidth / 2) + " " + (nodeHeight - 2) + " L 2 " + (nodeHeight / 2) + " Z",
+                "input-output": "M 21 2 H " + (nodeWidth - 2) + " L " + (nodeWidth - 21) + " " + (nodeHeight - 2) + " H 2 Z",
+                subprocess: rounded,
+                document: "M 3 2 H " + (nodeWidth - 3) + " V " + (nodeHeight - 21) + " C " + (nodeWidth - 43) + " " + (nodeHeight - 1) + " " + (nodeWidth - 72) + " " + (nodeHeight + 4) + " " + (nodeWidth - 112) + " " + (nodeHeight - 2) + " H 3 Z",
+                "data-store": "M 3 13 C 3 -2 " + (nodeWidth - 3) + " -2 " + (nodeWidth - 3) + " 13 V " + (nodeHeight - 13) + " C " + (nodeWidth - 3) + " " + (nodeHeight + 2) + " 3 " + (nodeHeight + 2) + " 3 " + (nodeHeight - 13) + " Z",
+                database: "M 3 13 C 3 -2 " + (nodeWidth - 3) + " -2 " + (nodeWidth - 3) + " 13 V " + (nodeHeight - 13) + " C " + (nodeWidth - 3) + " " + (nodeHeight + 2) + " 3 " + (nodeHeight + 2) + " 3 " + (nodeHeight - 13) + " Z",
+                delay: "M 3 2 H " + (nodeWidth - 48) + " A 42 42 0 0 1 " + (nodeWidth - 48) + " " + (nodeHeight - 2) + " H 3 Z",
+                connector: "M " + (nodeWidth / 2) + " 2 A " + (nodeHeight / 2 - 2) + " " + (nodeHeight / 2 - 2) + " 0 1 1 " + (nodeWidth / 2 - .1) + " 2 Z",
+                annotation: "M 26 2 H " + (nodeWidth - 2) + " V " + (nodeHeight - 2) + " H 26 M 26 2 V " + (nodeHeight - 2),
+                root: "M 24 2 H " + (nodeWidth - 24) + " Q " + (nodeWidth - 2) + " 2 " + (nodeWidth - 2) + " 24 V " + (nodeHeight - 24) + " Q " + (nodeWidth - 2) + " " + (nodeHeight - 2) + " " + (nodeWidth - 24) + " " + (nodeHeight - 2) + " H 24 Q 2 " + (nodeHeight - 2) + " 2 " + (nodeHeight - 24) + " V 24 Q 2 2 24 2 Z",
+                branch: "M 23 2 H " + (nodeWidth - 23) + " L " + (nodeWidth - 2) + " " + (nodeHeight / 2) + " L " + (nodeWidth - 23) + " " + (nodeHeight - 2) + " H 23 L 2 " + (nodeHeight / 2) + " Z",
+                topic: capsule,
+                note: "M 3 2 H " + (nodeWidth - 29) + " L " + (nodeWidth - 2) + " 29 V " + (nodeHeight - 2) + " H 3 Z M " + (nodeWidth - 29) + " 2 V 29 H " + (nodeWidth - 2),
+                person: rounded,
+                team: "M 19 2 H " + (nodeWidth - 19) + " L " + (nodeWidth - 2) + " 20 V " + (nodeHeight - 2) + " H 2 V 20 Z",
+                vacancy: "M 23 2 H " + (nodeWidth - 23) + " L " + (nodeWidth - 2) + " " + (nodeHeight / 2) + " L " + (nodeWidth - 23) + " " + (nodeHeight - 2) + " H 23 L 2 " + (nodeHeight / 2) + " Z",
+                user: "M 20 2 H " + (nodeWidth - 20) + " Q " + (nodeWidth - 2) + " 2 " + (nodeWidth - 2) + " 20 V " + (nodeHeight - 2) + " H 2 V 20 Q 2 2 20 2 Z",
+                service: "M 23 2 H " + (nodeWidth - 23) + " L " + (nodeWidth - 2) + " " + (nodeHeight / 2) + " L " + (nodeWidth - 23) + " " + (nodeHeight - 2) + " H 23 L 2 " + (nodeHeight / 2) + " Z",
+                queue: "M 18 2 H " + (nodeWidth - 18) + " L " + (nodeWidth - 2) + " 17 V " + (nodeHeight - 17) + " L " + (nodeWidth - 18) + " " + (nodeHeight - 2) + " H 18 L 2 " + (nodeHeight - 17) + " V 17 Z",
+                external: "M 23 2 H " + (nodeWidth - 2) + " V " + (nodeHeight - 24) + " L " + (nodeWidth - 24) + " " + (nodeHeight - 2) + " H 2 V 23 Z",
+                boundary: rounded
+            };
+            return shapes[kind] ?? rounded;
+        }
+
+        renderNodeSurface(element, node, style) {
+            const surface = element.querySelector(".z-diagram-node-surface");
+            if (!surface) return;
+            const size = this.nodeSize(node);
+            surface.setAttribute("viewBox", "0 0 " + size.width + " " + size.height);
+            const defs = svg("defs");
+            const path = svg("path", "z-diagram-node-shape");
+            path.setAttribute("d", this.shapePath(node.kind, clamp(number(style?.cornerRadius, 13), 0, 38), size.width, size.height));
+            const fill = style?.fillColor;
+            const stroke = style?.borderColor;
+            if (style?.gradient) {
+                const gradient = svg("linearGradient");
+                const id = this.root.id + "-gradient-" + node.id.replace(/[^a-z0-9_-]/gi, "-");
+                gradient.id = id;
+                gradient.setAttribute("x1", "0%"); gradient.setAttribute("y1", "0%");
+                gradient.setAttribute("x2", "100%"); gradient.setAttribute("y2", "100%");
+                const first = svg("stop"); first.setAttribute("offset", "0%"); first.setAttribute("stop-color", style.gradient.startColor);
+                const last = svg("stop"); last.setAttribute("offset", "100%"); last.setAttribute("stop-color", style.gradient.endColor);
+                gradient.append(first, last); defs.append(gradient); path.setAttribute("fill", "url(#" + id + ")");
+            } else if (fill) path.setAttribute("fill", fill);
+            if (stroke) path.setAttribute("stroke", stroke);
+            if (style?.borderWidth) path.setAttribute("stroke-width", String(style.borderWidth));
+            if (node.kind === "vacancy" || node.kind === "boundary") path.setAttribute("stroke-dasharray", "6 4");
+            surface.replaceChildren(defs, path);
         }
 
         fontFamily(value) {
@@ -955,14 +1468,11 @@
             const targetInput = create("input", "z-input"); targetInput.value = node.action?.target ?? ""; targetInput.dataset.zDiagramField = "action-target"; targetInput.placeholder = "e.g. details-panel";
             targetLabel.append(targetInput);
             const actions = create("div", "z-diagram-inspector-actions");
-            const apply = create("button", "z-button z-button-primary z-button-sm"); apply.type = "button"; apply.textContent = "Apply"; apply.dataset.zDiagramInspector = "apply-node";
-            const duplicate = create("button", "z-button z-button-ghost z-button-sm"); duplicate.type = "button"; duplicate.textContent = "Duplicate"; duplicate.dataset.zDiagramInspector = "duplicate-node";
-            const remove = create("button", "z-button z-button-danger z-button-sm"); remove.type = "button"; remove.textContent = "Delete"; remove.dataset.zDiagramInspector = "delete-node";
-            actions.append(apply, duplicate, remove);
             if (this.profile === "mindmap" || this.profile === "orgchart") {
                 const collapse = create("button", "z-button z-button-ghost z-button-sm"); collapse.type = "button"; collapse.textContent = node.collapsed ? "Expand branch" : "Collapse branch"; collapse.dataset.zDiagramInspector = "toggle-collapse"; actions.append(collapse);
             }
-            form.append(titleLabel, descriptionLabel, toneLabel, actionLabel, targetLabel, actions);
+            form.append(titleLabel, descriptionLabel, toneLabel, actionLabel, targetLabel);
+            if (actions.childElementCount) form.append(actions);
             return form;
         }
 
@@ -994,11 +1504,7 @@
             const opacity = this.rangeField("Opacity", "opacity", Math.round((style.opacity ?? 1) * 100), 15, 100, "%");
             const palette = this.stylePalette();
             const advice = create("p", "z-diagram-contrast-advice"); advice.dataset.zDiagramContrast = ""; advice.textContent = this.contrastAdvice(style);
-            const actions = create("div", "z-diagram-inspector-actions");
-            const apply = create("button", "z-button z-button-primary z-button-sm"); apply.type = "button"; apply.textContent = "Apply appearance"; apply.dataset.zDiagramInspector = "apply-node";
-            const reset = create("button", "z-button z-button-ghost z-button-sm"); reset.type = "button"; reset.textContent = "Reset style"; reset.dataset.zDiagramInspector = "reset-node-style";
-            actions.append(apply, reset);
-            form.append(surface, fill, gradient, gradientStart, gradientEnd, angle, palette, borderHeading, border, borderWidth, radius, typography, textColor, familyLabel, fontSize, weightLabel, opacity, advice, actions);
+            form.append(surface, fill, gradient, gradientStart, gradientEnd, angle, palette, borderHeading, border, borderWidth, radius, typography, textColor, familyLabel, fontSize, weightLabel, opacity, advice);
             return form;
         }
 
@@ -1071,47 +1577,14 @@
             const width = this.rangeField("Stroke width", "edgeWidth", edge.style?.strokeWidth ?? 2, 1, 6, "px");
             const dashed = create("label", "z-diagram-switch"); dashed.textContent = "Dashed";
             const dashedInput = create("input"); dashedInput.type = "checkbox"; dashedInput.checked = Boolean(edge.style?.dashed); dashedInput.dataset.zDiagramStyleField = "edgeDashed"; dashed.append(dashedInput);
-            const actions = create("div", "z-diagram-inspector-actions");
-            const apply = create("button", "z-button z-button-primary z-button-sm"); apply.type = "button"; apply.textContent = "Apply"; apply.dataset.zDiagramInspector = "apply-edge";
-            const remove = create("button", "z-button z-button-danger z-button-sm"); remove.type = "button"; remove.textContent = "Delete"; remove.dataset.zDiagramInspector = "delete-edge";
-            actions.append(apply, remove);
-            form.append(label, stroke, width, dashed, actions);
+            form.append(label, stroke, width, dashed);
             fragment.append(eyebrow, title, form);
             return fragment;
         }
 
         handleInspector(action) {
             const selected = this.document.nodes.find(node => this.selection.has(node.id));
-            const edge = this.selectedEdge ? this.edge(this.selectedEdge) : null;
-            if (action === "apply-node" && selected) {
-                if (this.inspectorTab === "appearance") {
-                    this.change("Node appearance updated.", () => { selected.style = this.styleFromInspector(); });
-                    return;
-                }
-                const title = this.inspector.querySelector("[data-z-diagram-field='title']")?.value;
-                const description = this.inspector.querySelector("[data-z-diagram-field='description']")?.value;
-                const tone = this.inspector.querySelector("[data-z-diagram-field='tone']")?.value;
-                const actionKind = this.inspector.querySelector("[data-z-diagram-field='action-kind']")?.value;
-                const target = this.inspector.querySelector("[data-z-diagram-field='action-target']")?.value;
-                this.change("Node details updated.", () => {
-                    selected.title = text(title) || "Untitled node";
-                    selected.description = text(description) || null;
-                    selected.tone = tones.has(tone) ? tone : "Neutral";
-                    selected.action = actionKinds.has(actionKind) && actionKind !== "None" ? { kind: actionKind, target: text(target) || null, payload: null } : null;
-                });
-            }
-            if (action === "apply-edge" && edge) {
-                const label = this.inspector.querySelector("[data-z-diagram-field='edge-label']")?.value;
-                this.change("Connection style updated.", () => {
-                    edge.label = text(label) || null;
-                    edge.style = normalizeEdgeStyle({ strokeColor: this.styleValue("edgeStroke"), strokeWidth: this.styleValue("edgeWidth"), dashed: this.styleChecked("edgeDashed") });
-                });
-            }
-            if (action === "delete-node" && selected) this.deleteSelection();
-            if (action === "delete-edge" && edge) this.deleteSelection();
-            if (action === "duplicate-node" && selected) this.duplicateSelection();
             if (action === "toggle-collapse" && selected) this.toggleCollapsed(selected.id);
-            if (action === "reset-node-style" && selected) this.change("Node appearance reset.", () => { selected.style = null; });
         }
 
         contrastAdvice(style) {
@@ -1187,8 +1660,8 @@
             const ys = this.document.nodes.map(node => node.position.y);
             const minX = Math.min(...xs) - padding;
             const minY = Math.min(...ys) - padding;
-            const maxX = Math.max(...xs) + nodeWidth + padding;
-            const maxY = Math.max(...ys) + nodeHeight + padding;
+            const maxX = Math.max(...this.document.nodes.map(node => node.position.x + this.nodeSize(node).width)) + padding;
+            const maxY = Math.max(...this.document.nodes.map(node => node.position.y + this.nodeSize(node).height)) + padding;
             return { minX, minY, width: maxX - minX, height: maxY - minY };
         }
 
@@ -1197,6 +1670,50 @@
             this.overviewVisible = !this.overviewVisible;
             this.renderMinimap();
             this.setStatus(this.overviewVisible ? "Diagram overview shown." : "Diagram overview hidden.");
+        }
+
+        toggleFocusMode(active = !this.focusMode) {
+            const next = Boolean(active);
+            if (this.focusMode === next) return;
+            this.focusMode = next;
+            if (this.focusToggle) {
+                this.focusToggle.classList.toggle("is-active", next);
+                this.focusToggle.setAttribute("aria-pressed", String(next));
+                this.focusToggle.setAttribute("aria-label", next ? "Exit focus mode" : "Enter focus mode");
+                this.focusToggle.title = next ? "Exit focus mode" : "Focus canvas";
+            }
+            if (next) {
+                this.focusReturn = document.activeElement;
+                // A transformed app shell creates a containing block for fixed
+                // descendants. Portal the diagram while focused so it can use the
+                // actual viewport, then restore it exactly where it came from.
+                const parent = this.root.parentNode;
+                if (parent && !this.focusPlaceholder) {
+                    this.focusPlaceholder = document.createComment("zoorce-diagram-focus-placeholder");
+                    parent.insertBefore(this.focusPlaceholder, this.root);
+                    document.body.append(this.root);
+                }
+                this.root.classList.add("is-focus-mode");
+                document.documentElement.classList.add("z-diagram-focus-active");
+                document.body.classList.add("z-diagram-focus-active");
+                this.setStatus("Focus mode enabled. Press Escape to return.");
+                globalThis.requestAnimationFrame(() => {
+                    // Focus intentionally preserves the user's zoom and viewport.
+                    // It provides more available canvas; it must not reframe work.
+                    this.renderViewport();
+                    this.canvas?.focus({ preventScroll: true });
+                });
+                return;
+            }
+            this.root.classList.remove("is-focus-mode");
+            if (this.focusPlaceholder?.parentNode) this.focusPlaceholder.parentNode.replaceChild(this.root, this.focusPlaceholder);
+            this.focusPlaceholder = null;
+            document.documentElement.classList.remove("z-diagram-focus-active");
+            document.body.classList.remove("z-diagram-focus-active");
+            this.setStatus("Focus mode closed.");
+            globalThis.requestAnimationFrame(() => this.renderViewport());
+            this.focusReturn?.focus?.({ preventScroll: true });
+            this.focusReturn = null;
         }
 
         onOverviewPointerDown(event) {
@@ -1228,8 +1745,9 @@
             this.selectNode(node.id, false, false);
             const width = this.canvas?.clientWidth ?? 700;
             const height = this.canvas?.clientHeight ?? 500;
-            this.view.x = width / 2 - (node.position.x + nodeWidth / 2) * this.view.zoom;
-            this.view.y = height / 2 - (node.position.y + nodeHeight / 2) * this.view.zoom;
+            const size = this.nodeSize(node);
+            this.view.x = width / 2 - (node.position.x + size.width / 2) * this.view.zoom;
+            this.view.y = height / 2 - (node.position.y + size.height / 2) * this.view.zoom;
             this.renderViewport();
             this.world?.querySelector("[data-z-diagram-node-id='" + CSS.escape(node.id) + "']")?.focus();
         }
@@ -1244,9 +1762,9 @@
             const xs = this.document.nodes.map(node => node.position.x);
             const ys = this.document.nodes.map(node => node.position.y);
             const minX = Math.min(...xs);
-            const maxX = Math.max(...xs) + nodeWidth;
+            const maxX = Math.max(...this.document.nodes.map(node => node.position.x + this.nodeSize(node).width));
             const minY = Math.min(...ys);
-            const maxY = Math.max(...ys) + nodeHeight;
+            const maxY = Math.max(...this.document.nodes.map(node => node.position.y + this.nodeSize(node).height));
             const zoom = clamp(Math.min((this.canvas.clientWidth - 80) / Math.max(maxX - minX, 160), (this.canvas.clientHeight - 80) / Math.max(maxY - minY, 120)), number(this.configuration.minimumZoom, .4), number(this.configuration.maximumZoom, 2.4));
             this.view.zoom = zoom;
             this.view.x = (this.canvas.clientWidth - (maxX + minX) * zoom) / 2;
@@ -1331,21 +1849,27 @@
             const root = this.roots()[0] ?? this.document.nodes[0];
             if (!root) return;
             const children = this.childrenMap();
-            const levels = [[root.id]];
-            const seen = new Set([root.id]);
-            for (let depth = 0; depth < 10; depth += 1) {
-                const next = levels.at(-1).flatMap(id => children.get(id) || []).filter(id => !seen.has(id));
-                next.forEach(id => seen.add(id));
-                if (!next.length) break;
-                levels.push(next);
-            }
-            levels.forEach((level, depth) => level.forEach((id, index) => {
-                const node = this.node(id);
-                if (!node) return;
+            const coordinates = new Map();
+            const seen = new Set();
+            let leaf = 0;
+            const walk = (id, depth) => {
+                if (seen.has(id)) return leaf++;
+                seen.add(id);
+                const childIds = (children.get(id) || []).filter(child => !seen.has(child));
+                const order = childIds.length
+                    ? childIds.map(child => walk(child, depth + 1)).reduce((sum, value) => sum + value, 0) / childIds.length
+                    : leaf++;
+                coordinates.set(id, { depth, order });
+                return order;
+            };
+            walk(root.id, 0);
+            this.document.nodes.filter(node => !coordinates.has(node.id)).forEach(node => coordinates.set(node.id, { depth: 0, order: leaf++ }));
+            this.document.nodes.forEach(node => {
+                const position = coordinates.get(node.id);
                 node.position = horizontal
-                    ? { x: 90 + depth * 245, y: 80 + index * 125 }
-                    : { x: 90 + index * 225, y: 80 + depth * 140 };
-            }));
+                    ? { x: 90 + position.depth * 255, y: 80 + position.order * 142 }
+                    : { x: 90 + position.order * 230, y: 80 + position.depth * 165 };
+            });
         }
 
         gridLayout() {
@@ -1384,16 +1908,24 @@
             return { valid, errors };
         }
 
-        async save() {
+        async save(automatic = false) {
+            if (this.saveInFlight) {
+                this.saveQueued = true;
+                return;
+            }
+            if (this.autoSaveTimer) {
+                globalThis.clearTimeout(this.autoSaveTimer);
+                this.autoSaveTimer = null;
+            }
             const validation = this.validate(false);
             if (!validation.valid) return;
-            const detail = { document: this.snapshot(), source: "save" };
+            const revision = this.revision;
+            const detail = { document: this.snapshot(), source: automatic ? "autosave" : "save" };
             if (!dispatch(this.root, "zoerce:diagram:save-request", detail, true)) return;
+            this.saveInFlight = true;
             if (!this.configuration.saveUrl) {
-                this.dirty = false;
-                if (this.dirtyBadge) this.dirtyBadge.hidden = true;
-                this.setStatus("Saved locally for this diagram demo.");
-                dispatch(this.root, "zoerce:diagram:saved", detail);
+                this.completeSave(detail, revision, null, automatic);
+                this.saveInFlight = false;
                 return;
             }
             try {
@@ -1401,20 +1933,31 @@
                 const response = await fetch(this.configuration.saveUrl, { method: "PUT", headers: { "Content-Type": "application/json", Accept: "application/json" }, body: JSON.stringify(this.document), signal: this.abortController.signal });
                 if (!response.ok) throw new Error("Save failed.");
                 const body = await response.json().catch(() => null);
-                if (body?.document || body?.nodes) this.document = normalizeDocument(body.document ?? body);
-                this.dirty = false;
-                if (this.dirtyBadge) this.dirtyBadge.hidden = true;
-                this.setStatus("Diagram saved.");
-                dispatch(this.root, "zoerce:diagram:saved", { document: this.snapshot() });
-                this.render();
+                this.completeSave(detail, revision, body?.document || body?.nodes ? body.document ?? body : null, automatic);
             } catch (error) {
                 if (error.name !== "AbortError") {
                     this.setStatus("Diagram could not be saved.");
                     dispatch(this.root, "zoerce:diagram:error", { error });
                 }
             } finally {
+                this.saveInFlight = false;
                 this.root.removeAttribute("aria-busy");
+                if (this.saveQueued || this.revision > revision) {
+                    this.saveQueued = false;
+                    this.scheduleAutoSave(80);
+                }
             }
+        }
+
+        completeSave(detail, revision, document, automatic) {
+            if (this.revision !== revision) return;
+            if (document) this.document = normalizeDocument(document);
+            this.dirty = false;
+            if (this.dirtyBadge) this.dirtyBadge.hidden = true;
+            this.setStatus(automatic ? "Changes saved." : "Diagram saved.");
+            dispatch(this.root, "zoerce:diagram:saved", { ...detail, document: this.snapshot() });
+            this.renderScene();
+            this.renderNavigator();
         }
 
         async load() {
@@ -1436,6 +1979,9 @@
             this.history = [];
             this.future = [];
             this.dirty = false;
+            this.revision = 0;
+            this.inspectorEditTarget = null;
+            this.inspectorEditCaptured = false;
             if (this.dirtyBadge) this.dirtyBadge.hidden = true;
             this.render();
             this.setStatus(message);
@@ -1455,6 +2001,14 @@
         }
 
         dispose() {
+            if (this.autoSaveTimer) globalThis.clearTimeout(this.autoSaveTimer);
+            if (this.focusMode) {
+                this.root.classList.remove("is-focus-mode");
+                if (this.focusPlaceholder?.parentNode) this.focusPlaceholder.parentNode.replaceChild(this.root, this.focusPlaceholder);
+                this.focusPlaceholder = null;
+                document.documentElement.classList.remove("z-diagram-focus-active");
+                document.body.classList.remove("z-diagram-focus-active");
+            }
             this.abortController.abort();
             this.resizeObserver?.disconnect();
             this.unsubscribeRealtime?.();

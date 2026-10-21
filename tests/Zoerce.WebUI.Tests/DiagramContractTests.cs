@@ -30,7 +30,7 @@ public sealed class DiagramContractTests
                 new ZoorceDiagramNode(" notify ", " process ", " Notify ", new(5, 6), Action: new(ZoorceDiagramActionKind.Command, " refresh "), Style: new(Gradient: new(" #123456 ", " "))),
                 new ZoorceDiagramNode(" default-style ", " process ", " Default style ", new(7, 8), Style: new())
             ],
-            [new ZoorceDiagramEdge(" edge ", " start ", " work ", " label ", (ZoorceDiagramTone)99, " kind ", new(" #ddee11 ", 20m, true))], " version ")
+            [new ZoorceDiagramEdge(" edge ", " start ", " work ", " label ", (ZoorceDiagramTone)99, " kind ", new(" #ddee11 ", 20m, true), (ZoorceDiagramPortSide)99, (ZoorceDiagramPortSide)99)], " version ")
         };
 
         var normalized = options.Normalize();
@@ -80,6 +80,8 @@ public sealed class DiagramContractTests
         Assert.Equal("#ddee11", normalized.Document.EdgeList[0].Style!.StrokeColor);
         Assert.Equal(8m, normalized.Document.EdgeList[0].Style!.StrokeWidth);
         Assert.True(normalized.Document.EdgeList[0].Style!.Dashed);
+        Assert.Equal(ZoorceDiagramPortSide.Auto, normalized.Document.EdgeList[0].FromPort);
+        Assert.Equal(ZoorceDiagramPortSide.Auto, normalized.Document.EdgeList[0].ToPort);
         Assert.Equal("version", normalized.Document.Version);
     }
 
@@ -175,6 +177,7 @@ public sealed class DiagramContractTests
         Assert.Contains(ZoorceDiagramMode.ReadOnly, Enum.GetValues<ZoorceDiagramMode>());
         Assert.Contains(ZoorceDiagramLayout.TreeHorizontal, Enum.GetValues<ZoorceDiagramLayout>());
         Assert.Contains(ZoorceDiagramPanMode.MiddleButton, Enum.GetValues<ZoorceDiagramPanMode>());
+        Assert.Contains(ZoorceDiagramPortSide.Bottom, Enum.GetValues<ZoorceDiagramPortSide>());
         Assert.Contains(ZoorceDiagramTone.Danger, Enum.GetValues<ZoorceDiagramTone>());
         Assert.Contains(ZoorceDiagramActionKind.Endpoint, Enum.GetValues<ZoorceDiagramActionKind>());
         Assert.Equal("#010203", new ZoorceDiagramGradient("#010203", "#040506").StartColor);

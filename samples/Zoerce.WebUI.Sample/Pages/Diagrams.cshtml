@@ -11,7 +11,7 @@
         <div>
             <span class="z-section-kicker">Native diagram workspace</span>
             <h1>Model systems visually, without a diagramming dependency.</h1>
-            <p>Each canvas is a self-contained component: its own document, selection state, keyboard controls, REST save path and host events. Drag a node, style it from Appearance, connect ports, then use Undo, Arrange and Save.</p>
+            <p>Each canvas is a self-contained component: its own document, selection state, keyboard controls, REST save path and host events. Drag a node, style it from Appearance, connect ports, then use Undo, zoom and Save.</p>
         </div>
     </div>
 
@@ -26,7 +26,7 @@
     </article>
 
     <article class="z-diagram-demo" data-z-diagram-demo="org">
-        <header class="z-diagram-demo-header"><div><span class="z-section-kicker">Org chart · reporting structure</span><h2>Product organization</h2><p>Tree validation prevents multiple parents and makes long reporting paths easy to scan.</p></div><p class="z-diagram-demo-detail" data-z-diagram-detail>Use Arrange to restore the hierarchy.</p></header>
+        <header class="z-diagram-demo-header"><div><span class="z-section-kicker">Org chart · reporting structure</span><h2>Product organization</h2><p>Tree validation prevents multiple parents and makes long reporting paths easy to scan.</p></div><p class="z-diagram-demo-detail" data-z-diagram-detail>Use Fit to center the hierarchy.</p></header>
         @await Component.InvokeAsync("ZoorceDiagram", new ZoorceDiagramOptions { Id = "diagram-org", Title = "Product organization", Summary = "An editable product organization hierarchy", Profile = ZoorceDiagramProfile.OrgChart, Mode = ZoorceDiagramMode.Editor, Layout = ZoorceDiagramLayout.TreeVertical, Document = DiagramCatalog.Get("org"), SourceUrl = "/api/diagrams/org", SaveUrl = "/api/diagrams/org" })
     </article>
 
