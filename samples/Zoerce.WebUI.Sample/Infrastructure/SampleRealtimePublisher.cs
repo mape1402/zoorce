@@ -8,6 +8,7 @@ public sealed class SampleRealtimePublisher(
     IHubContext<ComponentActivityHub> hub)
 {
     private int chartRevision;
+    private int stepperRevision;
 
     /// <summary>
     /// Emits one demonstrative update only when a person explicitly asks for it.
@@ -19,5 +20,13 @@ public sealed class SampleRealtimePublisher(
         await hub.Clients.All.SendAsync("component-change", new ZoorceDataChange<ComponentCatalogItem>(ZoorceDataChangeKind.Upsert, item.Id, item), cancellationToken);
         await hub.Clients.All.SendAsync("adoption-update", SampleChartData.Create(Interlocked.Increment(ref chartRevision)), cancellationToken);
         return item;
+    }
+
+    /// <summary>Publishes one isolated workflow snapshot for the stepper demonstration.</summary>
+    public async Task<object> PublishStepperAsync(CancellationToken cancellationToken = default)
+    {
+        var snapshot = SampleStepperData.Create(Interlocked.Increment(ref stepperRevision));
+        await hub.Clients.All.SendAsync("release-stepper-update", snapshot, cancellationToken);
+        return snapshot;
     }
 }

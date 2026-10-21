@@ -1,14 +1,23 @@
 (() => {
     const subscriptions = new Set();
 
-    const subscribe = ({ hubUrl, eventName }, callback) => {
+    const resolveTransport = transport => {
+        if (!transport || transport === "Auto") return undefined;
+        const candidate = window.signalR?.HttpTransportType?.[transport];
+        return typeof candidate === "number" ? candidate : undefined;
+    };
+
+    const subscribe = ({ hubUrl, eventName, transport }, callback) => {
         let connection = null;
         let disposed = false;
 
         const start = async () => {
             if (!window.signalR || disposed) return;
-            connection = new window.signalR.HubConnectionBuilder()
-                .withUrl(hubUrl)
+            const builder = new window.signalR.HubConnectionBuilder();
+            const selectedTransport = resolveTransport(transport);
+            connection = (selectedTransport === undefined
+                ? builder.withUrl(hubUrl)
+                : builder.withUrl(hubUrl, { transport: selectedTransport }))
                 .withAutomaticReconnect()
                 .build();
             connection.on(eventName, callback);

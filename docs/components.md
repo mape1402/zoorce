@@ -71,6 +71,56 @@ Use `ShowLegend`, `ShowGrid`, `ShowAxes`, and `ShowTooltip` to tune presentation
 
 SignalR is deliberately an opt-in adapter rather than a global shell dependency. When a component is given both realtime options, load the official SignalR browser client and Zoorce's `zoerce-signalr.js` adapter on the page that uses it. Static and REST-only components require neither script.
 
+## Workflow steppers
+
+`ZoorceStepper` is a Razor View Component for server-rendered progress, navigation and wizard flows. Every instance carries its own state payload, keyboard handling, optional REST refresh, and optional SignalR subscription; an update changes only that root and never reconstructs the surrounding page.
+
+Choose `Rail`, `Segmented`, `Sidebar`, or `Workflow` through `ZoorceStepperVariant`. `Orientation` can be `Horizontal`, `Vertical`, or `Auto`; auto rails switch to a vertical arrangement when their own container becomes narrow. `ZoorceStepperInteraction` separates a passive `Progress` display from direct `Navigation` and one-step-at-a-time `Wizard` behavior. The normalizer deliberately keeps segmented controls horizontal and sidebar journeys vertical.
+
+Each `ZoorceStepperStep` has an id, title, optional supporting text or icon, semantic state (`Pending`, `Active`, `Completed`, `Attention`, `Error`, or `Disabled`), optional status text, target URL, panel id, and an optional `Tone` (`Neutral`, `Primary`, `Success`, `Warning`, `Danger`, or `Info`). `AllowCompletedNavigation` and `AllowFutureNavigation` define the basic navigation policy instead of baking product rules into the component.
+
+`Presentation` supplies instance-level visual choices without global CSS overrides: `MarkerStyle` (`Number`, `Icon`, `Check`, `Dot`, or `None`), `ActiveIndicator` (`Ring`, `Halo`, `Solid`, or `Outline`), `ActiveMotion` (`HaloPulse`, `RingPulse`, `MarkerPulse`, or `ConnectorDraw`), `LabelPlacement`, and `ConnectorStyle`. Motion automatically respects the visitor's reduced-motion setting. Semantic colors always come from the injected `Light` and `Dark` palette tokens (`Primary`, `Success`, `Warning`, `Danger`, and `Info`), so changing a host palette in `AddZoerceWebUI` immediately changes every stepper without component-specific color duplication.
+
+`TransitionRules` makes state movement explicit: configure forward movement (`AdjacentOnly`, `AnyEligible`, or `Block`), backward movement (`CompletedOnly`, `AnyEligible`, or `Block`), warning/error behavior, and whether moving backward preserves or resets later steps. For business authorization, add `TransitionUrl`; the component posts a `ZoorceStepperTransitionRequest` and changes only when the endpoint returns an allowed `ZoorceStepperTransitionDecision`. An accepted decision may include a `ZoorceStepperSnapshot`, letting REST or SignalR update an individual step's state, tone, copy, icon, destination, and navigability without rerendering the page.
+
+```cshtml
+@await Component.InvokeAsync("ZoorceStepper", new ZoorceStepperOptions
+{
+    Id = "release-workflow",
+    AriaLabel = "Release readiness",
+    Variant = ZoorceStepperVariant.Rail,
+    Orientation = ZoorceStepperOrientation.Auto,
+    Interaction = ZoorceStepperInteraction.Wizard,
+    Presentation = new ZoorceStepperPresentation
+    {
+        MarkerStyle = ZoorceStepperMarkerStyle.Number,
+        ActiveIndicator = ZoorceStepperActiveIndicator.Halo,
+        ActiveMotion = ZoorceStepperActiveMotion.HaloPulse,
+        ConnectorStyle = ZoorceStepperConnectorStyle.Progress
+    },
+    TransitionRules = new ZoorceStepperTransitionRules
+    {
+        Forward = ZoorceStepperForwardRule.AdjacentOnly,
+        Backward = ZoorceStepperBackwardRule.CompletedOnly,
+        Warning = ZoorceStepperWarningRule.RequireAuthorization,
+        Error = ZoorceStepperErrorRule.Block,
+        OnBackward = ZoorceStepperBackwardEffect.ResetFollowing
+    },
+    TransitionUrl = "/api/releases/authorize-transition",
+    SourceUrl = "/api/releases/current",
+    RealtimeHubUrl = "/hubs/releases",
+    RealtimeEventName = "release-update",
+    Steps =
+    [
+        new("brief", "Release brief", State: ZoorceStepperState.Completed),
+        new("validation", "Validation", State: ZoorceStepperState.Active),
+        new("handoff", "Handoff")
+    ]
+})
+```
+
+REST and realtime snapshots use `{ currentStepId, steps: [{ id, state, tone, title, supportingText, statusText, icon, isNavigable, targetUrl }] }`. A transition request contains `stepperId`, `stepId`, `previousStepId`, `reason`, and `isBackward`. `RealtimeTransport` defaults to `Auto` and can explicitly select `WebSockets`, `ServerSentEvents`, or `LongPolling` when a host browser environment has a known transport constraint. The component emits cancelable `zoerce:stepper:request-change` before a local navigation request, followed by `zoerce:stepper:change`; listen on that one component root to run validation or synchronize adjacent content. `zoerce:stepper:loaded`, `zoerce:stepper:realtime`, and `zoerce:stepper:error` provide isolated transport lifecycle hooks. `IZoorceStepperTransitionPolicy` is the host-side contract when an application prefers injecting a policy service behind its own transition endpoint.
+
 ## Markdown
 
 `IZoorceMarkdownRenderer` is registered in dependency injection and uses Markdig with advanced Markdown extensions, GitHub-style heading identifiers and raw HTML disabled. Generated heading metadata is available through `ZoorceMarkdownRenderResult.TableOfContents`. The renderer preserves only fragment, application-relative, `./`, `../`, HTTP(S), and `mailto` links; other protocols and protocol-relative URLs are replaced with `#`.

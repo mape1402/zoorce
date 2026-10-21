@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc.ViewComponents;
 using Zoerce.WebUI.Abstractions.Data;
 using Zoerce.WebUI.Components.Charts;
 using Zoerce.WebUI.Components.DataGrid;
+using Zoerce.WebUI.Components.Stepper;
 
 namespace Zoerce.WebUI.Tests;
 
@@ -299,6 +300,265 @@ public sealed class ComponentContractTests
         Assert.Equal("#7c3aed", series.Color);
     }
 
+    [Fact]
+    public void Stepper_normalizes_a_configurable_workflow_and_forces_supported_variant_orientations()
+    {
+        var normalized = CreateStepper() with
+        {
+            Id = "  release-flow  ",
+            AriaLabel = "  ",
+            CurrentStepId = "  validate  ",
+            Variant = ZoorceStepperVariant.Segmented,
+            Orientation = ZoorceStepperOrientation.Vertical,
+            PreviousLabel = " ",
+            NextLabel = " ",
+            CompleteLabel = " ",
+            SourceUrl = " /api/releases ",
+            RealtimeHubUrl = " /hubs/releases ",
+            RealtimeEventName = " release-update ",
+            RealtimeTransport = ZoorceStepperRealtimeTransport.LongPolling,
+            Steps =
+            [
+                new ZoorceStepperStep(" brief ", " ", " context ", " ✓ ", ZoorceStepperState.Completed, " done ", TargetUrl: " /brief ", PanelId: " brief-panel "),
+                new ZoorceStepperStep(" validate ", " Validate ", " ", null, ZoorceStepperState.Active, null, PanelId: " ")
+            ]
+        };
+
+        normalized = normalized.Normalize();
+
+        Assert.Equal("release-flow", normalized.Id);
+        Assert.Equal("Workflow progress", normalized.AriaLabel);
+        Assert.Equal("validate", normalized.CurrentStepId);
+        Assert.Equal(ZoorceStepperOrientation.Horizontal, normalized.Orientation);
+        Assert.Equal("Back", normalized.PreviousLabel);
+        Assert.Equal("Continue", normalized.NextLabel);
+        Assert.Equal("Complete", normalized.CompleteLabel);
+        Assert.Equal("/api/releases", normalized.SourceUrl);
+        Assert.Equal("/hubs/releases", normalized.RealtimeHubUrl);
+        Assert.Equal("release-update", normalized.RealtimeEventName);
+        Assert.Equal(ZoorceStepperRealtimeTransport.LongPolling, normalized.RealtimeTransport);
+        Assert.Equal("brief", normalized.Steps[0].Id);
+        Assert.Equal("Step", normalized.Steps[0].Title);
+        Assert.Equal("context", normalized.Steps[0].SupportingText);
+        Assert.Equal("✓", normalized.Steps[0].Icon);
+        Assert.Equal("done", normalized.Steps[0].StatusText);
+        Assert.Equal("/brief", normalized.Steps[0].TargetUrl);
+        Assert.Equal("brief-panel", normalized.Steps[0].PanelId);
+        Assert.Null(normalized.Steps[1].SupportingText);
+        Assert.Null(normalized.Steps[1].Icon);
+        Assert.Null(normalized.Steps[1].StatusText);
+        Assert.Null(normalized.Steps[1].PanelId);
+    }
+
+    [Fact]
+    public void Stepper_selects_active_then_available_step_and_keeps_explicit_labels()
+    {
+        var active = (CreateStepper() with
+        {
+            CurrentStepId = " ",
+            Steps =
+            [
+                new ZoorceStepperStep("brief", "Brief", State: ZoorceStepperState.Completed),
+                new ZoorceStepperStep("validate", "Validate", State: ZoorceStepperState.Active)
+            ]
+        }).Normalize();
+        var available = (CreateStepper() with
+        {
+            CurrentStepId = null,
+            Variant = ZoorceStepperVariant.Sidebar,
+            Orientation = ZoorceStepperOrientation.Horizontal,
+            Steps =
+            [
+                new ZoorceStepperStep("locked", "Locked", State: ZoorceStepperState.Disabled),
+                new ZoorceStepperStep("brief", "Brief")
+            ]
+        }).Normalize();
+
+        Assert.Equal("validate", active.CurrentStepId);
+        Assert.Equal(ZoorceStepperInteraction.Progress, active.Interaction);
+        Assert.Equal(ZoorceStepperDensity.Comfortable, active.Density);
+        Assert.False(active.AllowFutureNavigation);
+        Assert.Equal("Previous", active.PreviousLabel);
+        Assert.Equal("Continue now", active.NextLabel);
+        Assert.Equal("Finish", active.CompleteLabel);
+        Assert.Null(active.SourceUrl);
+        Assert.Null(active.RealtimeHubUrl);
+        Assert.Null(active.RealtimeEventName);
+        Assert.Equal("brief", available.CurrentStepId);
+        Assert.Equal(ZoorceStepperOrientation.Vertical, available.Orientation);
+    }
+
+    [Fact]
+    public void Stepper_normalizes_presentation_transition_rules_and_semantic_tones()
+    {
+        var normalized = (CreateStepper() with
+        {
+            TransitionUrl = " /api/stepper/authorize ",
+            Presentation = new ZoorceStepperPresentation
+            {
+                MarkerStyle = ZoorceStepperMarkerStyle.Icon,
+                ActiveIndicator = ZoorceStepperActiveIndicator.Halo,
+                ActiveMotion = ZoorceStepperActiveMotion.RingPulse,
+                LabelPlacement = ZoorceStepperLabelPlacement.End,
+                ConnectorStyle = ZoorceStepperConnectorStyle.Dotted
+            },
+            TransitionRules = new ZoorceStepperTransitionRules
+            {
+                Forward = ZoorceStepperForwardRule.AdjacentOnly,
+                Backward = ZoorceStepperBackwardRule.CompletedOnly,
+                Warning = ZoorceStepperWarningRule.RequireAuthorization,
+                Error = ZoorceStepperErrorRule.RequireAuthorization,
+                OnBackward = ZoorceStepperBackwardEffect.ResetFollowing
+            },
+            Steps =
+            [
+                new ZoorceStepperStep("brief", "Brief", Tone: ZoorceStepperTone.Success, State: ZoorceStepperState.Active),
+                new ZoorceStepperStep("validate", "Validate", Tone: ZoorceStepperTone.Info)
+            ]
+        }).Normalize();
+
+        Assert.Equal("/api/stepper/authorize", normalized.TransitionUrl);
+        Assert.Equal(ZoorceStepperMarkerStyle.Icon, normalized.Presentation.MarkerStyle);
+        Assert.Equal(ZoorceStepperActiveIndicator.Halo, normalized.Presentation.ActiveIndicator);
+        Assert.Equal(ZoorceStepperActiveMotion.RingPulse, normalized.Presentation.ActiveMotion);
+        Assert.Equal(ZoorceStepperLabelPlacement.End, normalized.Presentation.LabelPlacement);
+        Assert.Equal(ZoorceStepperConnectorStyle.Dotted, normalized.Presentation.ConnectorStyle);
+        Assert.Equal(ZoorceStepperForwardRule.AdjacentOnly, normalized.TransitionRules.Forward);
+        Assert.Equal(ZoorceStepperBackwardRule.CompletedOnly, normalized.TransitionRules.Backward);
+        Assert.Equal(ZoorceStepperWarningRule.RequireAuthorization, normalized.TransitionRules.Warning);
+        Assert.Equal(ZoorceStepperErrorRule.RequireAuthorization, normalized.TransitionRules.Error);
+        Assert.Equal(ZoorceStepperBackwardEffect.ResetFollowing, normalized.TransitionRules.OnBackward);
+        Assert.Equal(ZoorceStepperTone.Success, normalized.Steps[0].Tone);
+        Assert.Equal(ZoorceStepperTone.Info, normalized.Steps[1].Tone);
+    }
+
+    [Fact]
+    public void Stepper_replaces_unknown_presentation_rules_and_tones_with_safe_defaults()
+    {
+        var normalized = (CreateStepper() with
+        {
+            Presentation = new ZoorceStepperPresentation
+            {
+                MarkerStyle = (ZoorceStepperMarkerStyle)999,
+                ActiveIndicator = (ZoorceStepperActiveIndicator)999,
+                ActiveMotion = (ZoorceStepperActiveMotion)999,
+                LabelPlacement = (ZoorceStepperLabelPlacement)999,
+                ConnectorStyle = (ZoorceStepperConnectorStyle)999
+            },
+            TransitionRules = new ZoorceStepperTransitionRules
+            {
+                Forward = (ZoorceStepperForwardRule)999,
+                Backward = (ZoorceStepperBackwardRule)999,
+                Warning = (ZoorceStepperWarningRule)999,
+                Error = (ZoorceStepperErrorRule)999,
+                OnBackward = (ZoorceStepperBackwardEffect)999
+            },
+            RealtimeTransport = (ZoorceStepperRealtimeTransport)999,
+            Steps =
+            [
+                new ZoorceStepperStep("brief", "Brief", State: ZoorceStepperState.Active, Tone: (ZoorceStepperTone)999),
+                new ZoorceStepperStep("validate", "Validate")
+            ]
+        }).Normalize();
+        var withNullContracts = (CreateStepper() with
+        {
+            Presentation = null!,
+            TransitionRules = null!,
+            Steps =
+            [
+                new ZoorceStepperStep("brief", "Brief", State: ZoorceStepperState.Active),
+                new ZoorceStepperStep("validate", "Validate")
+            ]
+        }).Normalize();
+
+        Assert.Equal(ZoorceStepperMarkerStyle.Auto, normalized.Presentation.MarkerStyle);
+        Assert.Equal(ZoorceStepperActiveIndicator.Ring, normalized.Presentation.ActiveIndicator);
+        Assert.Equal(ZoorceStepperActiveMotion.None, normalized.Presentation.ActiveMotion);
+        Assert.Equal(ZoorceStepperLabelPlacement.Auto, normalized.Presentation.LabelPlacement);
+        Assert.Equal(ZoorceStepperConnectorStyle.Solid, normalized.Presentation.ConnectorStyle);
+        Assert.Equal(ZoorceStepperForwardRule.Auto, normalized.TransitionRules.Forward);
+        Assert.Equal(ZoorceStepperBackwardRule.Auto, normalized.TransitionRules.Backward);
+        Assert.Equal(ZoorceStepperWarningRule.Allow, normalized.TransitionRules.Warning);
+        Assert.Equal(ZoorceStepperErrorRule.Block, normalized.TransitionRules.Error);
+        Assert.Equal(ZoorceStepperBackwardEffect.Auto, normalized.TransitionRules.OnBackward);
+        Assert.Equal(ZoorceStepperTone.Auto, normalized.Steps[0].Tone);
+        Assert.Equal(ZoorceStepperRealtimeTransport.Auto, normalized.RealtimeTransport);
+        Assert.Equal(new ZoorceStepperPresentation(), withNullContracts.Presentation);
+        Assert.Equal(new ZoorceStepperTransitionRules(), withNullContracts.TransitionRules);
+    }
+
+    [Fact]
+    public void Stepper_transition_contract_preserves_authorization_payloads()
+    {
+        var request = new ZoorceStepperTransitionRequest("policy", "approval", "risk", "next", false);
+        var step = new ZoorceStepperStepSnapshot("approval", ZoorceStepperState.Active, ZoorceStepperTone.Info, "Approval", "Owner confirmation", "In progress", "⌁", true, "/approve");
+        var snapshot = new ZoorceStepperSnapshot("approval", [step]);
+        var accepted = new ZoorceStepperTransitionDecision(true, "Authorized", snapshot);
+        var rejected = new ZoorceStepperTransitionDecision(false);
+
+        Assert.Equal("policy", request.StepperId);
+        Assert.Equal("approval", request.StepId);
+        Assert.Equal("risk", request.PreviousStepId);
+        Assert.Equal("next", request.Reason);
+        Assert.False(request.IsBackward);
+        Assert.True(accepted.Allowed);
+        Assert.Equal("Authorized", accepted.Message);
+        Assert.Same(snapshot, accepted.Snapshot);
+        Assert.False(rejected.Allowed);
+        Assert.Null(rejected.Message);
+        Assert.Equal("approval", snapshot.CurrentStepId);
+        Assert.Same(step, snapshot.Steps.Single());
+        Assert.Equal("approval", step.Id);
+        Assert.Equal(ZoorceStepperState.Active, step.State);
+        Assert.Equal(ZoorceStepperTone.Info, step.Tone);
+        Assert.Equal("Approval", step.Title);
+        Assert.Equal("Owner confirmation", step.SupportingText);
+        Assert.Equal("In progress", step.StatusText);
+        Assert.Equal("⌁", step.Icon);
+        Assert.True(step.IsNavigable);
+        Assert.Equal("/approve", step.TargetUrl);
+    }
+
+    [Fact]
+    public void Stepper_rejects_invalid_configuration_and_all_disabled_workflows()
+    {
+        Assert.Throws<ArgumentException>(() => (CreateStepper() with { Id = " " }).Normalize());
+        Assert.Throws<ArgumentException>(() => new ZoorceStepperOptions { Id = "one", Steps = [new ZoorceStepperStep("only", "Only")] }.Normalize());
+        Assert.Throws<ArgumentNullException>(() => (CreateStepper() with { Steps = [null!, new ZoorceStepperStep("two", "Two")] }).Normalize());
+        Assert.Throws<ArgumentException>(() => (CreateStepper() with { Steps = [new ZoorceStepperStep(" ", "One"), new ZoorceStepperStep("two", "Two")] }).Normalize());
+        Assert.Throws<ArgumentException>(() => (CreateStepper() with { Steps = [new ZoorceStepperStep("same", "One"), new ZoorceStepperStep(" SAME ", "Two")] }).Normalize());
+        Assert.Throws<ArgumentException>(() => (CreateStepper() with { CurrentStepId = "missing" }).Normalize());
+        Assert.Throws<ArgumentException>(() => (CreateStepper() with { CurrentStepId = "brief", Steps = [new ZoorceStepperStep("brief", "Brief", State: ZoorceStepperState.Disabled), new ZoorceStepperStep("validate", "Validate")] }).Normalize());
+        Assert.Throws<ArgumentException>(() => (CreateStepper() with { CurrentStepId = null, Steps = [new ZoorceStepperStep("one", "One", State: ZoorceStepperState.Disabled), new ZoorceStepperStep("two", "Two", State: ZoorceStepperState.Disabled)] }).Normalize());
+    }
+
+    [Fact]
+    public void Stepper_contracts_and_view_component_are_available()
+    {
+        var step = new ZoorceStepperStep("welcome", "Welcome", IsOptional: true, IsNavigable: false, TargetUrl: "/welcome", PanelId: "welcome-panel");
+        var component = new ZoorceStepperViewComponent();
+
+        Assert.Equal("welcome", step.Id);
+        Assert.True(step.IsOptional);
+        Assert.False(step.IsNavigable);
+        Assert.Equal("/welcome", step.TargetUrl);
+        Assert.Equal("welcome-panel", step.PanelId);
+        Assert.Throws<ArgumentNullException>(() => component.Invoke(null!));
+        var result = Assert.IsType<ViewViewComponentResult>(component.Invoke(CreateStepper() with { Id = " stepper-view " }));
+        var model = Assert.IsType<ZoorceStepperOptions>(result.ViewData!.Model);
+        Assert.Equal("stepper-view", model.Id);
+        Assert.Contains(ZoorceStepperVariant.Workflow, Enum.GetValues<ZoorceStepperVariant>());
+        Assert.Contains(ZoorceStepperOrientation.Auto, Enum.GetValues<ZoorceStepperOrientation>());
+        Assert.Contains(ZoorceStepperInteraction.Wizard, Enum.GetValues<ZoorceStepperInteraction>());
+        Assert.Contains(ZoorceStepperDensity.Compact, Enum.GetValues<ZoorceStepperDensity>());
+        Assert.Contains(ZoorceStepperState.Error, Enum.GetValues<ZoorceStepperState>());
+        Assert.Contains(ZoorceStepperMarkerStyle.Dot, Enum.GetValues<ZoorceStepperMarkerStyle>());
+        Assert.Contains(ZoorceStepperActiveMotion.ConnectorDraw, Enum.GetValues<ZoorceStepperActiveMotion>());
+        Assert.Contains(ZoorceStepperForwardRule.Block, Enum.GetValues<ZoorceStepperForwardRule>());
+        Assert.Contains(ZoorceStepperTone.Danger, Enum.GetValues<ZoorceStepperTone>());
+        Assert.Contains(ZoorceStepperRealtimeTransport.ServerSentEvents, Enum.GetValues<ZoorceStepperRealtimeTransport>());
+    }
+
     private static ZoorceDataGridOptions CreateGrid() => new()
     {
         Id = "catalogue",
@@ -313,5 +573,20 @@ public sealed class ComponentContractTests
         Summary = "Adoption trend",
         Kind = ZoorceChartKind.Area,
         Series = [new ZoorceChartSeries("Series", [new ZoorceChartPoint("Jan", 10)])]
+    };
+
+    private static ZoorceStepperOptions CreateStepper() => new()
+    {
+        Id = "release-stepper",
+        AriaLabel = "Release workflow",
+        CurrentStepId = "brief",
+        PreviousLabel = "Previous",
+        NextLabel = "Continue now",
+        CompleteLabel = "Finish",
+        Steps =
+        [
+            new ZoorceStepperStep("brief", "Brief", State: ZoorceStepperState.Active),
+            new ZoorceStepperStep("validate", "Validate")
+        ]
     };
 }

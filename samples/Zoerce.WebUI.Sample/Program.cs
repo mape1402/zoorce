@@ -4,6 +4,7 @@ using Zoerce.WebUI.Abstractions.UserContext;
 using Zoerce.WebUI.Options;
 using Zoerce.WebUI.Sample.Infrastructure;
 using Zoerce.WebUI.Abstractions.Data;
+using Zoerce.WebUI.Components.Stepper;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.Extensions.FileProviders;
@@ -65,10 +66,17 @@ app.MapGet("/api/components", async (string? search, string? sort, bool? descend
     return Results.Ok(await catalog.QueryAsync(query, request, cancellationToken));
 });
 app.MapGet("/api/charts/adoption", () => Results.Ok(SampleChartData.Create()));
+app.MapGet("/api/steppers/release", () => Results.Ok(SampleStepperData.Create()));
+app.MapPost("/api/steppers/policy-transition", (ZoorceStepperTransitionRequest request) => Results.Ok(SampleStepperData.Authorize(request)));
 app.MapPost("/api/demo/activity", async (SampleRealtimePublisher publisher, CancellationToken cancellationToken) =>
 {
     var changed = await publisher.PublishAsync(cancellationToken);
     return Results.Ok(new { changed.Id, changed.Name });
+});
+app.MapPost("/api/demo/stepper", async (SampleRealtimePublisher publisher, CancellationToken cancellationToken) =>
+{
+    var snapshot = await publisher.PublishStepperAsync(cancellationToken);
+    return Results.Ok(snapshot);
 });
 
 app.Run();
