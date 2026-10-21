@@ -76,21 +76,26 @@
         <div class="z-button-group z-diagram-toolbar-actions">
             @if (isEditor)
             {
-                <button class="z-icon-button" type="button" data-z-diagram-command="undo" aria-label="Undo last change" title="Undo"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 7 4 12l5 5" /><path d="M4 12h10a6 6 0 0 1 6 6" /></svg></button>
-                <button class="z-icon-button" type="button" data-z-diagram-command="redo" aria-label="Redo last change" title="Redo"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 7 5 5-5 5" /><path d="M20 12H10a6 6 0 0 0-6 6" /></svg></button>
+                <button class="z-icon-button" type="button" data-z-diagram-command="undo" data-z-tooltip="Undo last change" aria-label="Undo last change"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 7 4 12l5 5" /><path d="M4 12h10a6 6 0 0 1 6 6" /></svg></button>
+                <button class="z-icon-button" type="button" data-z-diagram-command="redo" data-z-tooltip="Redo last change" aria-label="Redo last change"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 7 5 5-5 5" /><path d="M20 12H10a6 6 0 0 0-6 6" /></svg></button>
             }
         </div>
         <div class="z-button-group z-diagram-toolbar-zoom" aria-label="Canvas zoom controls">
-            <button class="z-icon-button" type="button" data-z-diagram-command="zoom-out" aria-label="Zoom out" title="Zoom out"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.5" /><path d="m16 16 4.5 4.5M8 10.8h5.6" /></svg></button>
-            <output data-z-diagram-zoom aria-label="Current zoom">100%</output>
-            <button class="z-icon-button" type="button" data-z-diagram-command="zoom-in" aria-label="Zoom in" title="Zoom in"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.5" /><path d="m16 16 4.5 4.5M8 10.8h5.6M10.8 8v5.6" /></svg></button>
-            <button class="z-icon-button" type="button" data-z-diagram-command="fit" aria-label="Fit diagram to canvas" title="Fit diagram"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H3v5M16 3h5v5M21 16v5h-5M3 16v5h5" /><path d="M7 7h10v10H7z" /></svg></button>
+            <button class="z-icon-button" type="button" data-z-diagram-command="zoom-out" data-z-tooltip="Zoom out" aria-label="Zoom out"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.5" /><path d="m16 16 4.5 4.5M8 10.8h5.6" /></svg></button>
+            <label class="z-diagram-zoom-input" data-z-tooltip="Set zoom percentage. Press Enter to apply."><input type="number" inputmode="decimal" min="@Coordinate(Model.MinimumZoom * 100)" max="@Coordinate(Model.MaximumZoom * 100)" step="1" value="100" data-z-diagram-zoom aria-label="Set zoom percentage" /><span aria-hidden="true">%</span></label>
+            <button class="z-icon-button" type="button" data-z-diagram-command="zoom-in" data-z-tooltip="Zoom in" aria-label="Zoom in"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.5" /><path d="m16 16 4.5 4.5M8 10.8h5.6M10.8 8v5.6" /></svg></button>
+            <button class="z-icon-button" type="button" data-z-diagram-command="fit" data-z-tooltip="Fit diagram to canvas" aria-label="Fit diagram to canvas"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H3v5M16 3h5v5M21 16v5h-5M3 16v5h5" /><path d="M7 7h10v10H7z" /></svg></button>
+            <button class="z-icon-button" type="button" data-z-diagram-command="toggle-wheel-zoom" data-z-diagram-wheel-zoom-toggle data-z-tooltip="Enable scroll zoom" aria-pressed="false" aria-label="Enable scroll zoom"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="3" width="10" height="18" rx="5" /><path d="M12 3v6m0 3v3m-3 0h6" /></svg></button>
+            @if (Model.ShowMinimap)
+            {
+                <button class="z-icon-button" type="button" data-z-diagram-command="toggle-overview" data-z-diagram-overview-toggle data-z-tooltip="Show diagram overview" aria-pressed="false" aria-label="Show diagram overview"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="4.5" width="17" height="15" rx="2" /><path d="M7 15.5 10 12l2.3 1.9 3.7-4 1 1.1" /><circle cx="8" cy="8.5" r="1" /></svg></button>
+            }
         </div>
         @if (isEditor)
         {
-            <div class="z-button-group z-diagram-toolbar-save"><button class="z-icon-button" type="button" data-z-diagram-command="save" aria-label="Save now" title="Save now"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3h11l3 3v15H5z" /><path d="M8 3v6h8V3" /><path d="M8 21v-7h8v7" /></svg></button></div>
+            <div class="z-button-group z-diagram-toolbar-save"><button class="z-icon-button" type="button" data-z-diagram-command="save" data-z-tooltip="Save now" aria-label="Save now"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3h11l3 3v15H5z" /><path d="M8 3v6h8V3" /><path d="M8 21v-7h8v7" /></svg></button></div>
         }
-        <div class="z-button-group z-diagram-toolbar-focus"><button class="z-icon-button" type="button" data-z-diagram-command="focus" data-z-diagram-focus-toggle aria-pressed="false" aria-label="Enter focus mode" title="Focus canvas"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H3v5M16 3h5v5M21 16v5h-5M3 16v5h5" /></svg></button></div>
+        <div class="z-button-group z-diagram-toolbar-focus"><button class="z-icon-button" type="button" data-z-diagram-command="focus" data-z-diagram-focus-toggle data-z-tooltip="Focus canvas" aria-pressed="false" aria-label="Enter focus mode"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H3v5M16 3h5v5M21 16v5h-5M3 16v5h5" /></svg></button></div>
     </div>
 
     <div class="z-diagram-workbench">

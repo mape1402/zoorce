@@ -168,9 +168,10 @@
             this.minimap = root.querySelector("[data-z-diagram-minimap]");
             this.overview = root.querySelector("[data-z-diagram-overview]");
             this.overviewToggle = root.querySelector("[data-z-diagram-overview-toggle]");
+            this.wheelZoomToggle = root.querySelector("[data-z-diagram-wheel-zoom-toggle]");
             this.panHelp = root.querySelector("[data-z-diagram-pan-help]");
             this.status = root.querySelector("[data-z-diagram-status]");
-            this.zoomOutput = root.querySelector("[data-z-diagram-zoom]");
+            this.zoomInput = root.querySelector("[data-z-diagram-zoom]");
             this.dirtyBadge = root.querySelector("[data-z-diagram-dirty]");
             this.announcer = root.querySelector("[data-z-diagram-announcer]");
             this.abortController = new AbortController();
@@ -197,6 +198,7 @@
             this.inspectorEditCaptured = false;
             this.inspectorTab = "content";
             this.overviewVisible = false;
+            this.wheelZoomEnabled = false;
             const requestedPanMode = panModes[this.configuration.panMode] ?? key(this.configuration.panMode);
             this.panMode = Object.values(panModes).includes(requestedPanMode) ? requestedPanMode : "background";
             if (this.panHelp) this.panHelp.textContent = this.panMode === "spacekey"
@@ -226,6 +228,7 @@
 
         bind() {
             const signal = this.abortController.signal;
+            this.root.addEventListener("pointerdown", event => this.onToolbarTooltipPointerDown(event), { signal });
             this.root.addEventListener("click", event => this.onClick(event), { signal });
             this.root.addEventListener("dblclick", event => this.onDoubleClick(event), { signal });
             this.root.addEventListener("dragstart", event => this.onPaletteDragStart(event), { signal });
@@ -238,6 +241,8 @@
             this.canvas?.addEventListener("pointerup", event => this.onPointerUp(event), { signal });
             this.canvas?.addEventListener("pointercancel", event => this.onPointerUp(event), { signal });
             this.canvas?.addEventListener("wheel", event => this.onWheel(event), { signal, passive: false });
+            this.zoomInput?.addEventListener("keydown", event => this.onZoomInputKeyDown(event), { signal });
+            this.zoomInput?.addEventListener("blur", () => this.syncZoomInput(), { signal });
             this.canvas?.addEventListener("keydown", event => this.onKeyDown(event), { signal });
             this.canvas?.addEventListener("keyup", event => this.onKeyUp(event), { signal });
             this.canvas?.addEventListener("dragover", event => this.onCanvasDragOver(event), { signal });
@@ -264,9 +269,11 @@
         }
 
         onClick(event) {
-            const command = event.target.closest("[data-z-diagram-command]")?.dataset.zDiagramCommand;
+            const commandElement = event.target.closest("[data-z-diagram-command]");
+            const command = commandElement?.dataset.zDiagramCommand;
             if (command) {
                 this.command(command);
+                if (commandElement.classList.contains("is-tooltip-suppressed")) commandElement.blur();
                 return;
             }
             const tab = event.target.closest("[data-z-diagram-inspector-tab]")?.dataset.zDiagramInspectorTab;
@@ -351,6 +358,13 @@
                 return;
             }
             if (event.target === this.canvas || event.target === this.world || event.target === this.edgesLayer) this.clearSelection();
+        }
+
+        onToolbarTooltipPointerDown(event) {
+            const trigger = event.target.closest(".z-diagram-toolbar [data-z-tooltip]");
+            if (!trigger) return;
+            trigger.classList.add("is-tooltip-suppressed");
+            trigger.addEventListener("pointerleave", () => trigger.classList.remove("is-tooltip-suppressed"), { once: true });
         }
 
         onDoubleClick(event) {
@@ -493,9 +507,23 @@
         }
 
         onWheel(event) {
-            if (!event.ctrlKey && !event.metaKey) return;
+            if (!this.wheelZoomEnabled && !event.ctrlKey && !event.metaKey) return;
             event.preventDefault();
             this.setZoom(this.view.zoom + (event.deltaY < 0 ? .1 : -.1));
+        }
+
+        onZoomInputKeyDown(event) {
+            if (event.key === "Enter") {
+                event.preventDefault();
+                this.applyZoomInput();
+                this.zoomInput?.blur();
+                return;
+            }
+            if (event.key === "Escape") {
+                event.preventDefault();
+                this.syncZoomInput();
+                this.zoomInput?.blur();
+            }
         }
 
         onKeyDown(event) {
@@ -601,6 +629,7 @@
             if (command === "validate") this.validate(true);
             if (command === "save") this.save();
             if (command === "toggle-overview") this.toggleOverview();
+            if (command === "toggle-wheel-zoom") this.toggleWheelZoom();
             if (command === "focus") this.toggleFocusMode();
         }
 
@@ -1005,7 +1034,30 @@
             this.canvas.style.setProperty("--z-diagram-grid-size", grid + "px");
             this.canvas.style.setProperty("--z-diagram-grid-x", (x - 1) + "px");
             this.canvas.style.setProperty("--z-diagram-grid-y", (y - 1) + "px");
-            if (this.zoomOutput) this.zoomOutput.textContent = Math.round(this.view.zoom * 100) + "%";
+            this.syncZoomInput();
+        }
+
+        syncZoomInput() {
+            if (!this.zoomInput || document.activeElement === this.zoomInput) return;
+            this.zoomInput.value = String(Math.round(this.view.zoom * 100));
+        }
+
+        applyZoomInput() {
+            if (!this.zoomInput) return;
+            const requested = Number(this.zoomInput.value);
+            if (!Number.isFinite(requested)) {
+                this.syncZoomInput();
+                this.setStatus("Enter a valid zoom percentage.");
+                return;
+            }
+            const minimum = number(this.configuration.minimumZoom, .4) * 100;
+            const maximum = number(this.configuration.maximumZoom, 2.4) * 100;
+            this.setZoom(requested / 100);
+            const applied = Math.round(this.view.zoom * 100);
+            this.zoomInput.value = String(applied);
+            this.setStatus(requested === applied
+                ? "Zoom set to " + applied + "%."
+                : "Zoom limited to " + applied + "% (range " + Math.round(minimum) + "%–" + Math.round(maximum) + "%).");
         }
 
         pixel(value) {
@@ -1627,14 +1679,21 @@
             const height = Math.max(1, this.minimap.clientHeight || 74);
             const inset = 7;
             const scale = Math.min((width - inset * 2) / Math.max(bounds.width, nodeWidth), (height - inset * 2) / Math.max(bounds.height, nodeHeight));
-            const useful = Boolean(this.configuration.showMinimap) && (this.document.nodes.length > 4 || bounds.width * this.view.zoom > (this.canvas?.clientWidth ?? 0) * .92 || bounds.height * this.view.zoom > (this.canvas?.clientHeight ?? 0) * .92);
+            const available = Boolean(this.configuration.showMinimap);
+            const useful = available && (this.document.nodes.length > 4 || bounds.width * this.view.zoom > (this.canvas?.clientWidth ?? 0) * .92 || bounds.height * this.view.zoom > (this.canvas?.clientHeight ?? 0) * .92);
             if (!this.overviewInitialized) {
                 this.overviewVisible = useful;
                 this.overviewInitialized = true;
             }
-            if (!useful) this.overviewVisible = false;
+            if (!available) this.overviewVisible = false;
             this.overview.hidden = !this.overviewVisible;
-            if (this.overviewToggle) this.overviewToggle.hidden = !useful;
+            if (this.overviewToggle) {
+                this.overviewToggle.hidden = !available;
+                this.overviewToggle.classList.toggle("is-active", this.overviewVisible);
+                this.overviewToggle.setAttribute("aria-pressed", String(this.overviewVisible));
+                this.overviewToggle.setAttribute("aria-label", this.overviewVisible ? "Hide diagram overview" : "Show diagram overview");
+                this.overviewToggle.dataset.zTooltip = this.overviewVisible ? "Hide diagram overview" : "Show diagram overview";
+            }
             const marks = this.document.nodes.map(node => {
                 const mark = create("i");
                 mark.style.left = (inset + (node.position.x - bounds.minX) * scale) + "px";
@@ -1666,10 +1725,23 @@
         }
 
         toggleOverview() {
-            if (!this.overview || this.overviewToggle?.hidden) return;
+            if (!this.overview || !this.configuration.showMinimap) return;
             this.overviewVisible = !this.overviewVisible;
             this.renderMinimap();
             this.setStatus(this.overviewVisible ? "Diagram overview shown." : "Diagram overview hidden.");
+        }
+
+        toggleWheelZoom() {
+            this.wheelZoomEnabled = !this.wheelZoomEnabled;
+            if (this.wheelZoomToggle) {
+                this.wheelZoomToggle.classList.toggle("is-active", this.wheelZoomEnabled);
+                this.wheelZoomToggle.setAttribute("aria-pressed", String(this.wheelZoomEnabled));
+                this.wheelZoomToggle.setAttribute("aria-label", this.wheelZoomEnabled ? "Disable scroll zoom" : "Enable scroll zoom");
+                this.wheelZoomToggle.dataset.zTooltip = this.wheelZoomEnabled ? "Disable scroll zoom" : "Enable scroll zoom";
+            }
+            this.setStatus(this.wheelZoomEnabled
+                ? "Scroll wheel zoom enabled."
+                : "Scroll wheel zoom disabled. Hold Ctrl or Command while scrolling to zoom.");
         }
 
         toggleFocusMode(active = !this.focusMode) {
@@ -1680,7 +1752,7 @@
                 this.focusToggle.classList.toggle("is-active", next);
                 this.focusToggle.setAttribute("aria-pressed", String(next));
                 this.focusToggle.setAttribute("aria-label", next ? "Exit focus mode" : "Enter focus mode");
-                this.focusToggle.title = next ? "Exit focus mode" : "Focus canvas";
+                this.focusToggle.dataset.zTooltip = next ? "Exit focus mode" : "Focus canvas";
             }
             if (next) {
                 this.focusReturn = document.activeElement;
