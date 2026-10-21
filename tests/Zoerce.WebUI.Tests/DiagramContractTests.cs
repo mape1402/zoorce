@@ -20,6 +20,7 @@ public sealed class DiagramContractTests
             ValidateUrl = " /api/validate ",
             RealtimeHubUrl = " /hubs/diagrams ",
             RealtimeEventName = " change ",
+            NodeDetailsEnabled = true,
             PanMode = ZoorceDiagramPanMode.SpaceKey,
             GridSize = 200,
             MinimumZoom = 0.1m,
@@ -27,7 +28,7 @@ public sealed class DiagramContractTests
             InitialZoom = 9m,
             Document = new ZoorceDiagramDocument(0,
             [
-                new ZoorceDiagramNode(" start ", " START ", " Start ", new(1, 2), " ", ZoorceDiagramTone.Success, Action: new(ZoorceDiagramActionKind.None, " ignored "), Style: new(" #112233 ", " #445566 ", 20m, " #ffffff ", " mono ", 80m, 950, 90m, 2m, new(" #010203 ", " #abcdef ", 800))),
+                new ZoorceDiagramNode(" start ", " START ", " Start ", new(1, 2), " ", ZoorceDiagramTone.Success, Action: new(ZoorceDiagramActionKind.None, " ignored "), Style: new(" #112233 ", " #445566 ", 20m, " #ffffff ", " mono ", 80m, 950, 90m, 2m, new(" #010203 ", " #abcdef ", 800)), Identifier: "  START-001  "),
                 new ZoorceDiagramNode(" work ", " ", " ", new(3, 4), " Detail ", (ZoorceDiagramTone)99, Action: new((ZoorceDiagramActionKind)99, " event-name "), Style: new(Gradient: new(" ", " #abcdef ", -20))),
                 new ZoorceDiagramNode(" notify ", " process ", " Notify ", new(5, 6), Action: new(ZoorceDiagramActionKind.Command, " refresh "), Style: new(Gradient: new(" #123456 ", " "))),
                 new ZoorceDiagramNode(" default-style ", " process ", " Default style ", new(7, 8), Style: new())
@@ -45,6 +46,7 @@ public sealed class DiagramContractTests
         Assert.Equal("/api/validate", normalized.ValidateUrl);
         Assert.Equal("/hubs/diagrams", normalized.RealtimeHubUrl);
         Assert.Equal("change", normalized.RealtimeEventName);
+        Assert.True(normalized.NodeDetailsEnabled);
         Assert.Equal(ZoorceDiagramPanMode.SpaceKey, normalized.PanMode);
         Assert.Equal(80, normalized.GridSize);
         Assert.Equal(0.2m, normalized.MinimumZoom);
@@ -54,6 +56,7 @@ public sealed class DiagramContractTests
         Assert.Equal("start", normalized.Document.NodeList[0].Id);
         Assert.Equal("start", normalized.Document.NodeList[0].Kind);
         Assert.Null(normalized.Document.NodeList[0].Description);
+        Assert.Equal("START-001", normalized.Document.NodeList[0].Identifier);
         Assert.Null(normalized.Document.NodeList[0].Action);
         Assert.Equal(ZoorceDiagramNodeKinds.Process, normalized.Document.NodeList[1].Kind);
         Assert.Equal("Untitled node", normalized.Document.NodeList[1].Title);
@@ -120,6 +123,7 @@ public sealed class DiagramContractTests
         Assert.Equal(ZoorceDiagramMode.Viewer, normalized.Mode);
         Assert.Equal(ZoorceDiagramLayout.Manual, normalized.Layout);
         Assert.Equal(ZoorceDiagramPanMode.Background, normalized.PanMode);
+        Assert.False(normalized.NodeDetailsEnabled);
         Assert.Null(normalized.SourceUrl);
         Assert.Null(normalized.SaveUrl);
         Assert.Null(normalized.ValidateUrl);
@@ -182,6 +186,7 @@ public sealed class DiagramContractTests
         Assert.Single(values.EdgeList);
         Assert.True(values.NodeList[0].Collapsed);
         Assert.Null(values.NodeList[0].Data);
+        Assert.Null(values.NodeList[0].Identifier);
         Assert.Contains(ZoorceDiagramProfile.Architecture, Enum.GetValues<ZoorceDiagramProfile>());
         Assert.Contains(ZoorceDiagramMode.ReadOnly, Enum.GetValues<ZoorceDiagramMode>());
         Assert.Contains(ZoorceDiagramLayout.TreeHorizontal, Enum.GetValues<ZoorceDiagramLayout>());

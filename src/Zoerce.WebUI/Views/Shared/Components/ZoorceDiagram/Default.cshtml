@@ -23,6 +23,7 @@
         showPalette = Model.ShowPalette,
         showInspector = Model.ShowInspector,
         showMinimap = Model.ShowMinimap,
+        nodeDetailsEnabled = Model.NodeDetailsEnabled,
         panMode = Model.PanMode,
         snapToGrid = Model.SnapToGrid,
         gridSize = Model.GridSize,
@@ -96,6 +97,7 @@
                 <button class="z-icon-button" type="button" data-z-diagram-command="undo" data-z-tooltip="Undo last change" aria-label="Undo last change"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 7 4 12l5 5" /><path d="M4 12h10a6 6 0 0 1 6 6" /></svg></button>
                 <button class="z-icon-button" type="button" data-z-diagram-command="redo" data-z-tooltip="Redo last change" aria-label="Redo last change"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 7 5 5-5 5" /><path d="M20 12H10a6 6 0 0 0-6 6" /></svg></button>
             }
+            <button class="z-icon-button" type="button" data-z-diagram-command="toggle-node-details" data-z-diagram-node-details-toggle data-z-tooltip="Show node details" aria-pressed="false" aria-label="Show node details"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.25" /><path d="M12 10.5v5M12 7.5h.01" /></svg></button>
         </div>
         <div class="z-button-group z-diagram-toolbar-zoom" aria-label="Canvas zoom controls">
             <button class="z-icon-button" type="button" data-z-diagram-command="zoom-out" data-z-tooltip="Zoom out" aria-label="Zoom out"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.5" /><path d="m16 16 4.5 4.5M8 10.8h5.6" /></svg></button>
@@ -165,6 +167,8 @@
             <aside class="z-diagram-inspector" data-z-diagram-inspector aria-label="Selected element inspector"><div data-z-diagram-inspector-empty><strong>Inspector</strong><p>Select a node or connection to edit its details.</p></div></aside>
         }
     </div>
+
+    <aside id="@Model.Id-node-details-tooltip" class="z-diagram-node-details-tooltip" data-z-diagram-node-details-tooltip role="tooltip" aria-hidden="true" hidden></aside>
 
     <footer class="z-diagram-footer">
         <div><strong>Diagram navigator</strong><span>Keyboard-friendly element list</span></div>

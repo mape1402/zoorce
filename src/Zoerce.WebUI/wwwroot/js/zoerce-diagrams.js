@@ -135,6 +135,7 @@
         id: text(node?.id) || "node-" + (index + 1),
         kind: key(node?.kind) || "process",
         title: text(node?.title) || "Untitled node",
+        identifier: text(node?.identifier) || null,
         description: text(node?.description) || null,
         tone: enumValue(tones, node?.tone, "Neutral"),
         collapsed: Boolean(node?.collapsed),
@@ -188,7 +189,7 @@
             this.root = root;
             this.configuration = {
                 profile: "Flowchart", mode: "Editor", layout: "Manual", document: {},
-                gridSize: 24, snapToGrid: true, minimumZoom: .4, maximumZoom: 2.4, initialZoom: 1, panMode: "Background",
+                gridSize: 24, snapToGrid: true, minimumZoom: .4, maximumZoom: 2.4, initialZoom: 1, panMode: "Background", nodeDetailsEnabled: false,
                 ...configuration
             };
             this.profile = profiles[this.configuration.profile] ?? key(this.configuration.profile);
@@ -205,6 +206,8 @@
             this.overview = root.querySelector("[data-z-diagram-overview]");
             this.overviewToggle = root.querySelector("[data-z-diagram-overview-toggle]");
             this.wheelZoomToggle = root.querySelector("[data-z-diagram-wheel-zoom-toggle]");
+            this.nodeDetailsToggle = root.querySelector("[data-z-diagram-node-details-toggle]");
+            this.nodeDetailsTooltip = root.querySelector("[data-z-diagram-node-details-tooltip]");
             this.panHelp = root.querySelector("[data-z-diagram-pan-help]");
             this.status = root.querySelector("[data-z-diagram-status]");
             this.titleElement = root.querySelector("[data-z-diagram-document-title]");
@@ -257,6 +260,9 @@
             this.inspectorTab = "content";
             this.overviewVisible = false;
             this.wheelZoomEnabled = false;
+            this.nodeDetailsEnabled = Boolean(this.configuration.nodeDetailsEnabled);
+            this.nodeDetailsNodeId = null;
+            this.nodeDetailsTrigger = null;
             const requestedPanMode = panModes[this.configuration.panMode] ?? key(this.configuration.panMode);
             this.panMode = Object.values(panModes).includes(requestedPanMode) ? requestedPanMode : "background";
             if (this.panHelp) this.panHelp.textContent = this.panMode === "spacekey"
@@ -279,6 +285,7 @@
             this.descriptionBeforeEdit = null;
             this.resizeObserver = globalThis.ResizeObserver ? new ResizeObserver(() => this.renderViewport()) : null;
             this.resizeObserver?.observe(this.canvas);
+            this.syncNodeDetailsToggle();
             this.bind();
             this.render();
             this.fit(false);
@@ -304,6 +311,10 @@
             this.canvas?.addEventListener("pointermove", event => this.onPointerMove(event), { signal });
             this.canvas?.addEventListener("pointerup", event => this.onPointerUp(event), { signal });
             this.canvas?.addEventListener("pointercancel", event => this.onPointerUp(event), { signal });
+            this.canvas?.addEventListener("pointerover", event => this.onNodeDetailsPointerOver(event), { signal });
+            this.canvas?.addEventListener("pointerout", event => this.onNodeDetailsPointerOut(event), { signal });
+            this.canvas?.addEventListener("focusin", event => this.onNodeDetailsFocusIn(event), { signal });
+            this.canvas?.addEventListener("focusout", event => this.onNodeDetailsFocusOut(event), { signal });
             this.canvas?.addEventListener("wheel", event => this.onWheel(event), { signal, passive: false });
             this.zoomInput?.addEventListener("keydown", event => this.onZoomInputKeyDown(event), { signal });
             this.zoomInput?.addEventListener("blur", () => this.syncZoomInput(), { signal });
@@ -411,6 +422,11 @@
             // immediately clear that just-established selection.
             if (!node && pointerNode && this.node(pointerNode)) {
                 this.selectNode(pointerNode, false, false);
+                if (this.nodeDetailsEnabled) {
+                    const current = this.node(pointerNode);
+                    const trigger = this.world?.querySelector("[data-z-diagram-node-id='" + CSS.escape(pointerNode) + "']");
+                    if (current && trigger) this.showNodeDetails(current, trigger);
+                }
                 return;
             }
             if (node) {
@@ -435,6 +451,11 @@
                 }
                 const actionHandledOnPointerUp = pointerNode === nodeId;
                 this.selectNode(nodeId, event.ctrlKey || event.metaKey, !actionHandledOnPointerUp);
+                if (this.nodeDetailsEnabled) {
+                    const current = this.node(nodeId);
+                    const trigger = this.world?.querySelector("[data-z-diagram-node-id='" + CSS.escape(nodeId) + "']");
+                    if (current && trigger) this.showNodeDetails(current, trigger);
+                }
                 return;
             }
             const edge = event.target.closest("[data-z-diagram-edge]");
@@ -463,6 +484,132 @@
             this.root.querySelectorAll(".z-diagram-toolbar [data-z-tooltip]").forEach(trigger => trigger.classList.remove("is-tooltip-suppressed"));
         }
 
+        syncNodeDetailsToggle() {
+            const enabled = Boolean(this.nodeDetailsEnabled);
+            this.root.classList.toggle("is-node-details-active", enabled);
+            if (!this.nodeDetailsToggle) return;
+            this.nodeDetailsToggle.classList.toggle("is-active", enabled);
+            this.nodeDetailsToggle.setAttribute("aria-pressed", String(enabled));
+            this.nodeDetailsToggle.setAttribute("aria-label", enabled ? "Hide node details" : "Show node details");
+            this.nodeDetailsToggle.dataset.zTooltip = enabled ? "Hide node details" : "Show node details";
+        }
+
+        toggleNodeDetails(enabled = !this.nodeDetailsEnabled) {
+            this.nodeDetailsEnabled = Boolean(enabled);
+            this.configuration.nodeDetailsEnabled = this.nodeDetailsEnabled;
+            this.syncNodeDetailsToggle();
+            if (!this.nodeDetailsEnabled) this.hideNodeDetails();
+            this.setStatus(this.nodeDetailsEnabled
+                ? "Node details enabled. Hover, focus, or tap a node to inspect it."
+                : "Node details hidden.");
+            dispatch(this.root, "zoerce:diagram:detailsmodechanged", { enabled: this.nodeDetailsEnabled });
+        }
+
+        onNodeDetailsPointerOver(event) {
+            if (!this.nodeDetailsEnabled || this.drag || this.pan || this.portDrag || event.target.closest("[data-z-diagram-port]")) return;
+            const trigger = event.target.closest("[data-z-diagram-node]");
+            const node = this.node(trigger?.dataset.zDiagramNodeId);
+            if (node && trigger) this.showNodeDetails(node, trigger);
+        }
+
+        onNodeDetailsPointerOut(event) {
+            const trigger = event.target.closest("[data-z-diagram-node]");
+            if (!trigger || trigger.contains(event.relatedTarget)) return;
+            // A selection refresh replaces the node under a stationary pointer. Ignore
+            // the stale pointerout from the discarded element; its replacement owns the
+            // same details tooltip and remains the active anchor.
+            if (this.nodeDetailsTrigger !== trigger
+                && this.nodeDetailsNodeId === trigger.dataset.zDiagramNodeId) return;
+            this.hideNodeDetails();
+        }
+
+        onNodeDetailsFocusIn(event) {
+            if (!this.nodeDetailsEnabled || event.target.closest("[data-z-diagram-port]")) return;
+            const trigger = event.target.closest("[data-z-diagram-node]");
+            const node = this.node(trigger?.dataset.zDiagramNodeId);
+            if (node && trigger) this.showNodeDetails(node, trigger);
+        }
+
+        onNodeDetailsFocusOut(event) {
+            const trigger = event.target.closest("[data-z-diagram-node]");
+            if (!trigger || trigger.contains(event.relatedTarget)) return;
+            // Selecting a node reconstructs its DOM for the inspector. The discarded
+            // focused node may emit focusout after its replacement is already anchoring
+            // the tooltip, so it must not close the active details panel.
+            if (this.nodeDetailsTrigger !== trigger
+                && this.nodeDetailsNodeId === trigger.dataset.zDiagramNodeId) return;
+            this.hideNodeDetails();
+        }
+
+        showNodeDetails(node, trigger) {
+            const tooltip = this.nodeDetailsTooltip;
+            if (!this.nodeDetailsEnabled || !tooltip || !trigger) return;
+            if (this.nodeDetailsTrigger && this.nodeDetailsTrigger !== trigger) this.nodeDetailsTrigger.removeAttribute("aria-describedby");
+            this.nodeDetailsNodeId = node.id;
+            this.nodeDetailsTrigger = trigger;
+            const header = create("div", "z-diagram-node-details-header");
+            const icon = create("span", "z-diagram-node-details-icon z-diagram-node-details-icon--" + key(node.tone));
+            icon.setAttribute("aria-hidden", "true");
+            icon.textContent = iconForKind(node.kind);
+            const copy = create("div", "z-diagram-node-details-copy");
+            const title = create("strong"); title.textContent = node.title;
+            copy.append(title);
+            if (node.identifier) {
+                const identifier = create("code"); identifier.textContent = node.identifier;
+                copy.append(identifier);
+            }
+            header.append(icon, copy);
+            const divider = create("div", "z-diagram-node-details-divider");
+            const description = create("p"); description.textContent = node.description || "No additional description.";
+            tooltip.replaceChildren(header, divider, description);
+            tooltip.hidden = false;
+            tooltip.setAttribute("aria-hidden", "false");
+            tooltip.dataset.zDiagramNodeDetailsFor = node.id;
+            trigger.setAttribute("aria-describedby", tooltip.id);
+            this.positionNodeDetailsTooltip(trigger);
+        }
+
+        positionNodeDetailsTooltip(trigger = this.nodeDetailsTrigger) {
+            const tooltip = this.nodeDetailsTooltip;
+            if (!tooltip || tooltip.hidden || !trigger?.isConnected) return;
+            tooltip.style.visibility = "hidden";
+            const anchor = trigger.getBoundingClientRect();
+            const bounds = tooltip.getBoundingClientRect();
+            const inset = 12;
+            const gap = 12;
+            const viewportWidth = globalThis.innerWidth || document.documentElement.clientWidth;
+            const viewportHeight = globalThis.innerHeight || document.documentElement.clientHeight;
+            const preferAbove = anchor.bottom + gap + bounds.height > viewportHeight - inset && anchor.top - gap - bounds.height >= inset;
+            const top = preferAbove ? anchor.top - bounds.height - gap : anchor.bottom + gap;
+            const left = clamp(anchor.left + anchor.width / 2 - bounds.width / 2, inset, Math.max(inset, viewportWidth - bounds.width - inset));
+            tooltip.style.left = Math.round(left) + "px";
+            tooltip.style.top = Math.round(clamp(top, inset, Math.max(inset, viewportHeight - bounds.height - inset))) + "px";
+            tooltip.dataset.zDiagramNodeDetailsPlacement = preferAbove ? "top" : "bottom";
+            tooltip.style.visibility = "";
+        }
+
+        hideNodeDetails() {
+            const tooltip = this.nodeDetailsTooltip;
+            this.nodeDetailsTrigger?.removeAttribute("aria-describedby");
+            this.nodeDetailsTrigger = null;
+            this.nodeDetailsNodeId = null;
+            if (!tooltip) return;
+            tooltip.hidden = true;
+            tooltip.setAttribute("aria-hidden", "true");
+            tooltip.removeAttribute("data-z-diagram-node-details-for");
+        }
+
+        refreshNodeDetailsTooltip() {
+            if (!this.nodeDetailsEnabled || !this.nodeDetailsNodeId) return;
+            const node = this.node(this.nodeDetailsNodeId);
+            const trigger = this.world?.querySelector("[data-z-diagram-node-id='" + CSS.escape(this.nodeDetailsNodeId) + "']");
+            if (!node || !trigger) {
+                this.hideNodeDetails();
+                return;
+            }
+            this.showNodeDetails(node, trigger);
+        }
+
         onDoubleClick(event) {
             if (!this.editable || !(this.profile === "mindmap" || this.profile === "orgchart")) return;
             if (Date.now() < this.ignoreNativeDoubleClickUntil) return;
@@ -475,6 +622,7 @@
             if (event.button !== 0 && event.button !== 1) return;
             const port = event.target.closest("[data-z-diagram-port]");
             if (port && this.editable && event.button === 0) {
+                this.hideNodeDetails();
                 const nodeId = port.closest("[data-z-diagram-node]")?.dataset.zDiagramNodeId;
                 if (!nodeId) return;
                 this.portDrag = { nodeId, side: port.dataset.zDiagramPortSide || "right", x: event.clientX, y: event.clientY, moved: false };
@@ -490,6 +638,7 @@
                 return;
             }
             if (nodeElement && this.editable && !event.target.closest("[data-z-diagram-port]")) {
+                this.hideNodeDetails();
                 const nodeId = nodeElement.dataset.zDiagramNodeId;
                 if (!this.selection.has(nodeId)) this.selectNode(nodeId, event.ctrlKey || event.metaKey, false);
                 this.drag = {
@@ -504,6 +653,7 @@
                 return;
             }
             if (this.canPan(event) && (event.target === this.canvas || event.target === this.world || event.target === this.edgesLayer || event.button === 1)) {
+                this.hideNodeDetails();
                 this.pan = { x: event.clientX, y: event.clientY, viewX: this.view.x, viewY: this.view.y };
                 this.canvas.setPointerCapture?.(event.pointerId);
                 this.canvas.classList.add("is-panning");
@@ -585,6 +735,13 @@
                 } else {
                     this.pendingPointerAction = drag.primaryId;
                     const node = this.node(drag.primaryId);
+                    // Node selection can re-render during pointerdown, before a browser
+                    // dispatches the following click. Anchor details here as well so a
+                    // tap/click is as reliable as hover and keyboard focus.
+                    if (this.nodeDetailsEnabled && node) {
+                        const trigger = this.world?.querySelector("[data-z-diagram-node-id='" + CSS.escape(node.id) + "']");
+                        if (trigger) this.showNodeDetails(node, trigger);
+                    }
                     if (node?.action) this.invokeAction(node);
                     if (this.profile === "mindmap" || this.profile === "orgchart") {
                         const now = Date.now();
@@ -655,6 +812,12 @@
                 return;
             }
             if (event.key === "Escape") {
+                if (this.nodeDetailsNodeId) {
+                    this.hideNodeDetails();
+                    this.setStatus("Node details closed.");
+                    event.preventDefault();
+                    return;
+                }
                 if (this.connectingFrom) {
                     this.connectingFrom = null;
                     this.setStatus("Connection source cleared.");
@@ -729,6 +892,7 @@
             if (command === "save") this.save();
             if (command === "toggle-overview") this.toggleOverview();
             if (command === "toggle-wheel-zoom") this.toggleWheelZoom();
+            if (command === "toggle-node-details") this.toggleNodeDetails();
             if (command === "focus") this.toggleFocusMode();
             if (command === "export") this.openExport();
             if (command === "edit-title" && this.editable) this.beginTitleEdit();
@@ -905,12 +1069,14 @@
             const selected = this.document.nodes.find(node => this.selection.has(node.id));
             if (!selected || !this.inspector) return;
             const title = this.inspector.querySelector("[data-z-diagram-field='title']")?.value;
+            const identifier = this.inspector.querySelector("[data-z-diagram-field='identifier']")?.value;
             const description = this.inspector.querySelector("[data-z-diagram-field='description']")?.value;
             const tone = this.inspector.querySelector("[data-z-diagram-field='tone']")?.value;
             const actionKind = this.inspector.querySelector("[data-z-diagram-field='action-kind']")?.value;
             const target = this.inspector.querySelector("[data-z-diagram-field='action-target']")?.value;
             this.prepareInspectorChange();
             selected.title = text(title) || "Untitled node";
+            selected.identifier = text(identifier) || null;
             selected.description = text(description) || null;
             selected.tone = tones.has(tone) ? tone : "Neutral";
             selected.action = actionKinds.has(actionKind) && actionKind !== "None" ? { kind: actionKind, target: text(target) || null, payload: null } : null;
@@ -1092,6 +1258,7 @@
                     id: idFor(normalizedKind, this.document.nodes),
                     kind: normalizedKind,
                     title: titleForKind(normalizedKind),
+                    identifier: null,
                     description: null,
                     tone: "Neutral",
                     collapsed: false,
@@ -1319,6 +1486,7 @@
                 existing.delete(node.id);
             });
             existing.forEach(element => element.remove());
+            this.refreshNodeDetailsTooltip();
         }
 
         marker() {
@@ -1720,6 +1888,9 @@
             const titleLabel = create("label"); titleLabel.textContent = "Title";
             const titleInput = create("input", "z-input"); titleInput.value = node.title; titleInput.dataset.zDiagramField = "title";
             titleLabel.append(titleInput);
+            const identifierLabel = create("label"); identifierLabel.textContent = "Identifier";
+            const identifierInput = create("input", "z-input"); identifierInput.value = node.identifier ?? ""; identifierInput.maxLength = 120; identifierInput.dataset.zDiagramField = "identifier"; identifierInput.placeholder = "e.g. RELEASE-PUBLISH";
+            identifierLabel.append(identifierInput);
             const descriptionLabel = create("label"); descriptionLabel.textContent = "Description";
             const descriptionInput = create("textarea", "z-textarea"); descriptionInput.value = node.description ?? ""; descriptionInput.dataset.zDiagramField = "description";
             descriptionLabel.append(descriptionInput);
@@ -1742,7 +1913,7 @@
             if (this.profile === "mindmap" || this.profile === "orgchart") {
                 const collapse = create("button", "z-button z-button-ghost z-button-sm"); collapse.type = "button"; collapse.textContent = node.collapsed ? "Expand branch" : "Collapse branch"; collapse.dataset.zDiagramInspector = "toggle-collapse"; actions.append(collapse);
             }
-            form.append(titleLabel, descriptionLabel, toneLabel, actionLabel, targetLabel);
+            form.append(titleLabel, identifierLabel, descriptionLabel, toneLabel, actionLabel, targetLabel);
             if (actions.childElementCount) form.append(actions);
             return form;
         }
@@ -2009,6 +2180,7 @@
 
         onOverviewPointerDown(event) {
             if (!this.overviewLayout) return;
+            this.hideNodeDetails();
             this.overviewDrag = true;
             this.minimap?.setPointerCapture?.(event.pointerId);
             this.navigateOverview(event);
@@ -2044,12 +2216,14 @@
         }
 
         setZoom(value) {
+            this.hideNodeDetails();
             this.view.zoom = clamp(value, number(this.configuration.minimumZoom, .4), number(this.configuration.maximumZoom, 2.4));
             this.renderViewport();
         }
 
         fit(announce) {
             if (!this.document.nodes.length || !this.canvas) return;
+            this.hideNodeDetails();
             const xs = this.document.nodes.map(node => node.position.x);
             const ys = this.document.nodes.map(node => node.position.y);
             const minX = Math.min(...xs);

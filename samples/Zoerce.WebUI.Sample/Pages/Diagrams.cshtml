@@ -11,13 +11,13 @@
         <div>
             <span class="z-section-kicker">Native diagram workspace</span>
             <h1>Model systems visually, without a diagramming dependency.</h1>
-            <p>Each canvas is a self-contained component: its own document, selection state, keyboard controls, REST save path and host events. Drag a node, style it from Appearance, connect ports, then use Undo, zoom, Save and Export to create JSON, SVG, JPG, HTML or PDF output.</p>
+            <p>Each canvas is a self-contained component: its own document, selection state, keyboard controls, REST save path and host events. Drag a node, style it from Appearance, connect ports, then use Undo, zoom, Save and Export to create JSON, SVG, JPG, HTML or PDF output. Enable node details to inspect the complete description and optional identifier without expanding the canvas.</p>
         </div>
     </div>
 
     <article class="z-diagram-demo" data-z-diagram-demo="flow">
         <header class="z-diagram-demo-header"><div><span class="z-section-kicker">Flowchart · editable process</span><h2>Release routing</h2><p>Typed flow nodes, separate yes/no branches and an Appearance panel persisted in the JSON document.</p></div><p class="z-diagram-demo-detail" data-z-diagram-detail>Click a node, then open Appearance.</p></header>
-        @await Component.InvokeAsync("ZoorceDiagram", new ZoorceDiagramOptions { Id = "diagram-flow", Title = "Release routing", Summary = "An editable flowchart for a release request", Profile = ZoorceDiagramProfile.Flowchart, Mode = ZoorceDiagramMode.Editor, Layout = ZoorceDiagramLayout.Flow, Document = DiagramCatalog.Get("flow"), SourceUrl = "/api/diagrams/flow", SaveUrl = "/api/diagrams/flow" })
+        @await Component.InvokeAsync("ZoorceDiagram", new ZoorceDiagramOptions { Id = "diagram-flow", Title = "Release routing", Summary = "An editable flowchart for a release request", Profile = ZoorceDiagramProfile.Flowchart, Mode = ZoorceDiagramMode.Editor, Layout = ZoorceDiagramLayout.Flow, NodeDetailsEnabled = true, Document = DiagramCatalog.Get("flow"), SourceUrl = "/api/diagrams/flow", SaveUrl = "/api/diagrams/flow" })
     </article>
 
     <article class="z-diagram-demo" data-z-diagram-demo="mind">

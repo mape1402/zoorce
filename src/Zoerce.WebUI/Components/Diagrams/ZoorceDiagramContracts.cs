@@ -152,7 +152,8 @@ public sealed record ZoorceDiagramNode(
     bool Collapsed = false,
     ZoorceDiagramAction? Action = null,
     IReadOnlyDictionary<string, string?>? Data = null,
-    ZoorceDiagramNodeStyle? Style = null);
+    ZoorceDiagramNodeStyle? Style = null,
+    string? Identifier = null);
 
 /// <summary>Defines a directed connection between two diagram nodes.</summary>
 public sealed record ZoorceDiagramEdge(

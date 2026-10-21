@@ -48,6 +48,9 @@ public sealed record ZoorceDiagramOptions
     /// <summary>Gets whether the compact minimap is visible.</summary>
     public bool ShowMinimap { get; init; } = true;
 
+    /// <summary>Gets whether the node-details inspection mode starts enabled.</summary>
+    public bool NodeDetailsEnabled { get; init; }
+
     /// <summary>Gets the pointer gesture used to pan unused canvas space.</summary>
     public ZoorceDiagramPanMode PanMode { get; init; } = ZoorceDiagramPanMode.Background;
 
@@ -131,6 +134,7 @@ public sealed record ZoorceDiagramOptions
                 Id = node.Id.Trim(),
                 Kind = string.IsNullOrWhiteSpace(node.Kind) ? ZoorceDiagramNodeKinds.Process : node.Kind.Trim().ToLowerInvariant(),
                 Title = string.IsNullOrWhiteSpace(node.Title) ? "Untitled node" : node.Title.Trim(),
+                Identifier = TrimOrNull(node.Identifier),
                 Description = TrimOrNull(node.Description),
                 Tone = Enum.IsDefined(node.Tone) ? node.Tone : ZoorceDiagramTone.Neutral,
                 Action = NormalizeAction(node.Action),

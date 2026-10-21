@@ -9,13 +9,13 @@ public sealed class SampleDiagramCatalog
     {
         ["flow"] = new ZoorceDiagramDocument(1,
         [
-            Node("start", "start", "Request received", 70, 330, "Event trigger", ZoorceDiagramTone.Success),
-            Node("triage", "process", "Triage request", 300, 339, "Classify and enrich", ZoorceDiagramTone.Info),
-            Node("decision", "decision", "Ready to ship?", 545, 321, "Policy decision", ZoorceDiagramTone.Warning, style: new(FillColor: "#fff3d6", BorderColor: "#d78a19", TextColor: "#39230a", CornerRadius: 8m)),
-            Node("release", "process", "Create release", 805, 178, "Publish change", ZoorceDiagramTone.Primary, new(ZoorceDiagramActionKind.Event, "flow-release"), new(Gradient: new("#7c5cff", "#2aa8ff", 132), TextColor: "#ffffff", BorderColor: "#9b8cff", FontWeight: 800)),
-            Node("hold", "process", "Request changes", 805, 492, "Return to owner", ZoorceDiagramTone.Danger),
-            Node("done", "end", "Completed", 1080, 169, "Release is visible", ZoorceDiagramTone.Success),
-            Node("closed", "end", "Closed", 1080, 483, "Needs more work", ZoorceDiagramTone.Neutral)
+            Node("start", "start", "Request received", 70, 330, "A release request entered the workflow and is ready for the initial qualification checks.", ZoorceDiagramTone.Success, identifier: "REQ-001"),
+            Node("triage", "process", "Triage request", 300, 339, "Classify the request, collect missing context, and identify the owner who must approve the release.", ZoorceDiagramTone.Info, identifier: "FLOW-TRIAGE"),
+            Node("decision", "decision", "Ready to ship?", 545, 321, "Policy gate that evaluates required checks, risk evidence, and release readiness before publishing.", ZoorceDiagramTone.Warning, style: new(FillColor: "#fff3d6", BorderColor: "#d78a19", TextColor: "#39230a", CornerRadius: 8m), identifier: "GATE-SHIP"),
+            Node("release", "process", "Create release", 805, 178, "Create the release record, publish the change, and notify subscribers that the new version is available.", ZoorceDiagramTone.Primary, new(ZoorceDiagramActionKind.Event, "flow-release"), new(Gradient: new("#7c5cff", "#2aa8ff", 132), TextColor: "#ffffff", BorderColor: "#9b8cff", FontWeight: 800), "RELEASE-PUBLISH"),
+            Node("hold", "process", "Request changes", 805, 492, "Return the request to its owner with the required corrections before another review begins.", ZoorceDiagramTone.Danger, identifier: "REWORK"),
+            Node("done", "end", "Completed", 1080, 169, "The release is visible and the workflow completed successfully.", ZoorceDiagramTone.Success, identifier: "DONE"),
+            Node("closed", "end", "Closed", 1080, 483, "The request was closed without publication and requires a new submission to continue.", ZoorceDiagramTone.Neutral, identifier: "CLOSED")
         ],
         [
             Edge("edge-start", "start", "triage"), Edge("edge-triage", "triage", "decision"),
@@ -80,8 +80,8 @@ public sealed class SampleDiagramCatalog
         return Get(key);
     }
 
-    private static ZoorceDiagramNode Node(string id, string kind, string title, decimal x, decimal y, string description, ZoorceDiagramTone tone, ZoorceDiagramAction? action = null, ZoorceDiagramNodeStyle? style = null)
-        => new(id, kind, title, new(x, y), description, tone, false, action, null, style);
+    private static ZoorceDiagramNode Node(string id, string kind, string title, decimal x, decimal y, string description, ZoorceDiagramTone tone, ZoorceDiagramAction? action = null, ZoorceDiagramNodeStyle? style = null, string? identifier = null)
+        => new(id, kind, title, new(x, y), description, tone, false, action, null, style, identifier);
 
     private static ZoorceDiagramEdge Edge(string id, string from, string to, string? label = null, ZoorceDiagramTone tone = ZoorceDiagramTone.Neutral, ZoorceDiagramEdgeStyle? style = null)
         => new(id, from, to, label, tone, null, style);
