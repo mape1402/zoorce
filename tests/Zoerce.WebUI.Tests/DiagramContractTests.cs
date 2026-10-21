@@ -18,17 +18,19 @@ public sealed class DiagramContractTests
             ValidateUrl = " /api/validate ",
             RealtimeHubUrl = " /hubs/diagrams ",
             RealtimeEventName = " change ",
+            PanMode = ZoorceDiagramPanMode.SpaceKey,
             GridSize = 200,
             MinimumZoom = 0.1m,
             MaximumZoom = 9m,
             InitialZoom = 9m,
             Document = new ZoorceDiagramDocument(0,
             [
-                new ZoorceDiagramNode(" start ", " START ", " Start ", new(1, 2), " ", ZoorceDiagramTone.Success, Action: new(ZoorceDiagramActionKind.None, " ignored ")),
-                new ZoorceDiagramNode(" work ", " ", " ", new(3, 4), " Detail ", (ZoorceDiagramTone)99, Action: new((ZoorceDiagramActionKind)99, " event-name ")),
-                new ZoorceDiagramNode(" notify ", " process ", " Notify ", new(5, 6), Action: new(ZoorceDiagramActionKind.Command, " refresh "))
+                new ZoorceDiagramNode(" start ", " START ", " Start ", new(1, 2), " ", ZoorceDiagramTone.Success, Action: new(ZoorceDiagramActionKind.None, " ignored "), Style: new(" #112233 ", " #445566 ", 20m, " #ffffff ", " mono ", 80m, 950, 90m, 2m, new(" #010203 ", " #abcdef ", 800))),
+                new ZoorceDiagramNode(" work ", " ", " ", new(3, 4), " Detail ", (ZoorceDiagramTone)99, Action: new((ZoorceDiagramActionKind)99, " event-name "), Style: new(Gradient: new(" ", " #abcdef ", -20))),
+                new ZoorceDiagramNode(" notify ", " process ", " Notify ", new(5, 6), Action: new(ZoorceDiagramActionKind.Command, " refresh "), Style: new(Gradient: new(" #123456 ", " "))),
+                new ZoorceDiagramNode(" default-style ", " process ", " Default style ", new(7, 8), Style: new())
             ],
-            [new ZoorceDiagramEdge(" edge ", " start ", " work ", " label ", (ZoorceDiagramTone)99, " kind ")], " version ")
+            [new ZoorceDiagramEdge(" edge ", " start ", " work ", " label ", (ZoorceDiagramTone)99, " kind ", new(" #ddee11 ", 20m, true))], " version ")
         };
 
         var normalized = options.Normalize();
@@ -41,6 +43,7 @@ public sealed class DiagramContractTests
         Assert.Equal("/api/validate", normalized.ValidateUrl);
         Assert.Equal("/hubs/diagrams", normalized.RealtimeHubUrl);
         Assert.Equal("change", normalized.RealtimeEventName);
+        Assert.Equal(ZoorceDiagramPanMode.SpaceKey, normalized.PanMode);
         Assert.Equal(80, normalized.GridSize);
         Assert.Equal(0.2m, normalized.MinimumZoom);
         Assert.Equal(4m, normalized.MaximumZoom);
@@ -57,10 +60,26 @@ public sealed class DiagramContractTests
         Assert.Equal(ZoorceDiagramActionKind.Event, normalized.Document.NodeList[1].Action!.Kind);
         Assert.Equal("event-name", normalized.Document.NodeList[1].Action!.Target);
         Assert.Equal(ZoorceDiagramActionKind.Command, normalized.Document.NodeList[2].Action!.Kind);
+        Assert.Null(normalized.Document.NodeList[2].Style!.Gradient);
+        Assert.Null(normalized.Document.NodeList[3].Style!.Gradient);
+        Assert.Equal("#112233", normalized.Document.NodeList[0].Style!.FillColor);
+        Assert.Equal("#445566", normalized.Document.NodeList[0].Style!.BorderColor);
+        Assert.Equal(12m, normalized.Document.NodeList[0].Style!.BorderWidth);
+        Assert.Equal("#ffffff", normalized.Document.NodeList[0].Style!.TextColor);
+        Assert.Equal("mono", normalized.Document.NodeList[0].Style!.FontFamily);
+        Assert.Equal(42m, normalized.Document.NodeList[0].Style!.FontSize);
+        Assert.Equal(900, normalized.Document.NodeList[0].Style!.FontWeight);
+        Assert.Equal(64m, normalized.Document.NodeList[0].Style!.CornerRadius);
+        Assert.Equal(1m, normalized.Document.NodeList[0].Style!.Opacity);
+        Assert.Equal(360, normalized.Document.NodeList[0].Style!.Gradient!.Angle);
+        Assert.Null(normalized.Document.NodeList[1].Style!.Gradient);
         Assert.Equal("edge", normalized.Document.EdgeList[0].Id);
         Assert.Equal("label", normalized.Document.EdgeList[0].Label);
         Assert.Equal("kind", normalized.Document.EdgeList[0].Kind);
         Assert.Equal(ZoorceDiagramTone.Neutral, normalized.Document.EdgeList[0].Tone);
+        Assert.Equal("#ddee11", normalized.Document.EdgeList[0].Style!.StrokeColor);
+        Assert.Equal(8m, normalized.Document.EdgeList[0].Style!.StrokeWidth);
+        Assert.True(normalized.Document.EdgeList[0].Style!.Dashed);
         Assert.Equal("version", normalized.Document.Version);
     }
 
@@ -75,6 +94,7 @@ public sealed class DiagramContractTests
             Profile = (ZoorceDiagramProfile)99,
             Mode = (ZoorceDiagramMode)99,
             Layout = (ZoorceDiagramLayout)99,
+            PanMode = (ZoorceDiagramPanMode)99,
             SourceUrl = " ",
             SaveUrl = " ",
             ValidateUrl = " ",
@@ -92,6 +112,7 @@ public sealed class DiagramContractTests
         Assert.Equal(ZoorceDiagramProfile.Flowchart, normalized.Profile);
         Assert.Equal(ZoorceDiagramMode.Viewer, normalized.Mode);
         Assert.Equal(ZoorceDiagramLayout.Manual, normalized.Layout);
+        Assert.Equal(ZoorceDiagramPanMode.Background, normalized.PanMode);
         Assert.Null(normalized.SourceUrl);
         Assert.Null(normalized.SaveUrl);
         Assert.Null(normalized.ValidateUrl);
@@ -117,6 +138,7 @@ public sealed class DiagramContractTests
         Assert.Throws<ArgumentException>(() => (CreateFlow() with { Document = new(1, [Node("one")], [new(" ", "one", "one")]) }).Normalize());
         Assert.Throws<ArgumentException>(() => (CreateFlow() with { Document = new(1, [Node("one")], [new("edge", "one", "missing")]) }).Normalize());
         Assert.Throws<ArgumentException>(() => (CreateFlow() with { Document = new(1, [Node("one"), Node("two")], [new("edge", "one", "two"), new(" EDGE ", "two", "one")]) }).Normalize());
+        Assert.Throws<ArgumentException>(() => (CreateFlow() with { Document = new(1, [Node("one"), Node("two")], [new("edge-one", "one", "two"), new("edge-two", "two", "one"), new("edge-three", "one", "two")]) }).Normalize());
     }
 
     [Fact]
@@ -148,11 +170,14 @@ public sealed class DiagramContractTests
         Assert.Single(values.NodeList);
         Assert.Single(values.EdgeList);
         Assert.True(values.NodeList[0].Collapsed);
+        Assert.Null(values.NodeList[0].Data);
         Assert.Contains(ZoorceDiagramProfile.Architecture, Enum.GetValues<ZoorceDiagramProfile>());
         Assert.Contains(ZoorceDiagramMode.ReadOnly, Enum.GetValues<ZoorceDiagramMode>());
         Assert.Contains(ZoorceDiagramLayout.TreeHorizontal, Enum.GetValues<ZoorceDiagramLayout>());
+        Assert.Contains(ZoorceDiagramPanMode.MiddleButton, Enum.GetValues<ZoorceDiagramPanMode>());
         Assert.Contains(ZoorceDiagramTone.Danger, Enum.GetValues<ZoorceDiagramTone>());
         Assert.Contains(ZoorceDiagramActionKind.Endpoint, Enum.GetValues<ZoorceDiagramActionKind>());
+        Assert.Equal("#010203", new ZoorceDiagramGradient("#010203", "#040506").StartColor);
         Assert.Equal(ZoorceDiagramNodeKinds.DataStore, ZoorceDiagramNodeKinds.DataStore);
         Assert.Throws<ArgumentNullException>(() => component.Invoke(null!));
 

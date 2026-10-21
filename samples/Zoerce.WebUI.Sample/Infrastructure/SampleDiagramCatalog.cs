@@ -11,20 +11,20 @@ public sealed class SampleDiagramCatalog
         [
             Node("start", "start", "Request received", 70, 330, "Event trigger", ZoorceDiagramTone.Success),
             Node("triage", "process", "Triage request", 300, 330, "Classify and enrich", ZoorceDiagramTone.Info),
-            Node("decision", "decision", "Ready to ship?", 545, 330, "Policy decision", ZoorceDiagramTone.Warning),
-            Node("release", "process", "Create release", 805, 178, "Publish change", ZoorceDiagramTone.Primary, new(ZoorceDiagramActionKind.Event, "flow-release")),
+            Node("decision", "decision", "Ready to ship?", 545, 330, "Policy decision", ZoorceDiagramTone.Warning, style: new(FillColor: "#fff3d6", BorderColor: "#d78a19", TextColor: "#39230a", CornerRadius: 8m)),
+            Node("release", "process", "Create release", 805, 178, "Publish change", ZoorceDiagramTone.Primary, new(ZoorceDiagramActionKind.Event, "flow-release"), new(Gradient: new("#7c5cff", "#2aa8ff", 132), TextColor: "#ffffff", BorderColor: "#9b8cff", FontWeight: 800)),
             Node("hold", "process", "Request changes", 805, 492, "Return to owner", ZoorceDiagramTone.Danger),
             Node("done", "end", "Completed", 1080, 178, "Release is visible", ZoorceDiagramTone.Success),
             Node("closed", "end", "Closed", 1080, 492, "Needs more work", ZoorceDiagramTone.Neutral)
         ],
         [
             Edge("edge-start", "start", "triage"), Edge("edge-triage", "triage", "decision"),
-            Edge("edge-yes", "decision", "release", "yes", ZoorceDiagramTone.Success), Edge("edge-no", "decision", "hold", "no", ZoorceDiagramTone.Danger),
+            Edge("edge-yes", "decision", "release", "yes", ZoorceDiagramTone.Success, new("#18a878", 2.5m)), Edge("edge-no", "decision", "hold", "no", ZoorceDiagramTone.Danger, new("#de4b69", 2.5m)),
             Edge("edge-release", "release", "done"), Edge("edge-hold", "hold", "closed")
         ], "sample-flow"),
         ["mind"] = new ZoorceDiagramDocument(1,
         [
-            Node("north-star", "root", "Product north star", 610, 320, "Reduce time to value", ZoorceDiagramTone.Primary),
+            Node("north-star", "root", "Product north star", 610, 320, "Reduce time to value", ZoorceDiagramTone.Primary, style: new(Gradient: new("#7c5cff", "#22c8a2", 125), TextColor: "#ffffff", FontSize: 12m, FontWeight: 800)),
             Node("activation", "branch", "Activation", 920, 160, "First useful action", ZoorceDiagramTone.Success),
             Node("retention", "branch", "Retention", 915, 440, "Weekly habit", ZoorceDiagramTone.Info),
             Node("clarity", "topic", "Guided setup", 1170, 88, "Progressive disclosure", ZoorceDiagramTone.Neutral),
@@ -80,11 +80,11 @@ public sealed class SampleDiagramCatalog
         return Get(key);
     }
 
-    private static ZoorceDiagramNode Node(string id, string kind, string title, decimal x, decimal y, string description, ZoorceDiagramTone tone, ZoorceDiagramAction? action = null)
-        => new(id, kind, title, new(x, y), description, tone, false, action);
+    private static ZoorceDiagramNode Node(string id, string kind, string title, decimal x, decimal y, string description, ZoorceDiagramTone tone, ZoorceDiagramAction? action = null, ZoorceDiagramNodeStyle? style = null)
+        => new(id, kind, title, new(x, y), description, tone, false, action, null, style);
 
-    private static ZoorceDiagramEdge Edge(string id, string from, string to, string? label = null, ZoorceDiagramTone tone = ZoorceDiagramTone.Neutral)
-        => new(id, from, to, label, tone);
+    private static ZoorceDiagramEdge Edge(string id, string from, string to, string? label = null, ZoorceDiagramTone tone = ZoorceDiagramTone.Neutral, ZoorceDiagramEdgeStyle? style = null)
+        => new(id, from, to, label, tone, null, style);
 
     private static ZoorceDiagramDocument Clone(ZoorceDiagramDocument document)
         => new(document.SchemaVersion,

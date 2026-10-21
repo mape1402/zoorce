@@ -127,11 +127,15 @@ REST and realtime snapshots use `{ currentStepId, steps: [{ id, state, tone, tit
 
 ## Diagram workspace
 
-`ZoorceDiagram` is a dependency-free diagram surface. It keeps its document and interaction state inside its own component root: it never relies on a global page controller and uses HTML nodes over a native SVG connection layer, so lines and shapes remain sharp at browser zoom.
+`ZoorceDiagram` is a dependency-free diagram surface. It keeps its document and interaction state inside its own component root: it never relies on a global page controller. The camera projects HTML nodes and native SVG connections into screen space rather than scaling a single DOM layer, so text, cards and connection paths remain sharp at browser zoom.
 
-Choose `Flowchart`, `MindMap`, `OrgChart`, or `Architecture` with `ZoorceDiagramProfile`; choose `Viewer`, `ReadOnly`, or `Editor` with `ZoorceDiagramMode`. The editor includes pan, zoom, grid snapping, palette insertion, selection, multi-select, drag positioning, port-to-port connections, keyboard delete, duplicate, undo/redo, fit, arrange, validation, inspector editing, a navigator and minimap. Mind maps and org charts also collapse a branch with a double-click or inspector control.
+Choose `Flowchart`, `MindMap`, `OrgChart`, or `Architecture` with `ZoorceDiagramProfile`; choose `Viewer`, `ReadOnly`, or `Editor` with `ZoorceDiagramMode`. The editor includes pan, zoom, grid snapping, palette insertion, selection, multi-select, drag positioning, port-to-port connections, keyboard delete, duplicate, undo/redo, fit, arrange, validation, an inspector, navigator and an interactive overview. Mind maps and org charts also collapse a branch with a double-click or inspector control.
+
+Set `PanMode` to `Background`, `SpaceKey`, `MiddleButton`, or `Disabled` to make viewport movement match the host product. The overview appears only when a diagram warrants it, labels itself clearly, shows the current viewport, and can be clicked or dragged to navigate.
 
 Documents are portable JSON through `ZoorceDiagramDocument`, `ZoorceDiagramNode`, and `ZoorceDiagramEdge`. Flowcharts allow a maximum of one `start` node and block outgoing connections from `end` nodes. Mind maps and org charts require exactly one root and one parent at most for every descendant. The client repeats these structural checks before save so a user gets immediate feedback; hosts should enforce their domain-specific rules at the receiving endpoint too.
+
+`ZoorceDiagramNodeStyle` supplies per-node fill, border, two-stop gradient, text colour, font family, size, weight, corner radius and opacity. `ZoorceDiagramEdgeStyle` supplies a connection colour, width and dashed treatment. The Appearance tab edits those values without changing other nodes; both styles travel in the document JSON. The editor separates parallel flow connections into lanes and keeps each connection's configured stroke through its arrowhead, so decision branches such as `yes` and `no` remain visually unambiguous.
 
 ```cshtml
 @await Component.InvokeAsync("ZoorceDiagram", new ZoorceDiagramOptions

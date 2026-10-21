@@ -48,6 +48,9 @@ public sealed record ZoorceDiagramOptions
     /// <summary>Gets whether the compact minimap is visible.</summary>
     public bool ShowMinimap { get; init; } = true;
 
+    /// <summary>Gets the pointer gesture used to pan unused canvas space.</summary>
+    public ZoorceDiagramPanMode PanMode { get; init; } = ZoorceDiagramPanMode.Background;
+
     /// <summary>Gets whether nodes snap to the configured grid.</summary>
     public bool SnapToGrid { get; init; } = true;
 
@@ -76,6 +79,7 @@ public sealed record ZoorceDiagramOptions
         var profile = Enum.IsDefined(Profile) ? Profile : ZoorceDiagramProfile.Flowchart;
         var mode = Enum.IsDefined(Mode) ? Mode : ZoorceDiagramMode.Viewer;
         var layout = Enum.IsDefined(Layout) ? Layout : ZoorceDiagramLayout.Manual;
+        var panMode = Enum.IsDefined(PanMode) ? PanMode : ZoorceDiagramPanMode.Background;
         var document = NormalizeDocument(Document ?? new ZoorceDiagramDocument(), profile);
 
         return this with
@@ -86,6 +90,7 @@ public sealed record ZoorceDiagramOptions
             Profile = profile,
             Mode = mode,
             Layout = layout,
+            PanMode = panMode,
             Document = document,
             SourceUrl = TrimOrNull(SourceUrl),
             SaveUrl = TrimOrNull(SaveUrl),
@@ -117,7 +122,8 @@ public sealed record ZoorceDiagramOptions
                 Title = string.IsNullOrWhiteSpace(node.Title) ? "Untitled node" : node.Title.Trim(),
                 Description = TrimOrNull(node.Description),
                 Tone = Enum.IsDefined(node.Tone) ? node.Tone : ZoorceDiagramTone.Neutral,
-                Action = NormalizeAction(node.Action)
+                Action = NormalizeAction(node.Action),
+                Style = NormalizeNodeStyle(node.Style)
             };
         }).ToArray();
 
@@ -142,7 +148,8 @@ public sealed record ZoorceDiagramOptions
                 ToNodeId = edge.ToNodeId.Trim(),
                 Label = TrimOrNull(edge.Label),
                 Kind = TrimOrNull(edge.Kind),
-                Tone = Enum.IsDefined(edge.Tone) ? edge.Tone : ZoorceDiagramTone.Neutral
+                Tone = Enum.IsDefined(edge.Tone) ? edge.Tone : ZoorceDiagramTone.Neutral,
+                Style = NormalizeEdgeStyle(edge.Style)
             };
             if (!nodeIds.Contains(normalized.FromNodeId) || !nodeIds.Contains(normalized.ToNodeId) || string.Equals(normalized.FromNodeId, normalized.ToNodeId, StringComparison.OrdinalIgnoreCase))
             {
@@ -157,6 +164,11 @@ public sealed record ZoorceDiagramOptions
             throw new ArgumentException("Diagram edge ids must be unique.", nameof(document));
         }
 
+        if (edges.Select(edge => edge.FromNodeId + "\u001f" + edge.ToNodeId).Distinct(StringComparer.OrdinalIgnoreCase).Count() != edges.Length)
+        {
+            throw new ArgumentException("A diagram can only contain one directed connection between the same two nodes.", nameof(document));
+        }
+
         ValidateProfile(profile, nodes, edges);
         return new ZoorceDiagramDocument(Math.Max(1, document.SchemaVersion), nodes, edges, TrimOrNull(document.Version));
     }
@@ -168,6 +180,45 @@ public sealed record ZoorceDiagramOptions
             Kind = Enum.IsDefined(action.Kind) ? action.Kind : ZoorceDiagramActionKind.Event,
             Target = TrimOrNull(action.Target)
         };
+
+    private static ZoorceDiagramNodeStyle? NormalizeNodeStyle(ZoorceDiagramNodeStyle? style)
+    {
+        if (style is null)
+        {
+            return null;
+        }
+
+        var gradient = style.Gradient is null ? null : style.Gradient with
+        {
+            StartColor = TrimOrNull(style.Gradient.StartColor) ?? string.Empty,
+            EndColor = TrimOrNull(style.Gradient.EndColor) ?? string.Empty,
+            Angle = Math.Clamp(style.Gradient.Angle, 0, 360)
+        };
+
+        return style with
+        {
+            FillColor = TrimOrNull(style.FillColor),
+            BorderColor = TrimOrNull(style.BorderColor),
+            BorderWidth = Clamp(style.BorderWidth, 0.5m, 12m),
+            TextColor = TrimOrNull(style.TextColor),
+            FontFamily = TrimOrNull(style.FontFamily),
+            FontSize = Clamp(style.FontSize, 9m, 42m),
+            FontWeight = style.FontWeight is null ? null : Math.Clamp(style.FontWeight.Value, 300, 900),
+            CornerRadius = Clamp(style.CornerRadius, 0m, 64m),
+            Opacity = Clamp(style.Opacity, 0.15m, 1m),
+            Gradient = gradient is { StartColor.Length: > 0, EndColor.Length: > 0 } ? gradient : null
+        };
+    }
+
+    private static ZoorceDiagramEdgeStyle? NormalizeEdgeStyle(ZoorceDiagramEdgeStyle? style) => style is null
+        ? null
+        : style with
+        {
+            StrokeColor = TrimOrNull(style.StrokeColor),
+            StrokeWidth = Clamp(style.StrokeWidth, 1m, 8m)
+        };
+
+    private static decimal? Clamp(decimal? value, decimal minimum, decimal maximum) => value is null ? null : Math.Clamp(value.Value, minimum, maximum);
 
     private static void ValidateProfile(ZoorceDiagramProfile profile, IReadOnlyList<ZoorceDiagramNode> nodes, IReadOnlyList<ZoorceDiagramEdge> edges)
     {

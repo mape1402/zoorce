@@ -29,6 +29,19 @@ public enum ZoorceDiagramLayout
     TreeHorizontal
 }
 
+/// <summary>Controls how a pointer gesture over unused canvas space moves the diagram viewport.</summary>
+public enum ZoorceDiagramPanMode
+{
+    /// <summary>Dragging unused canvas space moves the viewport.</summary>
+    Background,
+    /// <summary>Viewport movement requires holding the space key or using the middle mouse button.</summary>
+    SpaceKey,
+    /// <summary>Viewport movement requires the middle mouse button.</summary>
+    MiddleButton,
+    /// <summary>Disables pointer panning while preserving keyboard navigation and zoom controls.</summary>
+    Disabled
+}
+
 /// <summary>Provides semantic visual tones for nodes and connections.</summary>
 public enum ZoorceDiagramTone
 {
@@ -61,6 +74,31 @@ public sealed record ZoorceDiagramAction(
     string? Target = null,
     IReadOnlyDictionary<string, string?>? Payload = null);
 
+/// <summary>Defines a two-stop color gradient that can be applied to a diagram node.</summary>
+public sealed record ZoorceDiagramGradient(
+    string StartColor,
+    string EndColor,
+    int Angle = 135);
+
+/// <summary>Defines optional presentation overrides for an individual diagram node.</summary>
+public sealed record ZoorceDiagramNodeStyle(
+    string? FillColor = null,
+    string? BorderColor = null,
+    decimal? BorderWidth = null,
+    string? TextColor = null,
+    string? FontFamily = null,
+    decimal? FontSize = null,
+    int? FontWeight = null,
+    decimal? CornerRadius = null,
+    decimal? Opacity = null,
+    ZoorceDiagramGradient? Gradient = null);
+
+/// <summary>Defines optional presentation overrides for an individual connection.</summary>
+public sealed record ZoorceDiagramEdgeStyle(
+    string? StrokeColor = null,
+    decimal? StrokeWidth = null,
+    bool Dashed = false);
+
 /// <summary>Defines one semantic node in a serializable diagram document.</summary>
 public sealed record ZoorceDiagramNode(
     string Id,
@@ -71,7 +109,8 @@ public sealed record ZoorceDiagramNode(
     ZoorceDiagramTone Tone = ZoorceDiagramTone.Neutral,
     bool Collapsed = false,
     ZoorceDiagramAction? Action = null,
-    IReadOnlyDictionary<string, string?>? Data = null);
+    IReadOnlyDictionary<string, string?>? Data = null,
+    ZoorceDiagramNodeStyle? Style = null);
 
 /// <summary>Defines a directed connection between two diagram nodes.</summary>
 public sealed record ZoorceDiagramEdge(
@@ -80,7 +119,8 @@ public sealed record ZoorceDiagramEdge(
     string ToNodeId,
     string? Label = null,
     ZoorceDiagramTone Tone = ZoorceDiagramTone.Neutral,
-    string? Kind = null);
+    string? Kind = null,
+    ZoorceDiagramEdgeStyle? Style = null);
 
 /// <summary>Defines a serializable, versioned diagram document.</summary>
 public sealed record ZoorceDiagramDocument(

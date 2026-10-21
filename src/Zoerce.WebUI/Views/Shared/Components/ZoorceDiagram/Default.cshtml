@@ -20,6 +20,7 @@
         showPalette = Model.ShowPalette,
         showInspector = Model.ShowInspector,
         showMinimap = Model.ShowMinimap,
+        panMode = Model.PanMode,
         snapToGrid = Model.SnapToGrid,
         gridSize = Model.GridSize,
         minimumZoom = Model.MinimumZoom,
@@ -72,7 +73,7 @@
     </header>
 
     <div class="z-diagram-toolbar" aria-label="Diagram controls">
-        <div class="z-button-group"><button class="z-icon-button" type="button" data-z-diagram-command="zoom-out" aria-label="Zoom out">−</button><output data-z-diagram-zoom aria-live="polite">100%</output><button class="z-icon-button" type="button" data-z-diagram-command="zoom-in" aria-label="Zoom in">+</button><button class="z-button z-button-ghost z-button-sm" type="button" data-z-diagram-command="fit">Fit canvas</button></div>
+        <div class="z-button-group"><button class="z-icon-button" type="button" data-z-diagram-command="zoom-out" aria-label="Zoom out">−</button><output data-z-diagram-zoom aria-live="polite">100%</output><button class="z-icon-button" type="button" data-z-diagram-command="zoom-in" aria-label="Zoom in">+</button><button class="z-button z-button-ghost z-button-sm" type="button" data-z-diagram-command="fit">Fit canvas</button>@if (Model.ShowMinimap){<button class="z-button z-button-ghost z-button-sm" type="button" data-z-diagram-command="toggle-overview" data-z-diagram-overview-toggle hidden>Overview</button>}</div>
         <div class="z-button-group">
             @if (isEditor)
             {
@@ -97,7 +98,7 @@
         }
 
         <div class="z-diagram-stage" data-z-diagram-stage>
-            <div class="z-diagram-canvas" data-z-diagram-canvas tabindex="0" role="region" aria-label="@Model.Summary. Use the diagram navigator to browse nodes with a keyboard.">
+            <div class="z-diagram-canvas" data-z-diagram-canvas tabindex="0" role="region" aria-label="@Model.Summary. Use the diagram navigator to browse nodes with a keyboard." aria-describedby="@Model.Id-pan-help">
                 <div class="z-diagram-world" data-z-diagram-world>
                     <svg class="z-diagram-edges" data-z-diagram-edges aria-hidden="true"><defs><marker id="@(Model.Id + "-arrow")" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" /></marker></defs></svg>
                     @foreach (var node in Model.Document.NodeList)
@@ -111,9 +112,13 @@
                 </div>
                 @if (Model.ShowMinimap)
                 {
-                    <div class="z-diagram-minimap" data-z-diagram-minimap aria-hidden="true"></div>
+                    <aside class="z-diagram-overview" data-z-diagram-overview aria-label="Diagram overview" hidden>
+                        <header><strong>Overview</strong><button class="z-icon-button" type="button" data-z-diagram-command="toggle-overview" aria-label="Hide diagram overview">×</button></header>
+                        <button class="z-diagram-minimap" type="button" data-z-diagram-minimap aria-label="Diagram overview. Click or drag the viewport frame to navigate."></button>
+                    </aside>
                 }
                 <span class="z-visually-hidden" data-z-diagram-announcer aria-live="polite"></span>
+                <span id="@Model.Id-pan-help" class="z-visually-hidden" data-z-diagram-pan-help>Drag unused canvas space to pan the viewport.</span>
             </div>
         </div>
 
