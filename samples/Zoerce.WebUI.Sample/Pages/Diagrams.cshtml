@@ -1,0 +1,66 @@
+@page "/diagrams"
+@using Zoerce.WebUI.Components.Diagrams
+@using Zoerce.WebUI.Sample.Infrastructure
+@inject SampleDiagramCatalog DiagramCatalog
+@{
+    ViewData["Title"] = "Diagram studio";
+}
+
+<section class="z-diagram-gallery-page">
+    <div class="z-diagram-gallery-intro">
+        <div>
+            <span class="z-section-kicker">Native diagram workspace</span>
+            <h1>Model systems visually, without a diagramming dependency.</h1>
+            <p>Each canvas is a self-contained component: its own document, selection state, keyboard controls, REST save path and host events. Drag a node, add an element, connect ports, then use Undo, Arrange and Save.</p>
+        </div>
+    </div>
+
+    <article class="z-diagram-demo" data-z-diagram-demo="flow">
+        <header class="z-diagram-demo-header"><div><span class="z-section-kicker">Flowchart · editable process</span><h2>Release routing</h2><p>Typed flow nodes, decision paths, click actions and a persisted JSON document.</p></div><p class="z-diagram-demo-detail" data-z-diagram-detail>Click a node to inspect its interaction.</p></header>
+        @await Component.InvokeAsync("ZoorceDiagram", new ZoorceDiagramOptions { Id = "diagram-flow", Title = "Release routing", Summary = "An editable flowchart for a release request", Profile = ZoorceDiagramProfile.Flowchart, Mode = ZoorceDiagramMode.Editor, Layout = ZoorceDiagramLayout.Flow, Document = DiagramCatalog.Get("flow"), SourceUrl = "/api/diagrams/flow", SaveUrl = "/api/diagrams/flow" })
+    </article>
+
+    <article class="z-diagram-demo" data-z-diagram-demo="mind">
+        <header class="z-diagram-demo-header"><div><span class="z-section-kicker">Mind map · expanding context</span><h2>Product signal map</h2><p>Double-click a branch to collapse or reveal its descendants; all nodes remain independently selectable.</p></div><p class="z-diagram-demo-detail" data-z-diagram-detail>Double-click a branch to toggle it.</p></header>
+        @await Component.InvokeAsync("ZoorceDiagram", new ZoorceDiagramOptions { Id = "diagram-mind", Title = "Product signal map", Summary = "An editable mind map for product direction", Profile = ZoorceDiagramProfile.MindMap, Mode = ZoorceDiagramMode.Editor, Layout = ZoorceDiagramLayout.Radial, Document = DiagramCatalog.Get("mind"), SourceUrl = "/api/diagrams/mind", SaveUrl = "/api/diagrams/mind" })
+    </article>
+
+    <article class="z-diagram-demo" data-z-diagram-demo="org">
+        <header class="z-diagram-demo-header"><div><span class="z-section-kicker">Org chart · reporting structure</span><h2>Product organization</h2><p>Tree validation prevents multiple parents and makes long reporting paths easy to scan.</p></div><p class="z-diagram-demo-detail" data-z-diagram-detail>Use Arrange to restore the hierarchy.</p></header>
+        @await Component.InvokeAsync("ZoorceDiagram", new ZoorceDiagramOptions { Id = "diagram-org", Title = "Product organization", Summary = "An editable product organization hierarchy", Profile = ZoorceDiagramProfile.OrgChart, Mode = ZoorceDiagramMode.Editor, Layout = ZoorceDiagramLayout.TreeVertical, Document = DiagramCatalog.Get("org"), SourceUrl = "/api/diagrams/org", SaveUrl = "/api/diagrams/org" })
+    </article>
+
+    <article class="z-diagram-demo" data-z-diagram-demo="architecture">
+        <header class="z-diagram-demo-header"><div><span class="z-section-kicker">Architecture · bounded systems</span><h2>Order platform</h2><p>System boundaries, services, queues and stores on the same native connection layer.</p></div><p class="z-diagram-demo-detail" data-z-diagram-detail>Click the API node to emit a host event.</p></header>
+        @await Component.InvokeAsync("ZoorceDiagram", new ZoorceDiagramOptions { Id = "diagram-architecture", Title = "Order platform", Summary = "An editable architecture view for an order platform", Profile = ZoorceDiagramProfile.Architecture, Mode = ZoorceDiagramMode.Editor, Layout = ZoorceDiagramLayout.Flow, Document = DiagramCatalog.Get("architecture"), SourceUrl = "/api/diagrams/architecture", SaveUrl = "/api/diagrams/architecture" })
+    </article>
+</section>
+
+@section Scripts {
+    <script>
+        (() => {
+            document.querySelectorAll('[data-z-diagram-demo]').forEach(demo => {
+                const detail = demo.querySelector('[data-z-diagram-detail]');
+                const diagram = demo.querySelector('[data-z-diagram]');
+                if (!detail || !diagram) return;
+                diagram.addEventListener('zoerce:diagram:nodeclick', event => {
+                    const node = event.detail.node;
+                    detail.textContent = node.title + ' · ' + (node.description || node.kind);
+                });
+                diagram.addEventListener('zoerce:diagram:action', event => {
+                    const action = event.detail.action;
+                    detail.textContent = 'Host event · ' + action.kind + ' → ' + (action.target || 'default handler');
+                });
+                diagram.addEventListener('architecture-api', event => {
+                    detail.textContent = 'Architecture event · Experience API was selected for host-side detail handling.';
+                });
+                diagram.addEventListener('flow-release', event => {
+                    detail.textContent = 'Release event · The host received the release-stage interaction.';
+                });
+                diagram.addEventListener('zoerce:diagram:validated', event => {
+                    detail.textContent = event.detail.valid ? 'Valid structure · local diagram rules passed.' : 'Validation issue · ' + event.detail.errors[0];
+                });
+            });
+        })();
+    </script>
+}

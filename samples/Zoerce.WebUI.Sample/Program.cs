@@ -5,6 +5,7 @@ using Zoerce.WebUI.Options;
 using Zoerce.WebUI.Sample.Infrastructure;
 using Zoerce.WebUI.Abstractions.Data;
 using Zoerce.WebUI.Components.Stepper;
+using Zoerce.WebUI.Components.Diagrams;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.Extensions.FileProviders;
@@ -26,6 +27,8 @@ builder.Services.AddRazorPages().AddZoerceWebUI(options =>
 builder.Services.AddScoped<INavigationProvider, SampleNavigationProvider>();
 builder.Services.AddScoped<IUserMenuProvider, SampleUserMenuProvider>();
 builder.Services.AddSingleton<SampleComponentCatalog>();
+builder.Services.AddSingleton<SampleDiagramCatalog>();
+builder.Services.ConfigureHttpJsonOptions(options => options.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 builder.Services.AddSingleton<SampleRealtimePublisher>();
 builder.Services.AddSignalR().AddJsonProtocol(options => options.PayloadSerializerOptions.Converters.Add(new JsonStringEnumConverter(JsonNamingPolicy.CamelCase)));
 
@@ -66,6 +69,8 @@ app.MapGet("/api/components", async (string? search, string? sort, bool? descend
     return Results.Ok(await catalog.QueryAsync(query, request, cancellationToken));
 });
 app.MapGet("/api/charts/adoption", () => Results.Ok(SampleChartData.Create()));
+app.MapGet("/api/diagrams/{key}", (string key, SampleDiagramCatalog catalog) => Results.Ok(catalog.Get(key)));
+app.MapPut("/api/diagrams/{key}", (string key, ZoorceDiagramDocument document, SampleDiagramCatalog catalog) => Results.Ok(catalog.Save(key, document)));
 app.MapGet("/api/steppers/release", () => Results.Ok(SampleStepperData.Create()));
 app.MapPost("/api/steppers/policy-transition", (ZoorceStepperTransitionRequest request) => Results.Ok(SampleStepperData.Authorize(request)));
 app.MapPost("/api/demo/activity", async (SampleRealtimePublisher publisher, CancellationToken cancellationToken) =>

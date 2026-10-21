@@ -1,0 +1,136 @@
+@using System.Globalization
+@using System.Text.Json
+@using System.Text.Json.Serialization
+@using Zoerce.WebUI.Components.Diagrams
+@model ZoorceDiagramOptions
+@{
+    var serializerOptions = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
+    serializerOptions.Converters.Add(new JsonStringEnumConverter());
+    var configuration = JsonSerializer.Serialize(new
+    {
+        profile = Model.Profile,
+        mode = Model.Mode,
+        layout = Model.Layout,
+        document = Model.Document,
+        sourceUrl = Model.SourceUrl,
+        saveUrl = Model.SaveUrl,
+        validateUrl = Model.ValidateUrl,
+        realtimeHubUrl = Model.RealtimeHubUrl,
+        realtimeEventName = Model.RealtimeEventName,
+        showPalette = Model.ShowPalette,
+        showInspector = Model.ShowInspector,
+        showMinimap = Model.ShowMinimap,
+        snapToGrid = Model.SnapToGrid,
+        gridSize = Model.GridSize,
+        minimumZoom = Model.MinimumZoom,
+        maximumZoom = Model.MaximumZoom,
+        initialZoom = Model.InitialZoom
+    }, serializerOptions);
+    var isEditor = Model.Mode == ZoorceDiagramMode.Editor;
+    var palette = Model.Profile switch
+    {
+        ZoorceDiagramProfile.MindMap => new[]
+        {
+            (ZoorceDiagramNodeKinds.Root, "Root", "✦"),
+            (ZoorceDiagramNodeKinds.Branch, "Branch", "↗"),
+            (ZoorceDiagramNodeKinds.Topic, "Topic", "◌"),
+            (ZoorceDiagramNodeKinds.Note, "Note", "⌁")
+        },
+        ZoorceDiagramProfile.OrgChart => new[]
+        {
+            (ZoorceDiagramNodeKinds.Person, "Person", "●"),
+            (ZoorceDiagramNodeKinds.Team, "Team", "◇"),
+            (ZoorceDiagramNodeKinds.Vacancy, "Vacancy", "+")
+        },
+        ZoorceDiagramProfile.Architecture => new[]
+        {
+            (ZoorceDiagramNodeKinds.User, "User", "◉"),
+            (ZoorceDiagramNodeKinds.Service, "Service", "▤"),
+            (ZoorceDiagramNodeKinds.Database, "Data store", "◒"),
+            (ZoorceDiagramNodeKinds.Queue, "Queue", "≈"),
+            (ZoorceDiagramNodeKinds.External, "External", "↗"),
+            (ZoorceDiagramNodeKinds.Boundary, "Boundary", "□")
+        },
+        _ => new[]
+        {
+            (ZoorceDiagramNodeKinds.Start, "Start", "●"),
+            (ZoorceDiagramNodeKinds.Process, "Process", "▭"),
+            (ZoorceDiagramNodeKinds.Decision, "Decision", "◇"),
+            (ZoorceDiagramNodeKinds.InputOutput, "Input / output", "▱"),
+            (ZoorceDiagramNodeKinds.Document, "Document", "▤"),
+            (ZoorceDiagramNodeKinds.DataStore, "Data", "◒"),
+            (ZoorceDiagramNodeKinds.End, "End", "■")
+        }
+    };
+    string Coordinate(decimal value) => value.ToString(CultureInfo.InvariantCulture);
+}
+<section id="@Model.Id" class="z-component z-diagram" data-z-diagram data-z-diagram-profile="@Model.Profile" data-z-diagram-mode="@Model.Mode" aria-label="@Model.Summary">
+    <script type="application/json" data-z-diagram-config>@Html.Raw(configuration)</script>
+    <header class="z-diagram-header">
+        <div><span class="z-section-kicker">@Model.Profile diagram</span><h2>@Model.Title</h2><p>@Model.Summary</p></div>
+        <div class="z-diagram-state"><span data-z-diagram-status aria-live="polite">Ready</span><span class="z-badge z-badge-primary" data-z-diagram-dirty hidden>Unsaved</span></div>
+    </header>
+
+    <div class="z-diagram-toolbar" aria-label="Diagram controls">
+        <div class="z-button-group"><button class="z-icon-button" type="button" data-z-diagram-command="zoom-out" aria-label="Zoom out">−</button><output data-z-diagram-zoom aria-live="polite">100%</output><button class="z-icon-button" type="button" data-z-diagram-command="zoom-in" aria-label="Zoom in">+</button><button class="z-button z-button-ghost z-button-sm" type="button" data-z-diagram-command="fit">Fit canvas</button></div>
+        <div class="z-button-group">
+            @if (isEditor)
+            {
+                <button class="z-button z-button-ghost z-button-sm" type="button" data-z-diagram-command="undo">Undo</button>
+                <button class="z-button z-button-ghost z-button-sm" type="button" data-z-diagram-command="redo">Redo</button>
+                <button class="z-button z-button-ghost z-button-sm" type="button" data-z-diagram-command="layout">Arrange</button>
+                <button class="z-button z-button-ghost z-button-sm" type="button" data-z-diagram-command="validate">Validate</button>
+                <button class="z-button z-button-primary z-button-sm" type="button" data-z-diagram-command="save">Save</button>
+            }
+        </div>
+    </div>
+
+    <div class="z-diagram-workbench">
+        @if (isEditor && Model.ShowPalette)
+        {
+            <aside class="z-diagram-palette" aria-label="Diagram elements"><strong>Elements</strong><p>Click to add to the canvas.</p><div>
+                @foreach (var item in palette)
+                {
+                    <button type="button" data-z-diagram-add="@item.Item1"><i aria-hidden="true">@item.Item3</i><span>@item.Item2</span></button>
+                }
+            </div></aside>
+        }
+
+        <div class="z-diagram-stage" data-z-diagram-stage>
+            <div class="z-diagram-canvas" data-z-diagram-canvas tabindex="0" role="region" aria-label="@Model.Summary. Use the diagram navigator to browse nodes with a keyboard.">
+                <div class="z-diagram-world" data-z-diagram-world>
+                    <svg class="z-diagram-edges" data-z-diagram-edges aria-hidden="true"><defs><marker id="@(Model.Id + "-arrow")" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" /></marker></defs></svg>
+                    @foreach (var node in Model.Document.NodeList)
+                    {
+                        <article class="z-diagram-node z-diagram-node--@node.Kind" data-z-diagram-node data-z-diagram-node-id="@node.Id" data-z-diagram-node-kind="@node.Kind" tabindex="0" role="button" aria-label="@node.Title" style="--z-node-x:@Coordinate(node.Position.X)px;--z-node-y:@Coordinate(node.Position.Y)px">
+                            <button type="button" class="z-diagram-port z-diagram-port--in" data-z-diagram-port="in" aria-label="Connect into @node.Title" tabindex="@(isEditor ? "0" : "-1")"></button>
+                            <div class="z-diagram-node-icon" aria-hidden="true"></div><div class="z-diagram-node-copy"><strong>@node.Title</strong>@if (!string.IsNullOrWhiteSpace(node.Description)){<small>@node.Description</small>}</div>
+                            <button type="button" class="z-diagram-port z-diagram-port--out" data-z-diagram-port="out" aria-label="Connect from @node.Title" tabindex="@(isEditor ? "0" : "-1")"></button>
+                        </article>
+                    }
+                </div>
+                @if (Model.ShowMinimap)
+                {
+                    <div class="z-diagram-minimap" data-z-diagram-minimap aria-hidden="true"></div>
+                }
+                <span class="z-visually-hidden" data-z-diagram-announcer aria-live="polite"></span>
+            </div>
+        </div>
+
+        @if (isEditor && Model.ShowInspector)
+        {
+            <aside class="z-diagram-inspector" data-z-diagram-inspector aria-label="Selected element inspector"><div data-z-diagram-inspector-empty><strong>Inspector</strong><p>Select a node or connection to edit its details.</p></div></aside>
+        }
+    </div>
+
+    <footer class="z-diagram-footer">
+        <div><strong>Diagram navigator</strong><span>Keyboard-friendly element list</span></div>
+        <ol data-z-diagram-navigator>
+            @foreach (var node in Model.Document.NodeList)
+            {
+                <li><button type="button" data-z-diagram-navigate="@node.Id">@node.Title</button></li>
+            }
+        </ol>
+    </footer>
+    <noscript><div class="z-diagram-noscript"><strong>@Model.Title</strong><ol>@foreach (var node in Model.Document.NodeList){<li>@node.Title (@node.Kind)</li>}</ol></div></noscript>
+</section>

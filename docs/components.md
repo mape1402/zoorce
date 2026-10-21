@@ -125,6 +125,42 @@ Each `ZoorceStepperStep` has an id, title, optional supporting text or icon, sem
 
 REST and realtime snapshots use `{ currentStepId, steps: [{ id, state, tone, title, supportingText, statusText, icon, isNavigable, targetUrl }] }`. A transition request contains `stepperId`, `stepId`, `previousStepId`, `reason`, and `isBackward`. `RealtimeTransport` defaults to `Auto` and can explicitly select `WebSockets`, `ServerSentEvents`, or `LongPolling` when a host browser environment has a known transport constraint. The component emits cancelable `zoerce:stepper:request-change` before a local navigation request, followed by `zoerce:stepper:change`; listen on that one component root to run validation or synchronize adjacent content. `zoerce:stepper:loaded`, `zoerce:stepper:realtime`, and `zoerce:stepper:error` provide isolated transport lifecycle hooks. `IZoorceStepperTransitionPolicy` is the host-side contract when an application prefers injecting a policy service behind its own transition endpoint.
 
+## Diagram workspace
+
+`ZoorceDiagram` is a dependency-free diagram surface. It keeps its document and interaction state inside its own component root: it never relies on a global page controller and uses HTML nodes over a native SVG connection layer, so lines and shapes remain sharp at browser zoom.
+
+Choose `Flowchart`, `MindMap`, `OrgChart`, or `Architecture` with `ZoorceDiagramProfile`; choose `Viewer`, `ReadOnly`, or `Editor` with `ZoorceDiagramMode`. The editor includes pan, zoom, grid snapping, palette insertion, selection, multi-select, drag positioning, port-to-port connections, keyboard delete, duplicate, undo/redo, fit, arrange, validation, inspector editing, a navigator and minimap. Mind maps and org charts also collapse a branch with a double-click or inspector control.
+
+Documents are portable JSON through `ZoorceDiagramDocument`, `ZoorceDiagramNode`, and `ZoorceDiagramEdge`. Flowcharts allow a maximum of one `start` node and block outgoing connections from `end` nodes. Mind maps and org charts require exactly one root and one parent at most for every descendant. The client repeats these structural checks before save so a user gets immediate feedback; hosts should enforce their domain-specific rules at the receiving endpoint too.
+
+```cshtml
+@await Component.InvokeAsync("ZoorceDiagram", new ZoorceDiagramOptions
+{
+    Id = "release-routing",
+    Title = "Release routing",
+    Summary = "An editable release decision flow",
+    Profile = ZoorceDiagramProfile.Flowchart,
+    Mode = ZoorceDiagramMode.Editor,
+    Layout = ZoorceDiagramLayout.Flow,
+    SourceUrl = "/api/diagrams/release-routing",
+    SaveUrl = "/api/diagrams/release-routing",
+    Document = new ZoorceDiagramDocument(1,
+    [
+        new("start", "start", "Request received", new(80, 220)),
+        new("review", "process", "Review request", new(350, 220)),
+        new("done", "end", "Completed", new(660, 220))
+    ],
+    [
+        new("start-review", "start", "review"),
+        new("review-done", "review", "done")
+    ])
+})
+```
+
+Set `SourceUrl` to reload one diagram document and `SaveUrl` to `PUT` its full JSON document. Provide `RealtimeHubUrl` plus `RealtimeEventName` for an optional SignalR full-document subscription. The component also accepts host-dispatched `zoerce:diagram:replace`, `zoerce:diagram:focus`, `zoerce:diagram:validate`, and `zoerce:diagram:save` events; these act on one root only.
+
+Its emitted events are `zoerce:diagram:nodeclick`, `zoerce:diagram:edgeclick`, `zoerce:diagram:selectionchanged`, `zoerce:diagram:changed`, `zoerce:diagram:validated`, `zoerce:diagram:saved`, `zoerce:diagram:replaced`, and `zoerce:diagram:error`. Node actions are declarative (`Navigate`, `Panel`, `Modal`, `Event`, `Command`, or `Endpoint`): hosts can intercept the cancelable `zoerce:diagram:action` event without exposing raw scripts in a JSON document.
+
 ## Markdown
 
 `IZoorceMarkdownRenderer` is registered in dependency injection and uses Markdig with advanced Markdown extensions, GitHub-style heading identifiers and raw HTML disabled. Generated heading metadata is available through `ZoorceMarkdownRenderResult.TableOfContents`. The renderer preserves only fragment, application-relative, `./`, `../`, HTTP(S), and `mailto` links; other protocols and protocol-relative URLs are replaced with `#`.
