@@ -70,7 +70,9 @@
     <div class="z-timeline-scroll-shell" data-z-timeline-scroll-shell>
         @if (Model.ShowOverflowControls)
         {
-            <button class="z-timeline-scroll-control z-timeline-scroll-control--previous" type="button" data-z-timeline-scroll="previous" aria-controls="@Model.Id-list" aria-label="Show earlier timeline events" hidden>‹</button>
+            <button class="z-timeline-scroll-control z-timeline-scroll-control--previous" type="button" data-z-timeline-scroll="previous" aria-controls="@Model.Id-list" aria-label="Show earlier timeline events" hidden>
+                <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="m9.75 3.25-4.5 4.5 4.5 4.5" /></svg>
+            </button>
         }
         <div class="z-timeline-scroll-viewport" data-z-timeline-scroll-viewport tabindex="-1" aria-describedby="@Model.Id-scroll-instructions">
     <ol id="@Model.Id-list" class="z-timeline-list" data-z-timeline-list aria-label="@Model.AriaLabel">
@@ -167,7 +169,9 @@
         </div>
         @if (Model.ShowOverflowControls)
         {
-            <button class="z-timeline-scroll-control z-timeline-scroll-control--next" type="button" data-z-timeline-scroll="next" aria-controls="@Model.Id-list" aria-label="Show later timeline events" hidden>›</button>
+            <button class="z-timeline-scroll-control z-timeline-scroll-control--next" type="button" data-z-timeline-scroll="next" aria-controls="@Model.Id-list" aria-label="Show later timeline events" hidden>
+                <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="m6.25 3.25 4.5 4.5-4.5 4.5" /></svg>
+            </button>
         }
     </div>
     <p id="@Model.Id-scroll-instructions" class="z-visually-hidden">When this timeline has more content than fits, use the previous and next controls, the arrow keys, or horizontal scrolling to view more events.</p>

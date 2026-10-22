@@ -178,10 +178,13 @@
             const overflowing = this.root.dataset.zTimelineOverflowing === "true";
             const visible = overflowing && this.configuration.showOverflowControls !== false;
             const maximum = Math.max(0, viewport.scrollWidth - viewport.clientWidth);
+            const atStart = viewport.scrollLeft <= 1;
+            const atEnd = viewport.scrollLeft >= maximum - 1;
+
             this.root.querySelectorAll("[data-z-timeline-scroll]").forEach(control => {
                 const previous = control.dataset.zTimelineScroll === "previous";
-                control.hidden = !visible;
-                control.disabled = !visible || (previous ? viewport.scrollLeft <= 1 : viewport.scrollLeft >= maximum - 1);
+                control.hidden = !visible || (previous ? atStart : atEnd);
+                control.disabled = !visible;
             });
             viewport.tabIndex = visible ? 0 : -1;
             viewport.setAttribute("aria-label", visible ? `${this.root.getAttribute("aria-label") ?? "Timeline"}. Scrollable timeline events.` : this.root.getAttribute("aria-label") ?? "Timeline");

@@ -124,7 +124,7 @@
         @await Component.InvokeAsync("ZoorceTimeline", new ZoorceTimelineOptions
         {
             Id = "milestone-timeline", AriaLabel = "System evolution milestones", Items = milestoneItems, Variant = ZoorceTimelineVariant.Milestones, Interaction = ZoorceTimelineInteraction.Select,
-            SelectedItemId = "milestone-timeline", Presentation = new ZoorceTimelinePresentation { MarkerStyle = ZoorceTimelineMarkerStyle.Ring, ConnectorStyle = ZoorceTimelineConnectorStyle.Solid, UseCards = false }
+            SelectedItemId = "milestone-timeline", Presentation = new ZoorceTimelinePresentation { MarkerStyle = ZoorceTimelineMarkerStyle.Dot, ConnectorStyle = ZoorceTimelineConnectorStyle.Solid, UseCards = false }
         })
     </article>
 
@@ -134,7 +134,7 @@
         {
             Id = "milestone-overflow-timeline", AriaLabel = "Scrollable milestone stress timeline", Items = overflowMilestoneItems, Variant = ZoorceTimelineVariant.Milestones, Interaction = ZoorceTimelineInteraction.Select,
             SelectedItemId = "milestone-timeline", OverflowMode = ZoorceTimelineOverflowMode.Scroll, ShowActors = false, ShowMetadata = false,
-            Presentation = new ZoorceTimelinePresentation { MarkerStyle = ZoorceTimelineMarkerStyle.Ring, ConnectorStyle = ZoorceTimelineConnectorStyle.Solid, UseCards = false }
+            Presentation = new ZoorceTimelinePresentation { MarkerStyle = ZoorceTimelineMarkerStyle.Dot, ConnectorStyle = ZoorceTimelineConnectorStyle.Solid, UseCards = false }
         })
     </article>
 
