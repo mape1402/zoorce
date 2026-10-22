@@ -1,33 +1,151 @@
 @page "/forms"
+@using Zoerce.WebUI.Components.Forms
 @{
-    ViewData["Title"] = "Component forms";
+    ViewData["Title"] = "Form controls";
+    var teams = new[]
+    {
+        new ZoorceFormChoice("platform", "Platform", "Shared systems", "▦"),
+        new ZoorceFormChoice("design", "Design", "Product experience", "◇"),
+        new ZoorceFormChoice("growth", "Growth", "Acquisition and adoption", "↗"),
+        new ZoorceFormChoice("security", "Security", "Risk and assurance", "◈")
+    };
+    var colors = new[]
+    {
+        new ZoorceFormChoice("#7C5CFF", "Amethyst"), new ZoorceFormChoice("#22C8A2", "Mint"), new ZoorceFormChoice("#2AA8FF", "Sky"), new ZoorceFormChoice("#F2AE3D", "Amber"), new ZoorceFormChoice("#DE4B69", "Rose")
+    };
+    var icons = new[]
+    {
+        new ZoorceFormChoice("spark", "Spark", Icon: "✦"), new ZoorceFormChoice("rocket", "Rocket", Icon: "🚀"), new ZoorceFormChoice("shield", "Shield", Icon: "◈"), new ZoorceFormChoice("bell", "Bell", Icon: "◌"), new ZoorceFormChoice("flag", "Flag", Icon: "⚑"), new ZoorceFormChoice("heart", "Heart", Icon: "♥")
+    };
+    var emoji = new[]
+    {
+        new ZoorceFormChoice("sparkles", "Sparkles", Icon: "✨"), new ZoorceFormChoice("fire", "Fire", Icon: "🔥"), new ZoorceFormChoice("party", "Party", Icon: "🎉"), new ZoorceFormChoice("eyes", "Eyes", Icon: "👀"), new ZoorceFormChoice("check", "Check", Icon: "✅"), new ZoorceFormChoice("idea", "Idea", Icon: "💡")
+    };
+    var ratings = Enumerable.Range(1, 5).Select(value => new ZoorceFormChoice(value.ToString(), $"{value} stars")).ToArray();
+    var foundations = new[]
+    {
+        new ZoorceFormControlOptions { Id = "release-name", Name = "releaseName", Label = "Release name", Description = "A concise, customer-facing title.", Value = "Autumn release", Required = true, Placeholder = "e.g. Autumn release", Autocomplete = "off" },
+        new ZoorceFormControlOptions { Id = "release-summary", Name = "summary", Kind = ZoorceFormControlKind.TextArea, Label = "Summary", Value = "Improves the delivery workflow while keeping migration work predictable.", MaximumLength = 240, Rows = 4 },
+        new ZoorceFormControlOptions { Id = "release-password", Name = "password", Kind = ZoorceFormControlKind.Password, Label = "Deployment password", Description = "Strength feedback remains local to this field.", Placeholder = "Use a strong secret", Autocomplete = "new-password" },
+        new ZoorceFormControlOptions { Id = "release-id", Name = "releaseId", Kind = ZoorceFormControlKind.Masked, Label = "Release identifier", Value = "REL-2026-104", Mask = "AAA-####-###", Placeholder = "REL-2026-104", State = ZoorceFormControlState.Success, ValidationMessage = "Identifier is available." },
+        new ZoorceFormControlOptions { Id = "retry-count", Name = "retries", Kind = ZoorceFormControlKind.NumericUpDown, Label = "Retry budget", Value = "3", Minimum = 0, Maximum = 12, Step = 1 },
+        new ZoorceFormControlOptions { Id = "dependents", Name = "dependents", Kind = ZoorceFormControlKind.QuantityStepper, Label = "Number of dependents", Description = "A spacious counter for a direct-touch quantity.", Value = "3", Minimum = 0, Maximum = 12, Step = 1 },
+        new ZoorceFormControlOptions { Id = "budget", Name = "budget", Kind = ZoorceFormControlKind.Currency, Label = "Monthly budget", Value = "12500", Prefix = "$", CurrencyCode = "MXN", Locale = "es-MX", Minimum = 0, Maximum = 1000000, Step = 500 },
+        new ZoorceFormControlOptions { Id = "rollout", Name = "rollout", Kind = ZoorceFormControlKind.Percentage, Label = "Rollout percentage", Value = "35", Minimum = 0, Maximum = 100, Step = 5 }
+    };
+    var selection = new[]
+    {
+        new ZoorceFormControlOptions { Id = "release-risk", Name = "risk", Kind = ZoorceFormControlKind.Select, Label = "Release risk", Placeholder = "Choose risk", Value = "standard", Choices = [new("low", "Low risk"), new("standard", "Standard"), new("high", "High risk")] },
+        new ZoorceFormControlOptions { Id = "owners", Name = "owners", Kind = ZoorceFormControlKind.MultiSelect, Label = "Reviewing teams", Value = "platform,design", Choices = teams },
+        new ZoorceFormControlOptions { Id = "owner-search", Name = "ownerSearch", Kind = ZoorceFormControlKind.Combobox, Label = "Release owner", Value = "Platform", Placeholder = "Find a team", Choices = teams, AllowCustomValues = true },
+        new ZoorceFormControlOptions { Id = "environment", Name = "environment", Kind = ZoorceFormControlKind.SegmentedControl, Label = "Environment", Value = "staging", Choices = [new("sandbox", "Sandbox", Icon: "◇"), new("staging", "Staging", Icon: "◈"), new("production", "Production", Icon: "↗")] },
+        new ZoorceFormControlOptions { Id = "release-flags", Name = "flags", Kind = ZoorceFormControlKind.CheckboxGroup, Label = "Release checks", Value = "tests,notes", Choices = [new("tests", "Tests passed", "All required checks are green"), new("notes", "Notes prepared", "Customer copy is ready"), new("migration", "Migration confirmed", "No remaining data work")] },
+        new ZoorceFormControlOptions { Id = "release-window", Name = "window", Kind = ZoorceFormControlKind.RadioGroup, Label = "Release window", Value = "scheduled", Choices = [new("scheduled", "Scheduled", "Use the agreed window"), new("manual", "Manual", "Trigger after approval")] },
+        new ZoorceFormControlOptions { Id = "telemetry", Name = "telemetry", Kind = ZoorceFormControlKind.ToggleSwitch, Label = "Telemetry", Value = "true", Placeholder = "Enable delivery telemetry" },
+        new ZoorceFormControlOptions { Id = "catalog-opt-in", Name = "catalog", Kind = ZoorceFormControlKind.Checkbox, Label = "Catalog visibility", Value = "true", Placeholder = "Include this release in the catalog" },
+        new ZoorceFormControlOptions { Id = "confidence", Name = "confidence", Kind = ZoorceFormControlKind.Rating, Label = "Launch confidence", Value = "4", Choices = ratings },
+        new ZoorceFormControlOptions { Id = "capabilities", Name = "capabilities", Kind = ZoorceFormControlKind.TransferList, Label = "Enabled capabilities", Value = "timeline,diagram", Choices = [new("grid", "Data grid"), new("charts", "Charts"), new("timeline", "Timeline"), new("diagram", "Diagram"), new("forms", "Forms")] }
+    };
+    var schedule = new[]
+    {
+        new ZoorceFormControlOptions { Id = "delivery-date", Name = "deliveryDate", Kind = ZoorceFormControlKind.Date, Label = "Delivery date", Value = "2026-10-30", Required = true },
+        new ZoorceFormControlOptions { Id = "delivery-time", Name = "deliveryTime", Kind = ZoorceFormControlKind.Time, Label = "Delivery time", Value = "17:30" },
+        new ZoorceFormControlOptions { Id = "review-at", Name = "reviewAt", Kind = ZoorceFormControlKind.DateTime, Label = "Review appointment", Value = "2026-10-28T10:00" },
+        new ZoorceFormControlOptions { Id = "release-range", Name = "releaseRange", Kind = ZoorceFormControlKind.DateRange, Label = "Release window", Value = "2026-10-28", SecondaryValue = "2026-10-30" },
+        new ZoorceFormControlOptions { Id = "duration", Name = "duration", Kind = ZoorceFormControlKind.Duration, Label = "Maintenance duration", Value = "0", SecondaryValue = "2", Metadata = new Dictionary<string, string?> { ["minutes"] = "30" } },
+        new ZoorceFormControlOptions { Id = "adoption", Name = "adoption", Kind = ZoorceFormControlKind.Slider, Label = "Target adoption", Value = "65", Minimum = 0, Maximum = 100, Step = 5 },
+        new ZoorceFormControlOptions { Id = "audience", Name = "audience", Kind = ZoorceFormControlKind.RangeSlider, Label = "Audience size", Value = "20", SecondaryValue = "80", Minimum = 0, Maximum = 100, Step = 5 },
+        new ZoorceFormControlOptions { Id = "brand-color", Name = "brandColor", Kind = ZoorceFormControlKind.ColorPicker, Label = "Release color", Value = "#7C5CFF", Choices = colors, AllowAlpha = true }
+    };
+    var advanced = new[]
+    {
+        new ZoorceFormControlOptions { Id = "release-tags", Name = "tags", Kind = ZoorceFormControlKind.TagInput, Label = "Release tags", Value = "workflow,priority", Placeholder = "Type and press Enter" },
+        new ZoorceFormControlOptions { Id = "feature-chips", Name = "featureChips", Kind = ZoorceFormControlKind.ChipGroup, Label = "Feature areas", Value = "timeline,forms", Choices = [new("timeline", "Timeline", Icon: "◌"), new("diagram", "Diagram", Icon: "◇"), new("forms", "Forms", Icon: "▦"), new("navigation", "Navigation", Icon: "→")] },
+        new ZoorceFormControlOptions { Id = "release-icon", Name = "releaseIcon", Kind = ZoorceFormControlKind.IconPicker, Label = "Release icon", Value = "spark", Choices = icons },
+        new ZoorceFormControlOptions { Id = "release-emoji", Name = "releaseEmoji", Kind = ZoorceFormControlKind.EmojiPicker, Label = "Release emoji", Value = "sparkles", Choices = emoji },
+        new ZoorceFormControlOptions { Id = "contact-phone", Name = "phone", Kind = ZoorceFormControlKind.Phone, Label = "Release contact", Value = "55 1234 5678", Placeholder = "55 1234 5678", Choices = [new("+52", "MX +52"), new("+1", "US +1"), new("+34", "ES +34")], Metadata = new Dictionary<string, string?> { ["country"] = "+52" } },
+        new ZoorceFormControlOptions { Id = "release-address", Name = "address", Kind = ZoorceFormControlKind.Address, Label = "Deployment address", Value = "Av. Reforma 250", Choices = [new("MX", "Mexico"), new("US", "United States"), new("ES", "Spain")], Metadata = new Dictionary<string, string?> { ["country"] = "MX" } },
+        new ZoorceFormControlOptions { Id = "approval-code", Name = "approvalCode", Kind = ZoorceFormControlKind.Otp, Label = "Approval code", Value = "2479", MaximumLength = 6 },
+        new ZoorceFormControlOptions { Id = "release-metadata", Name = "metadata", Kind = ZoorceFormControlKind.KeyValue, Label = "Release metadata", Value = "{\"service\":\"activity\",\"region\":\"mx-central\"}" }
+    };
 }
 
-<section>
-    <div class="z-page-heading"><div><span class="z-section-kicker">Forms and inputs</span><h1>Low-friction data entry.</h1><p>Fields, validation and control states are engineered to feel calm in either color mode.</p></div></div>
-    <div class="z-dashboard-grid">
-        <article class="z-panel">
-            <form data-z-demo-form onsubmit="return false">
-                <div class="z-form-grid">
-                    <div class="z-field"><label for="component-name">Component name</label><input class="z-input" id="component-name" data-z-demo-name value="Signal card" /><span class="z-field-hint">A concise, user-facing name.</span></div>
-                    <div class="z-field"><label for="component-category">Category</label><select class="z-select" id="component-category"><option>Data visualization</option><option>Feedback</option><option>Navigation</option></select></div>
-                    <div class="z-field"><label for="component-owner">Owner / combobox</label><input class="z-input" id="component-owner" list="owners" value="Design systems" /><datalist id="owners"><option value="Design systems"></option><option value="Platform UX"></option><option value="Developer experience"></option></datalist></div>
-                    <div class="z-field"><label for="component-date">Release date</label><input class="z-input" id="component-date" type="date" value="2026-10-18" /></div>
-                    <div class="z-field z-field-span-2"><label for="component-summary">Summary</label><textarea class="z-textarea" id="component-summary">A premium surface for communicating a primary metric and supporting trend.</textarea></div>
-                    <div class="z-field"><label for="invalid-example">Validation state</label><input class="z-input is-invalid" id="invalid-example" value="" placeholder="Name required" /><span class="z-field-error">Enter a descriptive name.</span></div>
-                </div>
-                <div class="z-filter-row" style="margin-top:17px"><label class="z-check"><input type="checkbox" checked /> Include in the public catalog</label><label class="z-radio"><input type="radio" name="release" checked /> Stable</label><label class="z-radio"><input type="radio" name="release" /> Preview</label><label class="z-switch"><input type="checkbox" checked /><span class="z-switch-track"></span> Enable telemetry</label></div>
-                <div class="z-page-actions" style="margin-top:20px"><button class="z-button z-button-primary" type="button" data-z-demo-form-save>Save draft</button><button class="z-button z-button-ghost" type="reset">Reset</button></div>
-                <p class="z-card-caption" data-z-demo-form-status aria-live="polite" style="margin-top:12px"></p>
-            </form>
-        </article>
-        <div class="z-insight-stack">
-            <article class="z-card"><h2 class="z-card-title">Button variants</h2><div class="z-filter-row" style="margin-top:15px"><button class="z-button z-button-primary" type="button">Primary</button><button class="z-button z-button-secondary" type="button">Secondary</button><button class="z-button z-button-ghost" type="button">Ghost</button><button class="z-button z-button-danger" type="button">Danger</button></div></article>
-            <article class="z-empty-state"><div><div class="z-empty-orb">◇</div><h2>No experiments yet</h2><p>Create a variant to compare interactive surfaces before release.</p><button class="z-button z-button-secondary z-button-sm" type="button" data-z-demo-experiment>Create experiment</button></div></article>
-        </div>
+<section class="z-form-catalog" data-z-form-catalog>
+    <div class="z-page-heading">
+        <div><span class="z-section-kicker">Form system · reusable controls</span><h1>Every input, one visual language.</h1><p>Each control is server-rendered, theme-aware and independently enhanced, while keeping a standard form value ready for its host.</p></div>
     </div>
+
+    <form data-z-form-demo novalidate>
+        @await Component.InvokeAsync("ZoorceFormControl", new ZoorceFormControlOptions { Id = "form-revision", Name = "formRevision", Kind = ZoorceFormControlKind.Hidden, Value = "forms-catalog-v1" })
+        <section class="z-form-catalog-section" aria-labelledby="foundation-title">
+            <div class="z-form-catalog-heading"><div><span class="z-section-kicker">01 · Core entry</span><h2 id="foundation-title">Text, values and quantities</h2></div><p>Includes the compact numeric up/down and the large touch-friendly counter requested for discrete quantities.</p></div>
+            <div class="z-form-demo-grid">
+                @foreach (var control in foundations) { @await Component.InvokeAsync("ZoorceFormControl", control) }
+            </div>
+        </section>
+
+        <section class="z-form-catalog-section" aria-labelledby="selection-title">
+            <div class="z-form-catalog-heading"><div><span class="z-section-kicker">02 · Selection</span><h2 id="selection-title">Choices, chips and toggles</h2></div><p>Every selection control emits an isolated change event and preserves a standard submitted value.</p></div>
+            <div class="z-form-demo-grid">
+                @foreach (var control in selection) { @await Component.InvokeAsync("ZoorceFormControl", control) }
+            </div>
+            <div class="z-filter-row" aria-label="Standalone chips">
+                @await Component.InvokeAsync("ZoorceChip", new ZoorceChipOptions { Text = "Stable", Icon = "✓", Tone = "success" })
+                @await Component.InvokeAsync("ZoorceChip", new ZoorceChipOptions { Text = "Needs review", Icon = "!", Tone = "warning", Removable = true })
+                @await Component.InvokeAsync("ZoorceChip", new ZoorceChipOptions { Text = "Selected", Icon = "◇", Selected = true })
+            </div>
+        </section>
+
+        <section class="z-form-catalog-section" aria-labelledby="schedule-title">
+            <div class="z-form-catalog-heading"><div><span class="z-section-kicker">03 · Time and ranges</span><h2 id="schedule-title">Dates, durations and thresholds</h2></div><p>Native values remain portable while the component adds readable feedback, constraints and responsive layouts.</p></div>
+            <div class="z-form-demo-grid">
+                @foreach (var control in schedule) { @await Component.InvokeAsync("ZoorceFormControl", control) }
+            </div>
+        </section>
+
+        <section class="z-form-catalog-section" aria-labelledby="advanced-title">
+            <div class="z-form-catalog-heading"><div><span class="z-section-kicker">04 · Structured inputs</span><h2 id="advanced-title">Richer data without leaving the form</h2></div><p>Composite controls retain values that a normal host form can submit, validate and persist.</p></div>
+            <div class="z-form-demo-grid">
+                @foreach (var control in advanced) { @await Component.InvokeAsync("ZoorceFormControl", control) }
+            </div>
+        </section>
+
+        <section class="z-form-catalog-section" aria-labelledby="files-title">
+            <div class="z-form-catalog-heading"><div><span class="z-section-kicker">05 · Assets and verification</span><h2 id="files-title">Files, images and identity</h2></div><p>Drop a file, see a local preview and submit it through the browser’s normal multipart form behavior.</p></div>
+            <div class="z-form-demo-grid z-form-demo-grid--thirds">
+                @await Component.InvokeAsync("ZoorceFormControl", new ZoorceFormControlOptions { Id = "release-files", Name = "files", Kind = ZoorceFormControlKind.FileUpload, Label = "Release attachments", Placeholder = "Add release notes or evidence", Accept = ".pdf,.docx,.png", Multiple = true })
+                @await Component.InvokeAsync("ZoorceFormControl", new ZoorceFormControlOptions { Id = "release-cover", Name = "cover", Kind = ZoorceFormControlKind.ImageUpload, Label = "Release cover", Placeholder = "Add a cover image", Accept = "image/png,image/jpeg,image/webp" })
+                @await Component.InvokeAsync("ZoorceFormControl", new ZoorceFormControlOptions { Id = "release-owner-avatar", Name = "avatar", Kind = ZoorceFormControlKind.AvatarPicker, Label = "Owner avatar", Placeholder = "Choose avatar" })
+            </div>
+        </section>
+
+        <section class="z-form-catalog-section z-form-catalog-section--submit" aria-labelledby="submission-title">
+            <div class="z-form-catalog-heading"><div><span class="z-section-kicker">Host boundary</span><h2 id="submission-title">Ready for host integration</h2></div><p>Every control keeps a normal named field, so the host receives a conventional form submission without a page-wide coordinator.</p></div>
+            <div class="z-form-submit-row">
+                <div class="z-form-feedback" aria-live="polite"><strong data-z-form-event-title>Try any control</strong><p data-z-form-event>Its value stays ready for the surrounding form.</p></div>
+                <div class="z-page-actions"><button class="z-button z-button-primary" type="submit">Validate draft</button><button class="z-button z-button-ghost" type="reset" data-z-form-reset>Reset demo</button></div>
+            </div>
+        </section>
+    </form>
 </section>
 
 @section Scripts {
-    <script src="/js/sample-demos.js" asp-append-version="true"></script>
+    <script>
+        (() => {
+            const form = document.querySelector("[data-z-form-demo]");
+            const title = document.querySelector("[data-z-form-event-title]");
+            const output = document.querySelector("[data-z-form-event]");
+            if (!form || !title || !output) return;
+            const labelFor = id => document.querySelector(`[data-z-form-id="${CSS.escape(id)}"] .z-form-label`)?.textContent?.replace("*", "").trim() || "This control";
+            const show = (heading, message) => { title.textContent = heading; output.textContent = message; };
+            form.addEventListener("zoerce:form:change", event => show(`${labelFor(event.detail.id)} updated`, "Its value remains synchronized with this form."));
+            form.addEventListener("zoerce:form:filechange", event => show("File selection updated", "The browser will include the selected file when the host submits this form."));
+            form.addEventListener("zoerce:form:invalid", event => show(`${labelFor(event.detail.id)} needs attention`, event.detail.message));
+            form.addEventListener("submit", event => {
+                event.preventDefault();
+                show("Draft validated", "All current values are ready for the host form to submit or persist.");
+            });
+            form.addEventListener("reset", () => window.setTimeout(() => show("Demo reset", "The sample values have been restored."), 0));
+        })();
+    </script>
 }

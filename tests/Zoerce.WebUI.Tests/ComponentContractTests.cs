@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc.ViewComponents;
 using Zoerce.WebUI.Abstractions.Data;
 using Zoerce.WebUI.Components.Charts;
 using Zoerce.WebUI.Components.DataGrid;
+using Zoerce.WebUI.Components.Forms;
 using Zoerce.WebUI.Components.Stepper;
 using Zoerce.WebUI.Components.Timeline;
 
@@ -785,6 +786,77 @@ public sealed class ComponentContractTests
         Assert.Contains(ZoorceTimelineActiveMotion.Reveal, Enum.GetValues<ZoorceTimelineActiveMotion>());
         Assert.Contains(ZoorceTimelineRefreshMode.Replace, Enum.GetValues<ZoorceTimelineRefreshMode>());
         Assert.Contains(ZoorceTimelineRealtimeTransport.ServerSentEvents, Enum.GetValues<ZoorceTimelineRealtimeTransport>());
+    }
+
+    [Fact]
+    public void Form_control_normalizes_reusable_configuration()
+    {
+        var options = new ZoorceFormControlOptions
+        {
+            Id = " release-owner ",
+            Name = " owner ",
+            Label = " Release owner ",
+            Description = " Team responsible for delivery ",
+            Kind = ZoorceFormControlKind.MultiSelect,
+            Value = " platform, design ",
+            Minimum = 0,
+            Maximum = 10,
+            Step = 1,
+            Rows = 99,
+            Locale = " es-MX ",
+            CurrencyCode = " mxn ",
+            Choices = [new(" platform ", " Platform "), new("design", " ")],
+            Metadata = new Dictionary<string, string?> { [" mode "] = " compact ", ["ignored"] = " " }
+        };
+
+        var normalized = options.Normalize();
+
+        Assert.Equal("release-owner", normalized.Id);
+        Assert.Equal("owner", normalized.Name);
+        Assert.Equal("Release owner", normalized.Label);
+        Assert.Equal("platform, design", normalized.Value);
+        Assert.Equal(18, normalized.Rows);
+        Assert.Equal("es-MX", normalized.Locale);
+        Assert.Equal("MXN", normalized.CurrencyCode);
+        Assert.Equal("platform", normalized.Choices[0].Value);
+        Assert.Equal("design", normalized.Choices[1].Label);
+        Assert.Equal("compact", normalized.Metadata["mode"]);
+        Assert.Null(normalized.Metadata["ignored"]);
+        Assert.True(normalized.GetSelectedValues().SetEquals(["platform", "design"]));
+    }
+
+    [Fact]
+    public void Form_control_rejects_invalid_bounds_identity_and_choices()
+    {
+        Assert.Throws<ArgumentException>(() => new ZoorceFormControlOptions { Id = " " }.Normalize());
+        Assert.Throws<ArgumentOutOfRangeException>(() => new ZoorceFormControlOptions { Id = "amount", Step = 0 }.Normalize());
+        Assert.Throws<ArgumentException>(() => new ZoorceFormControlOptions { Id = "amount", Minimum = 3, Maximum = 2 }.Normalize());
+        Assert.Throws<ArgumentException>(() => new ZoorceFormControlOptions { Id = "choice", Choices = [new("same", "One"), new(" SAME ", "Two")] }.Normalize());
+        Assert.Throws<ArgumentException>(() => new ZoorceFormControlOptions { Id = "locale", Locale = "not_a_locale" }.Normalize());
+        Assert.Throws<ArgumentException>(() => new ZoorceFormControlOptions { Id = "currency", CurrencyCode = "US" }.Normalize());
+    }
+
+    [Fact]
+    public void Form_controls_and_chips_are_available_as_isolated_view_components()
+    {
+        var control = new ZoorceFormControlViewComponent();
+        var chip = new ZoorceChipViewComponent();
+
+        Assert.Throws<ArgumentNullException>(() => control.Invoke(null!));
+        Assert.Throws<ArgumentNullException>(() => chip.Invoke(null!));
+
+        var controlResult = Assert.IsType<ViewViewComponentResult>(control.Invoke(new ZoorceFormControlOptions { Id = "quantity", Kind = ZoorceFormControlKind.QuantityStepper, Value = "3" }));
+        var controlModel = Assert.IsType<ZoorceFormControlOptions>(controlResult.ViewData!.Model);
+        var chipResult = Assert.IsType<ViewViewComponentResult>(chip.Invoke(new ZoorceChipOptions { Text = " Stable ", Tone = " SUCCESS " }));
+        var chipModel = Assert.IsType<ZoorceChipOptions>(chipResult.ViewData!.Model);
+
+        Assert.Equal("quantity", controlModel.Id);
+        Assert.Equal("Stable", chipModel.Text);
+        Assert.Equal("success", chipModel.Tone);
+        Assert.Contains(ZoorceFormControlKind.ColorPicker, Enum.GetValues<ZoorceFormControlKind>());
+        Assert.Contains(ZoorceFormControlKind.ToggleSwitch, Enum.GetValues<ZoorceFormControlKind>());
+        Assert.DoesNotContain("Json", Enum.GetNames<ZoorceFormControlKind>());
+        Assert.Contains(ZoorceFormControlState.Error, Enum.GetValues<ZoorceFormControlState>());
     }
 
     private static ZoorceDataGridOptions CreateGrid() => new()

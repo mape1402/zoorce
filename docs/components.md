@@ -185,8 +185,46 @@ For direct Razor use, add `@addTagHelper *, Zoerce.WebUI` and render an independ
 
 ## Forms
 
-- Text, select, combobox-style datalist, date, date range and textarea inputs.
-- Hints, validation/error presentation, checkboxes, radios and switches.
-- Tabs and tab panels.
+`ZoorceFormControl` is an isolated Razor View Component. It renders usable HTML form fields first, then enhances only its own root with `zoerce-forms.js`. A host can place any number of controls on a page or inside a normal `<form>`; values remain standard named inputs and do not require a client framework.
+
+The one typed contract, `ZoorceFormControlOptions`, supplies a stable `Id`, optional `Name`, label, supporting text, current values, choices, bounds, validation state, disabled/read-only state, semantic tokens, and optional host metadata. The host selects the visual behavior with `ZoorceFormControlKind`.
+
+```cshtml
+@await Component.InvokeAsync("ZoorceFormControl", new ZoorceFormControlOptions
+{
+    Id = "dependents",
+    Name = "dependents",
+    Kind = ZoorceFormControlKind.QuantityStepper,
+    Label = "Number of dependents",
+    Value = "3",
+    Minimum = 0,
+    Maximum = 12,
+    Step = 1
+})
+```
+
+The available kinds are grouped below:
+
+- **Entry:** `Text`, `TextArea`, `Password`, `Hidden`, `Masked`, `NumericUpDown`, `QuantityStepper`, `Currency`, and `Percentage`.
+- **Range and scheduling:** `Slider`, `RangeSlider`, `Date`, `Time`, `DateTime`, `DateRange`, and `Duration`.
+- **Selection:** `Checkbox`, `CheckboxGroup`, `RadioGroup`, `ToggleSwitch`, `Select`, `MultiSelect`, `Combobox`, `SegmentedControl`, `TransferList`, `Rating`, `ChipGroup`, and `TagInput`.
+- **Visual selection:** `ColorPicker`, `IconPicker`, and `EmojiPicker`.
+- **Files and structured values:** `FileUpload`, `ImageUpload`, `AvatarPicker`, `Phone`, `Address`, `Otp`, and `KeyValue`.
+
+`Masked` understands `#` (digit), `A` (letter), and `*` (alphanumeric) placeholders. This covers fiscal references, phone formats, card-like inputs, postal codes, and product-specific values without hardcoding local rules in the package. Currency and percentage controls build on the numeric behavior; phone, OTP, address, and key/value editors retain regular submitted values so the server stays authoritative.
+
+`QuantityStepper` is deliberately separate from `NumericUpDown`: the former has large, touch-friendly circular controls and a centered discrete value, while the latter supports compact, direct numeric entry. Both honor `Minimum`, `Maximum`, `Step`, disabled state, keyboard entry, and scoped change events.
+
+`ColorPicker` accepts six-digit HEX values; set `AllowAlpha` to expose an opacity control and serialize an eight-digit HEX value when opacity is below 100%. Choices may provide product-specific swatches. `ZoorceChip` is also exposed as a small standalone View Component for status, filters, removable labels, and selected states.
+
+Listen at an individual component root or a containing form for `zoerce:form:change`, `zoerce:form:filechange`, and `zoerce:form:invalid`. Each event bubbles with `{ id, kind, name, value, source }`; selection controls also include their selected values. No global page coordinator is necessary.
+
+```js
+document.querySelector("[data-z-form-demo]").addEventListener("zoerce:form:change", event => {
+    console.log(event.detail.id, event.detail.value);
+});
+```
+
+All controls share label, hint, required marker, disabled/read-only, warning, success, and error states; theme colors come only from the semantic `--z-*` palette. The sample’s **Forms** page is a live catalog that exercises every type, demonstrates native form readiness without exposing a debug payload, and covers desktop and responsive layouts.
 
 All visual colors consume `--z-*` semantic variables emitted by the Razor layout, including canvas, surfaces, code surfaces, overlay, shadow, foreground, and semantic success/warning/danger/info states. Configure `Light.DataPrimary` through `Light.DataQuinary` and their `Dark` equivalents in `AddZoerceWebUI` to establish a product's analytical palette independently from its brand accent. A host can brand both themes without editing Zoorce's generated Tailwind CSS.
