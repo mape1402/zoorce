@@ -1,0 +1,19 @@
+{
+  "formatVersion": 1,
+  "profile": "Flowchart",
+  "document": {
+    "schemaVersion": 1,
+    "version": "sample-import",
+    "title": "Imported release review",
+    "description": "A portable JSON flowchart loaded into the curation sample.",
+    "nodes": [
+      { "id": "received", "kind": "start", "title": "Received", "identifier": "IMP-001", "description": "The imported request entered the review flow.", "tone": "Success", "position": { "x": 100, "y": 300 } },
+      { "id": "checks", "kind": "subprocess", "title": "Run imported checks", "identifier": "IMP-CHECKS", "description": "A reusable subprocess verifies the request before approval.", "tone": "Primary", "position": { "x": 380, "y": 300 } },
+      { "id": "approved", "kind": "end", "title": "Approved", "identifier": "IMP-DONE", "description": "The imported workflow completed successfully.", "tone": "Success", "position": { "x": 690, "y": 300 } }
+    ],
+    "edges": [
+      { "id": "received-checks", "fromNodeId": "received", "toNodeId": "checks", "tone": "Neutral", "fromPort": "Right", "toPort": "Left" },
+      { "id": "checks-approved", "fromNodeId": "checks", "toNodeId": "approved", "tone": "Success", "fromPort": "Right", "toPort": "Left" }
+    ]
+  }
+}

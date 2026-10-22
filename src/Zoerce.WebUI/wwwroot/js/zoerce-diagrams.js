@@ -79,6 +79,32 @@
             pdfExportUrl: text(source?.pdfExportUrl) || null
         };
     };
+    const resolveCapabilities = (source, mode, exportEnabled) => {
+        const editor = mode === "editor";
+        const value = (name, fallback) => typeof source?.[name] === "boolean" ? source[name] : fallback;
+        const capabilities = {
+            canAddNodes: value("canAddNodes", editor),
+            canMoveNodes: value("canMoveNodes", editor),
+            canEditConnections: value("canEditConnections", editor),
+            canEditContent: value("canEditContent", editor),
+            canEditAppearance: value("canEditAppearance", editor),
+            canRemoveElements: value("canRemoveElements", editor),
+            canEditMetadata: value("canEditMetadata", editor),
+            canExport: value("canExport", Boolean(exportEnabled)),
+            canImport: value("canImport", false),
+            canInvokeNodeActions: value("canInvokeNodeActions", true)
+        };
+        capabilities.canModifyDocument = capabilities.canAddNodes
+            || capabilities.canMoveNodes
+            || capabilities.canEditConnections
+            || capabilities.canEditContent
+            || capabilities.canEditAppearance
+            || capabilities.canRemoveElements
+            || capabilities.canEditMetadata
+            || capabilities.canImport;
+        capabilities.canUseInspector = capabilities.canEditContent || capabilities.canEditAppearance;
+        return Object.freeze(capabilities);
+    };
     const idFor = (prefix, values) => {
         let index = values.length + 1;
         let id = prefix + "-" + index;
@@ -194,6 +220,7 @@
             };
             this.profile = profiles[this.configuration.profile] ?? key(this.configuration.profile);
             this.mode = modes[this.configuration.mode] ?? key(this.configuration.mode);
+            this.capabilities = resolveCapabilities(this.configuration.capabilities, this.mode, this.configuration.export?.enabled !== false);
             this.document = normalizeDocument(this.configuration.document);
             this.ensureDocumentTitle();
             this.ensureDocumentDescription();
@@ -223,6 +250,11 @@
             this.exportSettings = root.querySelector("[data-z-diagram-export-settings]");
             this.exportName = root.querySelector("[data-z-diagram-export-name]");
             this.exportDownload = root.querySelector("[data-z-diagram-export-download]");
+            this.importInput = root.querySelector("[data-z-diagram-import-input]");
+            this.importConfirm = root.querySelector("[data-z-diagram-import-confirm]");
+            this.importConfirmButton = root.querySelector("[data-z-diagram-import-confirm-button]");
+            this.pendingImport = null;
+            this.importReturn = null;
             this.exportState = {
                 format: this.exportOptions.format,
                 fileName: this.exportOptions.fileName || safeFileName(this.root.id || "diagram"),
@@ -293,7 +325,16 @@
             this.connectRealtime();
         }
 
-        get editable() { return this.mode === "editor"; }
+        get editable() { return this.capabilities.canModifyDocument; }
+        get canAddNodes() { return this.capabilities.canAddNodes; }
+        get canMoveNodes() { return this.capabilities.canMoveNodes; }
+        get canEditConnections() { return this.capabilities.canEditConnections; }
+        get canEditContent() { return this.capabilities.canEditContent; }
+        get canEditAppearance() { return this.capabilities.canEditAppearance; }
+        get canRemoveElements() { return this.capabilities.canRemoveElements; }
+        get canEditMetadata() { return this.capabilities.canEditMetadata; }
+        get canExport() { return this.capabilities.canExport; }
+        get canImport() { return this.capabilities.canImport; }
 
         bind() {
             const signal = this.abortController.signal;
@@ -344,9 +385,19 @@
             this.exportModal?.addEventListener("keydown", event => this.onExportKeyDown(event), { signal });
             this.exportModal?.addEventListener("input", event => this.onExportInput(event), { signal });
             this.exportModal?.addEventListener("change", event => this.onExportInput(event), { signal });
+            this.importInput?.addEventListener("change", event => this.onImportFile(event), { signal });
+            this.importConfirm?.addEventListener("keydown", event => this.onImportKeyDown(event), { signal });
         }
 
         onClick(event) {
+            if (event.target.closest("[data-z-diagram-import-cancel]")) {
+                this.closeImportConfirm();
+                return;
+            }
+            if (event.target.closest("[data-z-diagram-import-confirm-button]")) {
+                this.commitImport();
+                return;
+            }
             const exportClose = event.target.closest("[data-z-diagram-export-close]");
             if (exportClose) {
                 this.closeExport();
@@ -367,7 +418,7 @@
                 // The export dialog is rendered above the toolbar. Explicitly clear
                 // the tooltip state before opening it, because a pointer that remains
                 // stationary over the trigger does not reliably emit pointerleave.
-                if (command === "export") this.dismissToolbarTooltips();
+                if (command === "export" || command === "import") this.dismissToolbarTooltips();
                 this.command(command);
                 if (commandElement.classList.contains("is-tooltip-suppressed")) commandElement.blur();
                 return;
@@ -379,7 +430,7 @@
                 return;
             }
             const swatch = event.target.closest("[data-z-diagram-style-swatch]");
-            if (swatch) {
+            if (swatch && this.canEditAppearance) {
                 const field = swatch.dataset.zDiagramStyleSwatch;
                 const input = this.inspector?.querySelector("[data-z-diagram-style-field='" + CSS.escape(field) + "']");
                 if (input) {
@@ -395,7 +446,7 @@
                 return;
             }
             const add = event.target.closest("[data-z-diagram-add]")?.dataset.zDiagramAdd;
-            if (add && this.editable) {
+            if (add && this.canAddNodes) {
                 this.addNode(add);
                 return;
             }
@@ -405,7 +456,7 @@
                 return;
             }
             const port = event.target.closest("[data-z-diagram-port]");
-            if (port && this.editable) {
+            if (port && this.canEditConnections) {
                 event.stopPropagation();
                 if (this.ignoreNextPortClick) {
                     this.ignoreNextPortClick = false;
@@ -431,7 +482,7 @@
             }
             if (node) {
                 const nodeId = node.dataset.zDiagramNodeId;
-                if (this.connectionMode) {
+                if (this.connectionMode && this.canEditConnections) {
                     if (!this.connectingFrom) {
                         if (!this.canConnectFrom(nodeId)) {
                             this.setStatus("An end node cannot start a connection.");
@@ -611,7 +662,7 @@
         }
 
         onDoubleClick(event) {
-            if (!this.editable || !(this.profile === "mindmap" || this.profile === "orgchart")) return;
+            if (!this.canMoveNodes || !(this.profile === "mindmap" || this.profile === "orgchart")) return;
             if (Date.now() < this.ignoreNativeDoubleClickUntil) return;
             const node = event.target.closest("[data-z-diagram-node]");
             if (!node) return;
@@ -621,7 +672,7 @@
         onPointerDown(event) {
             if (event.button !== 0 && event.button !== 1) return;
             const port = event.target.closest("[data-z-diagram-port]");
-            if (port && this.editable && event.button === 0) {
+            if (port && this.canEditConnections && event.button === 0) {
                 this.hideNodeDetails();
                 const nodeId = port.closest("[data-z-diagram-node]")?.dataset.zDiagramNodeId;
                 if (!nodeId) return;
@@ -631,13 +682,13 @@
                 return;
             }
             const nodeElement = event.target.closest("[data-z-diagram-node]");
-            if (nodeElement && this.editable && this.connectionMode && !event.target.closest("[data-z-diagram-port]")) {
+            if (nodeElement && this.canEditConnections && this.connectionMode && !event.target.closest("[data-z-diagram-port]")) {
                 // Do not select and re-render a node before its click reaches the connection handler.
                 // Replacing it during pointerdown would detach the eventual click target.
                 event.preventDefault();
                 return;
             }
-            if (nodeElement && this.editable && !event.target.closest("[data-z-diagram-port]")) {
+            if (nodeElement && this.canMoveNodes && !event.target.closest("[data-z-diagram-port]")) {
                 this.hideNodeDetails();
                 const nodeId = nodeElement.dataset.zDiagramNodeId;
                 if (!this.selection.has(nodeId)) this.selectNode(nodeId, event.ctrlKey || event.metaKey, false);
@@ -742,7 +793,7 @@
                         const trigger = this.world?.querySelector("[data-z-diagram-node-id='" + CSS.escape(node.id) + "']");
                         if (trigger) this.showNodeDetails(node, trigger);
                     }
-                    if (node?.action) this.invokeAction(node);
+                    if (this.capabilities.canInvokeNodeActions && node?.action) this.invokeAction(node);
                     if (this.profile === "mindmap" || this.profile === "orgchart") {
                         const now = Date.now();
                         if (this.lastNodeTap?.id === drag.primaryId && now - this.lastNodeTap.time < 400) {
@@ -790,23 +841,23 @@
                 return;
             }
             if (event.key === "Delete" || event.key === "Backspace") {
-                if (this.editable && !event.target.matches("input, textarea, select")) {
+                if (this.canRemoveElements && !event.target.matches("input, textarea, select")) {
                     event.preventDefault();
                     this.deleteSelection();
                 }
                 return;
             }
-            if ((event.ctrlKey || event.metaKey) && key(event.key) === "c" && this.editable && !event.target.matches("input, textarea, select")) {
+            if ((event.ctrlKey || event.metaKey) && key(event.key) === "c" && !event.target.matches("input, textarea, select")) {
                 event.preventDefault();
                 this.copySelection();
                 return;
             }
-            if ((event.ctrlKey || event.metaKey) && key(event.key) === "v" && this.editable && !event.target.matches("input, textarea, select")) {
+            if ((event.ctrlKey || event.metaKey) && this.canAddNodes && this.canEditConnections && key(event.key) === "v" && !event.target.matches("input, textarea, select")) {
                 event.preventDefault();
                 this.pasteSelection();
                 return;
             }
-            if ((event.ctrlKey || event.metaKey) && key(event.key) === "z") {
+            if ((event.ctrlKey || event.metaKey) && this.editable && key(event.key) === "z") {
                 event.preventDefault();
                 event.shiftKey ? this.redo() : this.undo();
                 return;
@@ -848,7 +899,7 @@
 
         onPaletteDragStart(event) {
             const kind = key(event.target.closest("[data-z-diagram-add]")?.dataset.zDiagramAdd);
-            if (!this.editable || !nodeKinds.has(kind) || !event.dataTransfer) return;
+            if (!this.canAddNodes || !nodeKinds.has(kind) || !event.dataTransfer) return;
             this.paletteDragKind = kind;
             event.dataTransfer.effectAllowed = "copy";
             event.dataTransfer.setData("application/x-zoorce-diagram-node", kind);
@@ -857,7 +908,7 @@
         }
 
         onCanvasDragOver(event) {
-            if (!this.editable || !this.paletteKind(event)) return;
+            if (!this.canAddNodes || !this.paletteKind(event)) return;
             event.preventDefault();
             event.dataTransfer.dropEffect = "copy";
             this.canvas?.classList.add("is-drop-target");
@@ -871,7 +922,7 @@
             const kind = this.paletteKind(event);
             this.paletteDragKind = null;
             this.canvas?.classList.remove("is-drop-ready", "is-drop-target");
-            if (!this.editable || !kind || !this.canvas) return;
+            if (!this.canAddNodes || !kind || !this.canvas) return;
             event.preventDefault();
             const bounds = this.canvas.getBoundingClientRect();
             this.addNode(kind, {
@@ -886,17 +937,18 @@
             if (command === "fit") this.fit(true);
             if (command === "undo") this.undo();
             if (command === "redo") this.redo();
-            if (command === "layout" && this.editable) this.applyLayout();
-            if (command === "connect" && this.editable) this.toggleConnectionMode();
+            if (command === "layout" && this.canMoveNodes) this.applyLayout();
+            if (command === "connect" && this.canEditConnections) this.toggleConnectionMode();
             if (command === "validate") this.validate(true);
-            if (command === "save") this.save();
+            if (command === "save" && this.editable) this.save();
             if (command === "toggle-overview") this.toggleOverview();
             if (command === "toggle-wheel-zoom") this.toggleWheelZoom();
             if (command === "toggle-node-details") this.toggleNodeDetails();
             if (command === "focus") this.toggleFocusMode();
-            if (command === "export") this.openExport();
-            if (command === "edit-title" && this.editable) this.beginTitleEdit();
-            if (command === "edit-description" && this.editable) this.beginDescriptionEdit();
+            if (command === "export" && this.canExport) this.openExport();
+            if (command === "import" && this.canImport) this.openImportPicker();
+            if (command === "edit-title" && this.canEditMetadata) this.beginTitleEdit();
+            if (command === "edit-description" && this.canEditMetadata) this.beginDescriptionEdit();
         }
 
         node(id) { return this.document.nodes.find(node => key(node.id) === key(id)); }
@@ -914,7 +966,7 @@
             return description;
         }
         beginTitleEdit() {
-            if (!this.editable || !this.titleElement || this.titleInput) return;
+            if (!this.canEditMetadata || !this.titleElement || this.titleInput) return;
             this.titleBeforeEdit = this.ensureDocumentTitle();
             const input = create("input", "z-diagram-title-input");
             input.type = "text";
@@ -944,7 +996,7 @@
             });
         }
         beginDescriptionEdit() {
-            if (!this.editable || !this.descriptionElement || this.descriptionInput) return;
+            if (!this.canEditMetadata || !this.descriptionElement || this.descriptionInput) return;
             this.descriptionBeforeEdit = this.ensureDocumentDescription();
             const input = create("input", "z-diagram-description-input");
             input.type = "text";
@@ -1056,12 +1108,13 @@
         }
 
         onInspectorFieldChanged(target) {
-            if (!this.editable) return;
-            if (target.matches("[data-z-diagram-field]")) this.commitInspectorContent();
+            if (target.matches("[data-z-diagram-field]")) {
+                if (this.canEditContent) this.selectedEdge ? this.commitInspectorEdgeContent() : this.commitInspectorContent();
+            }
             if (target.matches("[data-z-diagram-style-field]")) {
                 const edge = this.selectedEdge ? this.edge(this.selectedEdge) : null;
-                if (edge) this.commitInspectorEdge();
-                else this.commitInspectorAppearance();
+                if (edge && this.canEditAppearance) this.commitInspectorEdgeAppearance();
+                else if (this.canEditAppearance) this.commitInspectorAppearance();
             }
         }
 
@@ -1071,14 +1124,12 @@
             const title = this.inspector.querySelector("[data-z-diagram-field='title']")?.value;
             const identifier = this.inspector.querySelector("[data-z-diagram-field='identifier']")?.value;
             const description = this.inspector.querySelector("[data-z-diagram-field='description']")?.value;
-            const tone = this.inspector.querySelector("[data-z-diagram-field='tone']")?.value;
             const actionKind = this.inspector.querySelector("[data-z-diagram-field='action-kind']")?.value;
             const target = this.inspector.querySelector("[data-z-diagram-field='action-target']")?.value;
             this.prepareInspectorChange();
             selected.title = text(title) || "Untitled node";
             selected.identifier = text(identifier) || null;
             selected.description = text(description) || null;
-            selected.tone = tones.has(tone) ? tone : "Neutral";
             selected.action = actionKinds.has(actionKind) && actionKind !== "None" ? { kind: actionKind, target: text(target) || null, payload: null } : null;
             this.markDirty("Node details updated.");
             this.emitChange("edit");
@@ -1090,6 +1141,8 @@
             const selected = this.document.nodes.find(node => this.selection.has(node.id));
             if (!selected) return;
             this.prepareInspectorChange();
+            const tone = this.inspector?.querySelector("[data-z-diagram-style-field='tone']")?.value;
+            selected.tone = tones.has(tone) ? tone : "Neutral";
             selected.style = this.styleFromInspector();
             this.markDirty("Node appearance updated.");
             this.emitChange("edit");
@@ -1098,12 +1151,21 @@
             if (advice) advice.textContent = this.contrastAdvice(selected.style ?? {});
         }
 
-        commitInspectorEdge() {
+        commitInspectorEdgeContent() {
             const edge = this.selectedEdge ? this.edge(this.selectedEdge) : null;
             if (!edge || !this.inspector) return;
             const label = this.inspector.querySelector("[data-z-diagram-field='edge-label']")?.value;
             this.prepareInspectorChange();
             edge.label = text(label) || null;
+            this.markDirty("Connection details updated.");
+            this.emitChange("edit");
+            this.renderScene();
+        }
+
+        commitInspectorEdgeAppearance() {
+            const edge = this.selectedEdge ? this.edge(this.selectedEdge) : null;
+            if (!edge || !this.inspector) return;
+            this.prepareInspectorChange();
             edge.style = normalizeEdgeStyle({ strokeColor: this.styleValue("edgeStroke"), strokeWidth: this.styleValue("edgeWidth"), dashed: this.styleChecked("edgeDashed") });
             this.markDirty("Connection style updated.");
             this.emitChange("edit");
@@ -1124,7 +1186,7 @@
             this.canvas?.focus({ preventScroll: true });
             dispatch(this.root, "zoerce:diagram:selectionchanged", { nodeIds: [...this.selection], edgeId: null });
             dispatch(this.root, "zoerce:diagram:nodeclick", { node, document: this.snapshot() });
-            if (invokeAction && node.action) this.invokeAction(node);
+            if (invokeAction && this.capabilities.canInvokeNodeActions && node.action) this.invokeAction(node);
         }
 
         selectEdge(edgeId) {
@@ -1163,6 +1225,7 @@
         }
 
         toggleConnectionMode() {
+            if (!this.canEditConnections) return;
             this.connectionMode = !this.connectionMode;
             this.connectingFrom = null;
             this.setStatus(this.connectionMode ? "Connection mode is on. Choose a source anchor, then a target anchor." : "Connection mode is off.");
@@ -1191,6 +1254,7 @@
         }
 
         handlePort(port) {
+            if (!this.canEditConnections) return;
             const nodeId = port.closest("[data-z-diagram-node]")?.dataset.zDiagramNodeId;
             const side = key(port.dataset.zDiagramPortSide) || "right";
             if (!nodeId) return;
@@ -1209,6 +1273,7 @@
         }
 
         connectNodes(sourceId, sourceSide, targetId, targetSide) {
+            if (!this.canEditConnections) return;
             if (!sourceId || !targetId) return;
             if (key(sourceId) === key(targetId)) {
                 this.setStatus("A node cannot connect to itself.");
@@ -1242,6 +1307,7 @@
         }
 
         addNode(kind, droppedAt = null) {
+            if (!this.canAddNodes) return;
             const normalizedKind = nodeKinds.has(key(kind)) ? key(kind) : "process";
             const index = this.document.nodes.length;
             const offset = index % 5;
@@ -1272,6 +1338,7 @@
         }
 
         deleteSelection() {
+            if (!this.canRemoveElements) return;
             const selected = new Set(this.selection);
             const edgeId = this.selectedEdge;
             if (!selected.size && !edgeId) return;
@@ -1307,6 +1374,7 @@
         }
 
         pasteSelection() {
+            if (!this.canAddNodes || !this.canEditConnections) return;
             const clipboard = this.nodeClipboard;
             if (!clipboard?.nodes?.length) {
                 this.setStatus("Copy nodes before pasting.");
@@ -1334,6 +1402,7 @@
         }
 
         undo() {
+            if (!this.editable) return;
             const previous = this.history.pop();
             if (!previous) {
                 this.setStatus("Nothing to undo.");
@@ -1351,6 +1420,7 @@
         }
 
         redo() {
+            if (!this.editable) return;
             const next = this.future.pop();
             if (!next) {
                 this.setStatus("Nothing to redo.");
@@ -1527,6 +1597,7 @@
 
         nodeSize(node) {
             if (node?.kind === "decision") return { width: 216, height: 122 };
+            if (node?.kind === "subprocess") return { width: 224, height: 94 };
             // Elliptical nodes need a broader interior than a rectangular node:
             // their curved shoulders visually consume the available copy space.
             if (ellipseKinds.has(node?.kind)) return { width: 226, height: 104 };
@@ -1713,7 +1784,7 @@
             element.append(surface);
             if (!compact) element.append(icon);
             element.append(copy);
-            if (this.editable) portOrder.forEach(side => {
+            if (this.canEditConnections) portOrder.forEach(side => {
                 const port = create("button", "z-diagram-port z-diagram-port--" + side);
                 port.type = "button";
                 port.dataset.zDiagramPort = "";
@@ -1776,6 +1847,8 @@
                 end: capsule,
                 decision: "M " + (nodeWidth / 2) + " 2 L " + (nodeWidth - 2) + " " + (nodeHeight / 2) + " L " + (nodeWidth / 2) + " " + (nodeHeight - 2) + " L 2 " + (nodeHeight / 2) + " Z",
                 "input-output": "M 21 2 H " + (nodeWidth - 2) + " L " + (nodeWidth - 21) + " " + (nodeHeight - 2) + " H 2 Z",
+                // BPMN/UML predefined-process notation: the outer boundary plus one
+                // internal rail on each side forms the characteristic double edge.
                 subprocess: rounded,
                 document: "M 3 2 H " + (nodeWidth - 3) + " V " + (nodeHeight - 21) + " C " + (nodeWidth - 43) + " " + (nodeHeight - 1) + " " + (nodeWidth - 72) + " " + (nodeHeight + 4) + " " + (nodeWidth - 112) + " " + (nodeHeight - 2) + " H 3 Z",
                 "data-store": "M 3 13 C 3 -2 " + (nodeWidth - 3) + " -2 " + (nodeWidth - 3) + " 13 V " + (nodeHeight - 13) + " C " + (nodeWidth - 3) + " " + (nodeHeight + 2) + " 3 " + (nodeHeight + 2) + " 3 " + (nodeHeight - 13) + " Z",
@@ -1825,6 +1898,18 @@
             else path.style.removeProperty("stroke-width");
             if (node.kind === "vacancy" || node.kind === "boundary") path.setAttribute("stroke-dasharray", "6 4");
             surface.replaceChildren(defs, path);
+            if (node.kind === "subprocess") {
+                const inset = Math.max(12, Math.min(16, size.width * .07));
+                const railColor = stroke || "var(--z-primary)";
+                const marker = svg("path", "z-diagram-node-subprocess-marker");
+                marker.setAttribute("d", "M " + inset + " 11 V " + (size.height - 11) +
+                    " M " + (size.width - inset) + " 11 V " + (size.height - 11));
+                marker.setAttribute("fill", "none");
+                marker.setAttribute("stroke", railColor);
+                marker.setAttribute("stroke-width", String(Math.max(1.45, number(style?.borderWidth, 1.15))));
+                marker.setAttribute("stroke-linecap", "round");
+                surface.append(marker);
+            }
         }
 
         fontFamily(value) {
@@ -1851,7 +1936,7 @@
         }
 
         renderInspector() {
-            if (!this.inspector) return;
+            if (!this.inspector || !this.capabilities.canUseInspector) return;
             const selected = this.document.nodes.find(node => this.selection.has(node.id));
             const edge = this.selectedEdge ? this.edge(this.selectedEdge) : null;
             this.inspector.replaceChildren();
@@ -1870,10 +1955,12 @@
             const eyebrow = create("span", "z-section-kicker"); eyebrow.textContent = node.kind;
             const title = create("strong"); title.textContent = "Node inspector";
             const tabs = create("div", "z-diagram-inspector-tabs"); tabs.setAttribute("role", "tablist");
-            [
-                ["content", "Content"],
-                ["appearance", "Appearance"]
-            ].forEach(([value, label]) => {
+            const availableTabs = [
+                this.canEditContent && ["content", "Content"],
+                this.canEditAppearance && ["appearance", "Appearance"]
+            ].filter(Boolean);
+            if (!availableTabs.some(([value]) => value === this.inspectorTab)) this.inspectorTab = availableTabs[0]?.[0] ?? "content";
+            availableTabs.forEach(([value, label]) => {
                 const button = create("button"); button.type = "button"; button.textContent = label; button.dataset.zDiagramInspectorTab = value; button.setAttribute("role", "tab");
                 button.setAttribute("aria-selected", String(this.inspectorTab === value));
                 if (this.inspectorTab === value) button.classList.add("is-active");
@@ -1894,12 +1981,6 @@
             const descriptionLabel = create("label"); descriptionLabel.textContent = "Description";
             const descriptionInput = create("textarea", "z-textarea"); descriptionInput.value = node.description ?? ""; descriptionInput.dataset.zDiagramField = "description";
             descriptionLabel.append(descriptionInput);
-            const toneLabel = create("label"); toneLabel.textContent = "Tone";
-            const toneSelect = create("select", "z-select"); toneSelect.dataset.zDiagramField = "tone";
-            ["Neutral", "Primary", "Success", "Warning", "Danger", "Info"].forEach(tone => {
-                const option = create("option"); option.value = tone; option.textContent = tone; option.selected = node.tone === tone; toneSelect.append(option);
-            });
-            toneLabel.append(toneSelect);
             const actionLabel = create("label"); actionLabel.textContent = "Click action";
             const actionSelect = create("select", "z-select"); actionSelect.dataset.zDiagramField = "action-kind";
             ["None", "Panel", "Modal", "Event", "Command", "Navigate", "Endpoint"].forEach(kind => {
@@ -1910,10 +1991,10 @@
             const targetInput = create("input", "z-input"); targetInput.value = node.action?.target ?? ""; targetInput.dataset.zDiagramField = "action-target"; targetInput.placeholder = "e.g. details-panel";
             targetLabel.append(targetInput);
             const actions = create("div", "z-diagram-inspector-actions");
-            if (this.profile === "mindmap" || this.profile === "orgchart") {
+            if (this.canMoveNodes && (this.profile === "mindmap" || this.profile === "orgchart")) {
                 const collapse = create("button", "z-button z-button-ghost z-button-sm"); collapse.type = "button"; collapse.textContent = node.collapsed ? "Expand branch" : "Collapse branch"; collapse.dataset.zDiagramInspector = "toggle-collapse"; actions.append(collapse);
             }
-            form.append(titleLabel, identifierLabel, descriptionLabel, toneLabel, actionLabel, targetLabel);
+            form.append(titleLabel, identifierLabel, descriptionLabel, actionLabel, targetLabel);
             if (actions.childElementCount) form.append(actions);
             return form;
         }
@@ -1922,6 +2003,12 @@
             const style = node.style ?? {};
             const form = create("div", "z-diagram-form z-diagram-appearance-form");
             const surface = create("strong", "z-diagram-form-heading"); surface.textContent = "Surface";
+            const toneLabel = create("label"); toneLabel.textContent = "Tone";
+            const toneSelect = create("select", "z-select"); toneSelect.dataset.zDiagramStyleField = "tone";
+            ["Neutral", "Primary", "Success", "Warning", "Danger", "Info"].forEach(tone => {
+                const option = create("option"); option.value = tone; option.textContent = tone; option.selected = node.tone === tone; toneSelect.append(option);
+            });
+            toneLabel.append(toneSelect);
             const fill = this.colorField("Fill", "fillColor", colorForInput(style.fillColor, "#7c5cff"));
             const gradient = create("label", "z-diagram-switch"); gradient.textContent = "Use a gradient";
             const gradientToggle = create("input"); gradientToggle.type = "checkbox"; gradientToggle.checked = Boolean(style.gradient); gradientToggle.dataset.zDiagramStyleField = "gradientEnabled"; gradient.append(gradientToggle);
@@ -1946,7 +2033,7 @@
             const opacity = this.rangeField("Opacity", "opacity", Math.round((style.opacity ?? 1) * 100), 15, 100, "%");
             const palette = this.stylePalette();
             const advice = create("p", "z-diagram-contrast-advice"); advice.dataset.zDiagramContrast = ""; advice.textContent = this.contrastAdvice(style);
-            form.append(surface, fill, gradient, gradientStart, gradientEnd, angle, palette, borderHeading, border, borderWidth, radius, typography, textColor, familyLabel, fontSize, weightLabel, opacity, advice);
+            form.append(surface, toneLabel, fill, gradient, gradientStart, gradientEnd, angle, palette, borderHeading, border, borderWidth, radius, typography, textColor, familyLabel, fontSize, weightLabel, opacity, advice);
             return form;
         }
 
@@ -2013,13 +2100,18 @@
             const eyebrow = create("span", "z-section-kicker"); eyebrow.textContent = "Connection";
             const title = create("strong"); title.textContent = "Edge inspector";
             const form = create("div", "z-diagram-form");
-            const label = create("label"); label.textContent = "Label";
-            const input = create("input", "z-input"); input.value = edge.label ?? ""; input.dataset.zDiagramField = "edge-label"; label.append(input);
-            const stroke = this.colorField("Stroke", "edgeStroke", colorForInput(edge.style?.strokeColor, "#7c5cff"));
-            const width = this.rangeField("Stroke width", "edgeWidth", edge.style?.strokeWidth ?? 2, 1, 6, "px");
-            const dashed = create("label", "z-diagram-switch"); dashed.textContent = "Dashed";
-            const dashedInput = create("input"); dashedInput.type = "checkbox"; dashedInput.checked = Boolean(edge.style?.dashed); dashedInput.dataset.zDiagramStyleField = "edgeDashed"; dashed.append(dashedInput);
-            form.append(label, stroke, width, dashed);
+            if (this.canEditContent) {
+                const label = create("label"); label.textContent = "Label";
+                const input = create("input", "z-input"); input.value = edge.label ?? ""; input.dataset.zDiagramField = "edge-label"; label.append(input);
+                form.append(label);
+            }
+            if (this.canEditAppearance) {
+                const stroke = this.colorField("Stroke", "edgeStroke", colorForInput(edge.style?.strokeColor, "#7c5cff"));
+                const width = this.rangeField("Stroke width", "edgeWidth", edge.style?.strokeWidth ?? 2, 1, 6, "px");
+                const dashed = create("label", "z-diagram-switch"); dashed.textContent = "Dashed";
+                const dashedInput = create("input"); dashedInput.type = "checkbox"; dashedInput.checked = Boolean(edge.style?.dashed); dashedInput.dataset.zDiagramStyleField = "edgeDashed"; dashed.append(dashedInput);
+                form.append(stroke, width, dashed);
+            }
             fragment.append(eyebrow, title, form);
             return fragment;
         }
@@ -2056,6 +2148,7 @@
         }
 
         toggleCollapsed(nodeId) {
+            if (!this.canMoveNodes) return;
             this.change("Branch visibility changed.", () => {
                 const target = this.node(nodeId);
                 if (target) target.collapsed = !target.collapsed;
@@ -2239,6 +2332,7 @@
         }
 
         applyLayout() {
+            if (!this.canMoveNodes) return;
             this.change("Diagram arranged.", () => {
                 if (this.profile === "mindmap") this.radialLayout();
                 else if (this.profile === "orgchart") this.treeLayout(false);
@@ -2374,6 +2468,7 @@
         }
 
         async save(automatic = false) {
+            if (!this.editable) return;
             if (this.saveInFlight) {
                 this.saveQueued = true;
                 return;
@@ -2472,7 +2567,7 @@
         }
 
         openExport() {
-            if (!this.exportOptions.enabled || !this.exportModal) return;
+            if (!this.canExport || !this.exportOptions.enabled || !this.exportModal) return;
             this.dismissToolbarTooltips();
             this.root.classList.add("is-exporting");
             this.exportReturn = document.activeElement;
@@ -2492,6 +2587,144 @@
             this.exportPreviewUrl = null;
             this.exportReturn?.focus?.({ preventScroll: true });
             this.exportReturn = null;
+        }
+
+        openImportPicker() {
+            if (!this.canImport || !this.importInput) return;
+            this.dismissToolbarTooltips();
+            this.importInput.value = "";
+            this.importInput.click();
+        }
+
+        async onImportFile(event) {
+            const file = event.target?.files?.[0];
+            if (event.target) event.target.value = "";
+            if (!this.canImport || !file) return;
+            const maximumBytes = clamp(Math.floor(number(this.configuration.maximumImportBytes, 1048576)), 16384, 10485760);
+            if (file.size > maximumBytes) {
+                this.setStatus("This JSON file is larger than the configured import limit.");
+                return;
+            }
+            try {
+                const payload = JSON.parse(await file.text());
+                const document = this.parseImportedDocument(payload);
+                this.pendingImport = { document, fileName: file.name || "diagram.json" };
+                if (this.dirty) this.openImportConfirm();
+                else this.commitImport();
+            } catch (error) {
+                const message = error instanceof Error ? error.message : "The selected file is not a valid diagram JSON document.";
+                this.setStatus(message);
+                dispatch(this.root, "zoerce:diagram:import-failed", { error, fileName: file.name });
+            }
+        }
+
+        parseImportedDocument(payload) {
+            const envelope = payload && typeof payload === "object" ? payload : null;
+            if (!envelope) throw new Error("The selected file is not a JSON object.");
+            if (envelope.profile && key(envelope.profile) !== key(this.configuration.profile)) {
+                throw new Error("This file was created for a different diagram profile.");
+            }
+            const source = envelope.document && typeof envelope.document === "object" ? envelope.document : envelope;
+            if (!Array.isArray(source.nodes) || !Array.isArray(source.edges)) {
+                throw new Error("The file must contain nodes and edges arrays.");
+            }
+            if (source.nodes.length > 600 || source.edges.length > 1200) {
+                throw new Error("This diagram exceeds the supported import size.");
+            }
+            const seenNodes = new Set();
+            source.nodes.forEach((node, index) => {
+                const id = text(node?.id);
+                if (!id || seenNodes.has(key(id))) throw new Error("Every imported node needs a unique id.");
+                if (!nodeKinds.has(key(node?.kind))) throw new Error("Node " + (index + 1) + " uses an unsupported kind.");
+                if (!Number.isFinite(Number(node?.position?.x)) || !Number.isFinite(Number(node?.position?.y))) throw new Error("Every imported node needs a valid position.");
+                seenNodes.add(key(id));
+            });
+            const edgeIds = new Set();
+            const paths = new Set();
+            source.edges.forEach((edge, index) => {
+                const id = text(edge?.id);
+                const from = text(edge?.fromNodeId);
+                const to = text(edge?.toNodeId);
+                const path = key(from) + "→" + key(to);
+                if (!id || edgeIds.has(key(id))) {
+                    throw new Error("Every imported connection needs a unique id.");
+                }
+                if (!from || !to || key(from) === key(to) || !seenNodes.has(key(from)) || !seenNodes.has(key(to)) || paths.has(path)) {
+                    throw new Error("Every imported connection must join two distinct nodes only once.");
+                }
+                edgeIds.add(key(id));
+                paths.add(path);
+            });
+            const document = normalizeDocument(source);
+            const validation = this.validateDocument(document);
+            if (!validation.valid) throw new Error(validation.errors[0]);
+            return document;
+        }
+
+        validateDocument(document) {
+            const errors = [];
+            if (this.profile === "flowchart") {
+                if (document.nodes.filter(node => node.kind === "start").length > 1) errors.push("A flowchart can only have one start node.");
+                document.nodes.filter(node => node.kind === "end").forEach(node => {
+                    if (document.edges.some(edge => key(edge.fromNodeId) === key(node.id))) errors.push("End nodes cannot have outgoing connections.");
+                });
+            }
+            if (this.profile === "mindmap" || this.profile === "orgchart") {
+                const incoming = new Map();
+                document.edges.forEach(edge => incoming.set(key(edge.toNodeId), (incoming.get(key(edge.toNodeId)) || 0) + 1));
+                if (document.nodes.length && document.nodes.filter(node => !incoming.has(key(node.id))).length !== 1) errors.push("This tree requires one root node.");
+                if ([...incoming.values()].some(count => count > 1)) errors.push("A tree node can only have one parent.");
+            }
+            return { valid: errors.length === 0, errors };
+        }
+
+        openImportConfirm() {
+            if (!this.importConfirm || !this.pendingImport) return;
+            this.importReturn = document.activeElement;
+            this.importConfirm.hidden = false;
+            this.importConfirm.setAttribute("aria-hidden", "false");
+            globalThis.requestAnimationFrame(() => this.importConfirmButton?.focus());
+        }
+
+        closeImportConfirm() {
+            if (!this.importConfirm || this.importConfirm.hidden) return;
+            this.importConfirm.hidden = true;
+            this.importConfirm.setAttribute("aria-hidden", "true");
+            this.pendingImport = null;
+            this.importReturn?.focus?.({ preventScroll: true });
+            this.importReturn = null;
+        }
+
+        onImportKeyDown(event) {
+            if (event.key !== "Escape") return;
+            event.preventDefault();
+            this.closeImportConfirm();
+        }
+
+        commitImport() {
+            if (!this.canImport || !this.pendingImport) return;
+            const imported = this.pendingImport;
+            const detail = { document: clone(imported.document), fileName: imported.fileName };
+            if (!dispatch(this.root, "zoerce:diagram:import-request", detail, true)) return;
+            this.history.push(this.snapshot());
+            this.future = [];
+            this.document = imported.document;
+            this.ensureDocumentTitle();
+            this.ensureDocumentDescription();
+            this.selection.clear();
+            this.selectedEdge = null;
+            this.inspectorEditTarget = null;
+            this.inspectorEditCaptured = false;
+            this.pendingImport = null;
+            if (this.importConfirm && !this.importConfirm.hidden) {
+                this.importConfirm.hidden = true;
+                this.importConfirm.setAttribute("aria-hidden", "true");
+            }
+            this.importReturn = null;
+            this.markDirty("Imported " + imported.fileName + ".");
+            this.emitChange("import");
+            this.render();
+            dispatch(this.root, "zoerce:diagram:imported", { ...detail, document: this.snapshot() });
         }
 
         selectExportFormat(format) {
@@ -2823,7 +3056,11 @@
                 ? "<text x=\"" + layout.titleX + "\" y=\"" + (size.height / 2 + 15) + "\" fill=\"" + escapeXml(descriptionColor) + "\" fill-opacity=\"" + descriptionOpacity + "\" font-family=\"" + escapeXml(font) + "\" font-size=\"9.5\">" + escapeXml(layout.description) + "</text>"
                 : "";
             const dash = node.kind === "vacancy" || node.kind === "boundary" ? " stroke-dasharray=\"6 4\"" : "";
-            return "<g transform=\"translate(" + node.position.x + " " + node.position.y + ")\" opacity=\"" + number(style.opacity ?? 1, 1) + "\"><path d=\"" + escapeXml(this.shapePath(node.kind, number(style.cornerRadius ?? 13, 13), size.width, size.height)) + "\" fill=\"" + escapeXml(fill) + "\" stroke=\"" + escapeXml(stroke) + "\" stroke-width=\"" + number(style.borderWidth ?? 1.15, 1.15) + "\" stroke-linejoin=\"round\" filter=\"url(#zoorce-export-node-shadow)\"" + dash + "/>" + icon + title + description + "</g>";
+            const markerInset = Math.max(12, Math.min(16, size.width * .07));
+            const subprocessMarker = node.kind === "subprocess"
+                ? "<path d=\"M " + markerInset + " 11 V " + (size.height - 11) + " M " + (size.width - markerInset) + " 11 V " + (size.height - 11) + "\" fill=\"none\" stroke=\"" + escapeXml(stroke) + "\" stroke-width=\"" + Math.max(1.45, number(style.borderWidth, 1.15)) + "\" stroke-linecap=\"round\" opacity=\".9\"/>"
+                : "";
+            return "<g transform=\"translate(" + node.position.x + " " + node.position.y + ")\" opacity=\"" + number(style.opacity ?? 1, 1) + "\"><path d=\"" + escapeXml(this.shapePath(node.kind, number(style.cornerRadius ?? 13, 13), size.width, size.height)) + "\" fill=\"" + escapeXml(fill) + "\" stroke=\"" + escapeXml(stroke) + "\" stroke-width=\"" + number(style.borderWidth ?? 1.15, 1.15) + "\" stroke-linejoin=\"round\" filter=\"url(#zoorce-export-node-shadow)\"" + dash + "/>" + subprocessMarker + icon + title + description + "</g>";
         }
 
         exportSvg(forceOpaque = false) {
@@ -2936,6 +3173,7 @@
         }
 
         async downloadExport() {
+            if (!this.canExport) return;
             const format = this.exportState.format;
             const detail = { format, options: clone(this.exportState), document: this.snapshot() };
             if (!dispatch(this.root, "zoerce:diagram:export-request", detail, true)) return;

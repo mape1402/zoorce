@@ -51,6 +51,12 @@ public sealed record ZoorceDiagramOptions
     /// <summary>Gets whether the node-details inspection mode starts enabled.</summary>
     public bool NodeDetailsEnabled { get; init; }
 
+    /// <summary>Gets the host-controlled capabilities that refine the selected interaction mode.</summary>
+    public ZoorceDiagramCapabilities? Capabilities { get; init; }
+
+    /// <summary>Gets the largest accepted JSON import in bytes.</summary>
+    public int MaximumImportBytes { get; init; } = 1_048_576;
+
     /// <summary>Gets the pointer gesture used to pan unused canvas space.</summary>
     public ZoorceDiagramPanMode PanMode { get; init; } = ZoorceDiagramPanMode.Background;
 
@@ -94,6 +100,7 @@ public sealed record ZoorceDiagramOptions
             Description = TrimOrNull(Document?.Description) ?? normalizedSummary
         };
         var export = (Export ?? exportDefaults ?? new ZoorceDiagramExportOptions()).Normalize(document.Title!);
+        var capabilities = (Capabilities ?? new ZoorceDiagramCapabilities()).Resolve(mode, export.Enabled);
 
         return this with
         {
@@ -110,6 +117,8 @@ public sealed record ZoorceDiagramOptions
             ValidateUrl = TrimOrNull(ValidateUrl),
             RealtimeHubUrl = TrimOrNull(RealtimeHubUrl),
             RealtimeEventName = TrimOrNull(RealtimeEventName),
+            Capabilities = capabilities,
+            MaximumImportBytes = Math.Clamp(MaximumImportBytes, 16_384, 10_485_760),
             GridSize = Math.Clamp(GridSize, 8, 80),
             MinimumZoom = minimumZoom,
             MaximumZoom = maximumZoom,

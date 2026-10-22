@@ -139,6 +139,114 @@ public sealed class DiagramContractTests
         Assert.Equal("Interactive diagram", normalized.Document.Description);
         Assert.True(normalized.Export!.Enabled);
         Assert.Equal(ZoorceDiagramExportFormat.Svg, normalized.Export.DefaultFormat);
+        Assert.NotNull(normalized.Capabilities);
+        Assert.False(normalized.Capabilities.CanModifyDocument);
+        Assert.False(normalized.Capabilities.CanUseInspector);
+        Assert.True(normalized.Capabilities.CanExport);
+        Assert.False(normalized.Capabilities.CanImport);
+        Assert.True(normalized.Capabilities.CanInvokeNodeActions);
+        Assert.Equal(1_048_576, normalized.MaximumImportBytes);
+    }
+
+    [Fact]
+    public void Diagram_resolves_granular_capabilities_and_import_limits()
+    {
+        var editor = (CreateFlow() with
+        {
+            MaximumImportBytes = 1,
+            Capabilities = new ZoorceDiagramCapabilities { CanExport = false, CanImport = true, CanInvokeNodeActions = false }
+        }).Normalize();
+
+        Assert.NotNull(editor.Capabilities);
+        Assert.True(editor.Capabilities.CanAddNodes);
+        Assert.True(editor.Capabilities.CanMoveNodes);
+        Assert.True(editor.Capabilities.CanEditConnections);
+        Assert.True(editor.Capabilities.CanEditContent);
+        Assert.True(editor.Capabilities.CanEditAppearance);
+        Assert.True(editor.Capabilities.CanRemoveElements);
+        Assert.True(editor.Capabilities.CanEditMetadata);
+        Assert.True(editor.Capabilities.CanModifyDocument);
+        Assert.True(editor.Capabilities.CanUseInspector);
+        Assert.False(editor.Capabilities.CanExport);
+        Assert.True(editor.Capabilities.CanImport);
+        Assert.False(editor.Capabilities.CanInvokeNodeActions);
+        Assert.Equal(16_384, editor.MaximumImportBytes);
+
+        var restricted = (CreateFlow() with
+        {
+            Mode = ZoorceDiagramMode.Viewer,
+            MaximumImportBytes = 99_999_999,
+            Export = new ZoorceDiagramExportOptions { Enabled = false },
+            Capabilities = new ZoorceDiagramCapabilities
+            {
+                CanAddNodes = false,
+                CanMoveNodes = true,
+                CanEditConnections = false,
+                CanEditContent = true,
+                CanEditAppearance = false,
+                CanRemoveElements = false,
+                CanEditMetadata = false,
+                CanExport = true,
+                CanImport = false,
+                CanInvokeNodeActions = true
+            }
+        }).Normalize();
+
+        Assert.NotNull(restricted.Capabilities);
+        Assert.False(restricted.Capabilities.CanAddNodes);
+        Assert.True(restricted.Capabilities.CanMoveNodes);
+        Assert.False(restricted.Capabilities.CanEditConnections);
+        Assert.True(restricted.Capabilities.CanEditContent);
+        Assert.False(restricted.Capabilities.CanEditAppearance);
+        Assert.False(restricted.Capabilities.CanRemoveElements);
+        Assert.False(restricted.Capabilities.CanEditMetadata);
+        Assert.True(restricted.Capabilities.CanModifyDocument);
+        Assert.True(restricted.Capabilities.CanUseInspector);
+        Assert.True(restricted.Capabilities.CanExport);
+        Assert.False(restricted.Capabilities.CanImport);
+        Assert.True(restricted.Capabilities.CanInvokeNodeActions);
+        Assert.Equal(10_485_760, restricted.MaximumImportBytes);
+    }
+
+    [Fact]
+    public void Diagram_supports_isolated_read_only_capability_recipes()
+    {
+        var copyOnly = (CreateFlow() with
+        {
+            Mode = ZoorceDiagramMode.ReadOnly,
+            Capabilities = new ZoorceDiagramCapabilities { CanEditContent = true }
+        }).Normalize();
+        var appearanceOnly = (CreateFlow() with
+        {
+            Mode = ZoorceDiagramMode.ReadOnly,
+            Capabilities = new ZoorceDiagramCapabilities { CanEditAppearance = true }
+        }).Normalize();
+        var importOnly = (CreateFlow() with
+        {
+            Mode = ZoorceDiagramMode.ReadOnly,
+            Capabilities = new ZoorceDiagramCapabilities { CanImport = true, CanExport = false, CanInvokeNodeActions = false }
+        }).Normalize();
+
+        Assert.True(copyOnly.Capabilities!.CanEditContent);
+        Assert.True(copyOnly.Capabilities.CanUseInspector);
+        Assert.True(copyOnly.Capabilities.CanModifyDocument);
+        Assert.False(copyOnly.Capabilities.CanEditAppearance);
+        Assert.False(copyOnly.Capabilities.CanMoveNodes);
+        Assert.False(copyOnly.Capabilities.CanEditConnections);
+
+        Assert.True(appearanceOnly.Capabilities!.CanEditAppearance);
+        Assert.True(appearanceOnly.Capabilities.CanUseInspector);
+        Assert.True(appearanceOnly.Capabilities.CanModifyDocument);
+        Assert.False(appearanceOnly.Capabilities.CanEditContent);
+        Assert.False(appearanceOnly.Capabilities.CanAddNodes);
+        Assert.False(appearanceOnly.Capabilities.CanRemoveElements);
+
+        Assert.True(importOnly.Capabilities!.CanImport);
+        Assert.True(importOnly.Capabilities.CanModifyDocument);
+        Assert.False(importOnly.Capabilities.CanUseInspector);
+        Assert.False(importOnly.Capabilities.CanExport);
+        Assert.False(importOnly.Capabilities.CanInvokeNodeActions);
+        Assert.False(importOnly.Capabilities.CanEditMetadata);
     }
 
     [Fact]
@@ -196,6 +304,7 @@ public sealed class DiagramContractTests
         Assert.Contains(ZoorceDiagramActionKind.Endpoint, Enum.GetValues<ZoorceDiagramActionKind>());
         Assert.Equal("#010203", new ZoorceDiagramGradient("#010203", "#040506").StartColor);
         Assert.Equal(ZoorceDiagramNodeKinds.DataStore, ZoorceDiagramNodeKinds.DataStore);
+        Assert.Equal("subprocess", ZoorceDiagramNodeKinds.Subprocess);
         Assert.Throws<ArgumentNullException>(() => component.Invoke(null!));
 
         var result = Assert.IsType<ViewViewComponentResult>(component.Invoke(CreateFlow() with { Id = " diagram-view " }));
