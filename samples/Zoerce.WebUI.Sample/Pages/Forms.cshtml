@@ -65,7 +65,8 @@
         new ZoorceFormControlOptions { Id = "release-emoji", Name = "releaseEmoji", Kind = ZoorceFormControlKind.EmojiPicker, Label = "Release emoji", Value = "sparkles", Choices = emoji },
         new ZoorceFormControlOptions { Id = "contact-phone", Name = "phone", Kind = ZoorceFormControlKind.Phone, Label = "Release contact", Value = "55 1234 5678", Placeholder = "55 1234 5678", Choices = [new("+52", "MX +52"), new("+1", "US +1"), new("+34", "ES +34")], Metadata = new Dictionary<string, string?> { ["country"] = "+52" } },
         new ZoorceFormControlOptions { Id = "release-address", Name = "address", Kind = ZoorceFormControlKind.Address, Label = "Deployment address", Value = "Av. Reforma 250", Choices = [new("MX", "Mexico"), new("US", "United States"), new("ES", "Spain")], Metadata = new Dictionary<string, string?> { ["country"] = "MX" } },
-        new ZoorceFormControlOptions { Id = "approval-code", Name = "approvalCode", Kind = ZoorceFormControlKind.Otp, Label = "Approval code", Value = "2479", MaximumLength = 6 },
+        new ZoorceFormControlOptions { Id = "approval-code", Name = "approvalCode", Kind = ZoorceFormControlKind.Otp, Label = "Approval code", Description = "Six-digit numeric code. Paste a whole code, use arrows to move, or Backspace to correct the previous digit.", Value = "2479", CodeLength = 6, Required = true },
+        new ZoorceFormControlOptions { Id = "release-access-code", Name = "accessCode", Kind = ZoorceFormControlKind.Otp, Label = "Release access code", Description = "An uppercase alphanumeric code. It demonstrates configurable length and character rules.", Value = "r9m", CodeLength = 8, OtpCharacterSet = ZoorceOtpCharacterSet.Alphanumeric, OtpTextTransform = ZoorceOtpTextTransform.Uppercase },
         new ZoorceFormControlOptions { Id = "release-metadata", Name = "metadata", Kind = ZoorceFormControlKind.KeyValue, Label = "Release metadata", Value = "{\"service\":\"activity\",\"region\":\"mx-central\"}" }
     };
 }
@@ -139,6 +140,7 @@
             const labelFor = id => document.querySelector(`[data-z-form-id="${CSS.escape(id)}"] .z-form-label`)?.textContent?.replace("*", "").trim() || "This control";
             const show = (heading, message) => { title.textContent = heading; output.textContent = message; };
             form.addEventListener("zoerce:form:change", event => show(`${labelFor(event.detail.id)} updated`, "Its value remains synchronized with this form."));
+            form.addEventListener("zoerce:form:complete", event => show(`${labelFor(event.detail.id)} complete`, "The full verification code is ready for the host form."));
             form.addEventListener("zoerce:form:filechange", event => show("File selection updated", "The browser will include the selected file when the host submits this form."));
             form.addEventListener("zoerce:form:invalid", event => show(`${labelFor(event.detail.id)} needs attention`, event.detail.message));
             form.addEventListener("submit", event => {

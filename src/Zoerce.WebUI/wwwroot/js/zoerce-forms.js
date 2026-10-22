@@ -33,8 +33,8 @@
     };
 
     const invalid = (root, message) => {
-        const field = root.querySelector("[data-z-form-input]");
-        field?.setAttribute("aria-invalid", "true");
+        root.querySelectorAll("[data-z-form-input]").forEach(field => field.setAttribute("aria-invalid", "true"));
+        root.querySelector("[data-z-otp-input]")?.setAttribute("aria-invalid", "true");
         root.classList.add("is-error");
         const target = root.querySelector("[data-z-form-message]");
         if (target) target.textContent = message;
@@ -46,7 +46,8 @@
 
     const clearInvalid = root => {
         root.classList.remove("is-error");
-        root.querySelector("[data-z-form-input]")?.removeAttribute("aria-invalid");
+        root.querySelectorAll("[data-z-form-input]").forEach(field => field.removeAttribute("aria-invalid"));
+        root.querySelector("[data-z-otp-input]")?.removeAttribute("aria-invalid");
     };
 
     const updateNumber = (root, direction) => {
@@ -256,13 +257,101 @@
     const bindOtp = root => {
         const hidden = root.querySelector("[data-z-form-value]");
         const cells = [...root.querySelectorAll("[data-z-otp-cell]")];
+        const status = root.querySelector("[data-z-otp-status]");
         if (!hidden || !cells.length) return;
-        const sync = () => { hidden.value = cells.map(cell => cell.value).join(""); changed(root, "otp"); };
+
+        const characterSet = root.dataset.zOtpCharacterSet || "Numeric";
+        const textTransform = root.dataset.zOtpTextTransform || "Uppercase";
+        const accepts = character => characterSet === "Numeric" ? /[0-9]/.test(character) : characterSet === "Alphabetic" ? /[A-Za-z]/.test(character) : /[A-Za-z0-9]/.test(character);
+        const normalize = value => [...String(value ?? "")]
+            .filter(accepts)
+            .map(character => textTransform === "Uppercase" ? character.toUpperCase() : textTransform === "Lowercase" ? character.toLowerCase() : character)
+            .join("");
+        const isEditable = cell => !cell.disabled && !cell.readOnly;
+        let wasComplete = cells.every(cell => cell.value.length === 1);
+
+        const sync = (source = "otp", notify = true) => {
+            const value = cells.map(cell => cell.value).join("");
+            const complete = cells.every(cell => cell.value.length === 1);
+            hidden.value = value;
+            root.classList.toggle("is-complete", complete);
+            root.dataset.zOtpComplete = String(complete);
+            if (status) status.textContent = complete ? "Code complete." : `${value.length} of ${cells.length} characters entered.`;
+            if (notify) {
+                clearInvalid(root);
+                changed(root, source, { complete });
+            }
+            if (notify && complete && !wasComplete) {
+                root.dispatchEvent(new CustomEvent("zoerce:form:complete", {
+                    bubbles: true,
+                    detail: { id: root.dataset.zFormId, kind: root.dataset.zFormKind, name: hidden.name, value, source }
+                }));
+            }
+            wasComplete = complete;
+        };
+
+        const focus = index => {
+            const target = cells[Math.max(0, Math.min(index, cells.length - 1))];
+            if (target && !target.disabled) target.focus();
+        };
+
+        const write = (startIndex, rawValue, source = "otp") => {
+            const characters = normalize(rawValue);
+            const current = cells[startIndex];
+            if (!current || !isEditable(current)) return;
+
+            if (!characters) {
+                current.value = "";
+                sync(source);
+                return;
+            }
+
+            let written = 0;
+            for (const character of characters) {
+                const target = cells[startIndex + written];
+                if (!target || !isEditable(target)) break;
+                target.value = character;
+                written += 1;
+            }
+            focus(startIndex + written);
+            sync(source);
+        };
+
         cells.forEach((cell, index) => {
-            cell.addEventListener("input", () => { cell.value = cell.value.replace(/\D/g, "").slice(-1); if (cell.value && cells[index + 1]) cells[index + 1].focus(); sync(); });
-            cell.addEventListener("keydown", event => { if (event.key === "Backspace" && !cell.value && cells[index - 1]) cells[index - 1].focus(); });
-            cell.addEventListener("paste", event => { const digits = event.clipboardData?.getData("text").replace(/\D/g, "") ?? ""; if (!digits) return; event.preventDefault(); digits.slice(0, cells.length).split("").forEach((digit, offset) => { if (cells[index + offset]) cells[index + offset].value = digit; }); cells[Math.min(index + digits.length, cells.length - 1)].focus(); sync(); });
+            cell.value = normalize(cell.value).slice(0, 1);
+            cell.addEventListener("focus", () => cell.select());
+            cell.addEventListener("input", () => write(index, cell.value));
+            cell.addEventListener("paste", event => {
+                event.preventDefault();
+                write(index, event.clipboardData?.getData("text") ?? "", "otp-paste");
+            });
+            cell.addEventListener("keydown", event => {
+                if (!isEditable(cell)) return;
+                if (event.key === "Backspace") {
+                    event.preventDefault();
+                    if (cell.value) {
+                        cell.value = "";
+                    } else if (cells[index - 1] && isEditable(cells[index - 1])) {
+                        cells[index - 1].value = "";
+                        focus(index - 1);
+                    }
+                    sync("otp-keyboard");
+                    return;
+                }
+                if (event.key === "Delete") {
+                    event.preventDefault();
+                    cell.value = "";
+                    sync("otp-keyboard");
+                    return;
+                }
+                if (event.key === "ArrowLeft") { event.preventDefault(); focus(index - 1); return; }
+                if (event.key === "ArrowRight") { event.preventDefault(); focus(index + 1); return; }
+                if (event.key === "Home") { event.preventDefault(); focus(0); return; }
+                if (event.key === "End") { event.preventDefault(); focus(cells.length - 1); return; }
+            });
         });
+
+        sync("otp", false);
     };
 
     const bindKeyValue = root => {
@@ -288,7 +377,7 @@
     };
 
     const bindInputEvents = root => {
-        root.querySelectorAll("[data-z-form-input]").forEach(input => input.addEventListener("change", () => { clearInvalid(root); changed(root, "input"); }));
+        root.querySelectorAll("[data-z-form-input]:not([data-z-otp-cell])").forEach(input => input.addEventListener("change", () => { clearInvalid(root); changed(root, "input"); }));
         root.querySelectorAll("[data-z-form-choice]").forEach(input => input.addEventListener("change", () => changed(root, "choice")));
     };
 

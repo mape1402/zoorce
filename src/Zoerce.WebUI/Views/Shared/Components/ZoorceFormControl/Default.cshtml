@@ -16,13 +16,18 @@
     var hasNumberPrefix = !string.IsNullOrWhiteSpace(Model.Prefix) || Model.Kind == ZoorceFormControlKind.Currency;
     var hasNumberSuffix = !string.IsNullOrWhiteSpace(Model.Suffix) || Model.Kind == ZoorceFormControlKind.Percentage;
     var isGroup = Model.Kind is ZoorceFormControlKind.CheckboxGroup or ZoorceFormControlKind.RadioGroup or ZoorceFormControlKind.ChipGroup;
+    var labelFor = Model.Kind == ZoorceFormControlKind.Otp ? $"{Model.Id}-0" : Model.Id;
+    var otpLength = Model.GetOtpLength();
+    var otpInputMode = Model.OtpCharacterSet == ZoorceOtpCharacterSet.Numeric ? "numeric" : "text";
+    var otpAutocomplete = Model.Autocomplete ?? (Model.OtpCharacterSet == ZoorceOtpCharacterSet.Numeric ? "one-time-code" : "off");
+    var otpCellName = Model.OtpCharacterSet == ZoorceOtpCharacterSet.Numeric ? "Digit" : "Character";
     string StateClass() => Model.State == ZoorceFormControlState.Default ? string.Empty : $"is-{Model.State.ToString().ToLowerInvariant()}";
     string ChoiceId(ZoorceFormChoice choice, int index) => $"{Model.Id}-{index}";
 }
 <div class="z-form-field z-form-field--@Model.Kind.ToString().ToLowerInvariant() @StateClass() @(Model.Disabled ? "is-disabled" : string.Empty)" data-z-form-control data-z-form-kind="@Model.Kind" data-z-form-id="@Model.Id" data-z-form-mask="@Model.Mask" data-z-form-min="@min" data-z-form-max="@max" data-z-form-step="@step" data-z-form-locale="@Model.Locale" data-z-form-currency="@Model.CurrencyCode" data-z-form-required="@Model.Required.ToString().ToLowerInvariant()">
     @if (Model.Kind != ZoorceFormControlKind.Hidden && !isGroup && !string.IsNullOrWhiteSpace(Model.Label))
     {
-        <label class="z-form-label" for="@Model.Id">@Model.Label @if (Model.Required) { <span class="z-form-required" aria-hidden="true">*</span> }</label>
+        <label class="z-form-label" for="@labelFor">@Model.Label @if (Model.Required) { <span class="z-form-required" aria-hidden="true">*</span> }</label>
     }
     @if (isGroup)
     {
@@ -170,7 +175,16 @@
                     <div class="z-address-grid" data-z-address><input id="@Model.Id" class="z-form-input z-address-street" name="@name-street" value="@Model.Value" placeholder="Street and number" disabled="@Model.Disabled" data-z-form-input /><input class="z-form-input" name="@name-unit" placeholder="Unit / suite" disabled="@Model.Disabled" data-z-form-input /><input class="z-form-input" name="@name-city" placeholder="City" disabled="@Model.Disabled" data-z-form-input /><input class="z-form-input" name="@name-region" placeholder="State / region" disabled="@Model.Disabled" data-z-form-input /><input class="z-form-input" name="@name-postal" placeholder="Postal code" disabled="@Model.Disabled" data-z-form-input /><select class="z-form-input z-form-select" name="@name-country" disabled="@Model.Disabled" data-z-form-input><option value="">Country</option>@foreach (var choice in Model.Choices) { <option value="@choice.Value" selected="@string.Equals(configuredCountry, choice.Value, StringComparison.OrdinalIgnoreCase)">@choice.Label</option> }</select></div>
                     break;
                 case ZoorceFormControlKind.Otp:
-                    <input id="@Model.Id" type="hidden" name="@name" value="@Model.Value" data-z-form-value /><div class="z-otp-input" data-z-otp-input>@for (var index = 0; index < (Model.MaximumLength ?? 6); index++) { <input type="text" inputmode="numeric" maxlength="1" aria-label="Digit @(index + 1)" value="@(Model.Value?.ElementAtOrDefault(index))" disabled="@Model.Disabled" data-z-otp-cell /> }</div>
+                    <input id="@Model.Id" type="hidden" name="@name" value="@Model.Value" disabled="@Model.Disabled" data-z-form-value />
+                    <div class="z-otp-input" role="group" aria-label="@(Model.Label ?? "Verification code")" aria-describedby="@describedBy" aria-required="@Model.Required.ToString().ToLowerInvariant()" aria-invalid="@hasError.ToString().ToLowerInvariant()" data-z-otp-input data-z-otp-character-set="@Model.OtpCharacterSet" data-z-otp-text-transform="@Model.OtpTextTransform">
+                        @for (var index = 0; index < otpLength; index++)
+                        {
+                            var cellId = $"{Model.Id}-{index}";
+                            var cellValue = index < (Model.Value?.Length ?? 0) ? Model.Value![index].ToString() : string.Empty;
+                            <input id="@cellId" type="text" inputmode="@otpInputMode" maxlength="1" autocomplete="@(index == 0 ? otpAutocomplete : "off")" aria-label="@otpCellName @(index + 1) of @otpLength" aria-describedby="@describedBy" aria-invalid="@hasError.ToString().ToLowerInvariant()" value="@cellValue" required="@Model.Required" disabled="@Model.Disabled" readonly="@Model.ReadOnly" data-z-form-input data-z-otp-cell />
+                        }
+                        <span class="z-visually-hidden" aria-live="polite" data-z-otp-status></span>
+                    </div>
                     break;
                 case ZoorceFormControlKind.KeyValue:
                     <input id="@Model.Id" type="hidden" name="@name" value="@Model.Value" data-z-form-value /><div class="z-key-value" data-z-key-value><div data-z-key-value-rows></div><button type="button" class="z-form-secondary-button" data-z-key-value-add disabled="@Model.Disabled">+ Add property</button></div>

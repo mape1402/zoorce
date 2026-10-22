@@ -830,10 +830,41 @@ public sealed class ComponentContractTests
     {
         Assert.Throws<ArgumentException>(() => new ZoorceFormControlOptions { Id = " " }.Normalize());
         Assert.Throws<ArgumentOutOfRangeException>(() => new ZoorceFormControlOptions { Id = "amount", Step = 0 }.Normalize());
+        Assert.Throws<ArgumentOutOfRangeException>(() => new ZoorceFormControlOptions { Id = "code", Kind = ZoorceFormControlKind.Otp, CodeLength = 0 }.Normalize());
         Assert.Throws<ArgumentException>(() => new ZoorceFormControlOptions { Id = "amount", Minimum = 3, Maximum = 2 }.Normalize());
         Assert.Throws<ArgumentException>(() => new ZoorceFormControlOptions { Id = "choice", Choices = [new("same", "One"), new(" SAME ", "Two")] }.Normalize());
         Assert.Throws<ArgumentException>(() => new ZoorceFormControlOptions { Id = "locale", Locale = "not_a_locale" }.Normalize());
         Assert.Throws<ArgumentException>(() => new ZoorceFormControlOptions { Id = "currency", CurrencyCode = "US" }.Normalize());
+    }
+
+    [Fact]
+    public void Otp_control_normalizes_length_character_set_and_case()
+    {
+        var code = new ZoorceFormControlOptions
+        {
+            Id = "release-code",
+            Kind = ZoorceFormControlKind.Otp,
+            Value = " a2-b9x ",
+            CodeLength = 4,
+            OtpCharacterSet = ZoorceOtpCharacterSet.Alphanumeric,
+            OtpTextTransform = ZoorceOtpTextTransform.Uppercase
+        }.Normalize();
+
+        var numericCode = new ZoorceFormControlOptions
+        {
+            Id = "legacy-code",
+            Kind = ZoorceFormControlKind.Otp,
+            Value = "ab1237",
+            MaximumLength = 4
+        }.Normalize();
+
+        Assert.Equal(4, code.CodeLength);
+        Assert.Equal(4, code.GetOtpLength());
+        Assert.Equal("A2B9", code.Value);
+        Assert.Equal(4, numericCode.CodeLength);
+        Assert.Equal("1237", numericCode.Value);
+        Assert.Contains(ZoorceOtpCharacterSet.Alphanumeric, Enum.GetValues<ZoorceOtpCharacterSet>());
+        Assert.Contains(ZoorceOtpTextTransform.Lowercase, Enum.GetValues<ZoorceOtpTextTransform>());
     }
 
     [Fact]
@@ -855,6 +886,7 @@ public sealed class ComponentContractTests
         Assert.Equal("success", chipModel.Tone);
         Assert.Contains(ZoorceFormControlKind.ColorPicker, Enum.GetValues<ZoorceFormControlKind>());
         Assert.Contains(ZoorceFormControlKind.ToggleSwitch, Enum.GetValues<ZoorceFormControlKind>());
+        Assert.Contains(ZoorceFormControlKind.Otp, Enum.GetValues<ZoorceFormControlKind>());
         Assert.DoesNotContain("Json", Enum.GetNames<ZoorceFormControlKind>());
         Assert.Contains(ZoorceFormControlState.Error, Enum.GetValues<ZoorceFormControlState>());
     }

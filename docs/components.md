@@ -213,11 +213,13 @@ The available kinds are grouped below:
 
 `Masked` understands `#` (digit), `A` (letter), and `*` (alphanumeric) placeholders. This covers fiscal references, phone formats, card-like inputs, postal codes, and product-specific values without hardcoding local rules in the package. Currency and percentage controls build on the numeric behavior; phone, OTP, address, and key/value editors retain regular submitted values so the server stays authoritative.
 
+`Otp` uses `CodeLength` (default: 6) to render its cells; `MaximumLength` remains a backwards-compatible fallback. Set `OtpCharacterSet` to `Numeric`, `Alphabetic`, or `Alphanumeric`, and choose `OtpTextTransform` (`Preserve`, `Uppercase`, or `Lowercase`) for letters. It accepts paste from the current cell, keeps the aggregate value in its normal named hidden field, supports arrows, Home/End, Backspace/Delete, read-only/disabled states, native required validation, and emits `zoerce:form:complete` once when a code becomes complete.
+
 `QuantityStepper` is deliberately separate from `NumericUpDown`: the former has large, touch-friendly circular controls and a centered discrete value, while the latter supports compact, direct numeric entry. Both honor `Minimum`, `Maximum`, `Step`, disabled state, keyboard entry, and scoped change events.
 
 `ColorPicker` accepts six-digit HEX values; set `AllowAlpha` to expose an opacity control and serialize an eight-digit HEX value when opacity is below 100%. Choices may provide product-specific swatches. `ZoorceChip` is also exposed as a small standalone View Component for status, filters, removable labels, and selected states.
 
-Listen at an individual component root or a containing form for `zoerce:form:change`, `zoerce:form:filechange`, and `zoerce:form:invalid`. Each event bubbles with `{ id, kind, name, value, source }`; selection controls also include their selected values. No global page coordinator is necessary.
+Listen at an individual component root or a containing form for `zoerce:form:change`, `zoerce:form:complete`, `zoerce:form:filechange`, and `zoerce:form:invalid`. Each event bubbles with `{ id, kind, name, value, source }`; selection controls also include their selected values. `zoerce:form:complete` is emitted when an OTP transitions from incomplete to complete. No global page coordinator is necessary.
 
 ```js
 document.querySelector("[data-z-form-demo]").addEventListener("zoerce:form:change", event => {
