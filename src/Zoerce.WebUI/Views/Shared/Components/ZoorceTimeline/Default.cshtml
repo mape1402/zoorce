@@ -23,6 +23,7 @@
         followLatest = Model.FollowLatest,
         maxItems = Model.MaxItems,
         presentation = Model.Presentation,
+        templates = Model.ItemTemplates.Select(template => new { template.Key, template.ClientTemplateId }),
         sourceUrl = Model.SourceUrl,
         refreshMode = Model.RefreshMode,
         realtimeHubUrl = Model.RealtimeHubUrl,
@@ -90,10 +91,20 @@
                 previousGroup = group;
             }
             var selected = string.Equals(item.Id, Model.SelectedItemId, StringComparison.OrdinalIgnoreCase);
+            var template = item.TemplateKey is null ? null : Model.ItemTemplates.FirstOrDefault(candidate => string.Equals(candidate.Key, item.TemplateKey, StringComparison.OrdinalIgnoreCase));
+            var clickBehavior = Model.ResolveClickBehavior(item);
             var hasAction = item.Action is not null && Model.Interaction != ZoorceTimelineInteraction.ReadOnly;
+            var canActivate = clickBehavior != ZoorceTimelineItemClickBehavior.None && (clickBehavior != ZoorceTimelineItemClickBehavior.Select || item.IsSelectable);
+            var activationLabel = clickBehavior switch
+            {
+                ZoorceTimelineItemClickBehavior.Select => $"Select {item.Title}",
+                ZoorceTimelineItemClickBehavior.Navigate => $"Open {item.Title}",
+                ZoorceTimelineItemClickBehavior.Command => $"Run {item.Title}",
+                _ => $"Inspect {item.Title}"
+            };
             var itemClasses = $"z-timeline-item is-{item.State.ToString().ToLowerInvariant()} tone-{item.Tone.ToString().ToLowerInvariant()} placement-{item.Placement.ToString().ToLowerInvariant()}" + (selected ? " is-selected" : string.Empty) + (!item.IsRead ? " is-unread" : string.Empty) + (item.IsPinned ? " is-pinned" : string.Empty);
             var segment = Model.Items.Count == 1 ? "only" : index == 0 ? "start" : index == Model.Items.Count - 1 ? "end" : "middle";
-            <li class="@itemClasses" data-z-timeline-item data-z-timeline-item-id="@item.Id" data-z-timeline-index="@index" data-z-timeline-segment="@segment" data-z-timeline-selectable="@item.IsSelectable.ToString().ToLowerInvariant()" data-z-timeline-timestamp="@item.Timestamp.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture)" data-z-timeline-tone="@item.Tone" data-z-timeline-state="@item.State" data-z-timeline-placement="@item.Placement">
+            <li class="@itemClasses" data-z-timeline-item data-z-timeline-item-id="@item.Id" data-z-timeline-index="@index" data-z-timeline-segment="@segment" data-z-timeline-selectable="@item.IsSelectable.ToString().ToLowerInvariant()" data-z-timeline-timestamp="@item.Timestamp.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture)" data-z-timeline-tone="@item.Tone" data-z-timeline-state="@item.State" data-z-timeline-placement="@item.Placement" data-z-timeline-template-key="@item.TemplateKey" data-z-timeline-click-behavior="@clickBehavior" data-z-timeline-command-id="@(item.CommandId ?? item.Action?.Id)" data-z-timeline-target-url="@(item.TargetUrl ?? item.Action?.TargetUrl)">
                 @if (!string.IsNullOrWhiteSpace(item.Flag))
                 {
                     <span class="z-timeline-flag" data-z-timeline-flag>@item.Flag</span>
@@ -106,6 +117,8 @@
                     {
                         <time class="z-timeline-time" datetime="@item.Timestamp.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture)" data-z-timeline-time>@item.Timestamp.ToLocalTime().ToString(dateFormat, CultureInfo.CurrentCulture)</time>
                     }
+                    @if (template is null)
+                    {
                     <article class="z-timeline-card" data-z-timeline-card>
                         <div class="z-timeline-card-heading">
                             <div>
@@ -158,10 +171,22 @@
                             }
                         }
                     </article>
+                    }
+                    else
+                    {
+                        @await Html.PartialAsync(template.PartialViewName, new ZoorceTimelineItemTemplateContext(Model, item, index, selected, item.Timestamp.ToLocalTime().ToString(dateFormat, CultureInfo.CurrentCulture), Model.ShowRelativeTime ? RelativeTime(item) : null, clickBehavior))
+                    }
                 </div>
-                @if (Model.Interaction is ZoorceTimelineInteraction.Select or ZoorceTimelineInteraction.Command)
+                @if (canActivate)
                 {
-                    <button class="z-timeline-select" type="button" data-z-timeline-select aria-label="Select @item.Title" aria-pressed="@selected.ToString().ToLowerInvariant()" tabindex="@(selected ? "0" : "-1")"></button>
+                    if (clickBehavior == ZoorceTimelineItemClickBehavior.Select)
+                    {
+                        <button class="z-timeline-select" type="button" data-z-timeline-activate aria-label="@activationLabel" aria-pressed="@selected.ToString().ToLowerInvariant()" tabindex="@(selected ? "0" : "-1")"></button>
+                    }
+                    else
+                    {
+                        <button class="z-timeline-select" type="button" data-z-timeline-activate aria-label="@activationLabel" tabindex="0"></button>
+                    }
                 }
             </li>
         }

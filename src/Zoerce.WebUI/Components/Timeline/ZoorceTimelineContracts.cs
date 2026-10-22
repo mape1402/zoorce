@@ -49,6 +49,28 @@ public enum ZoorceTimelineInteraction
     Command
 }
 
+/// <summary>Defines the behavior invoked when a timeline item itself is activated.</summary>
+public enum ZoorceTimelineItemClickBehavior
+{
+    /// <summary>Uses the interaction configured for the containing timeline.</summary>
+    Inherit,
+
+    /// <summary>Does not make the item activatable.</summary>
+    None,
+
+    /// <summary>Selects the item.</summary>
+    Select,
+
+    /// <summary>Navigates to the configured target URL.</summary>
+    Navigate,
+
+    /// <summary>Raises a command event for the host to handle.</summary>
+    Command,
+
+    /// <summary>Raises an item-click event without a default action.</summary>
+    Custom
+}
+
 /// <summary>Defines how items are grouped in a vertical timeline.</summary>
 public enum ZoorceTimelineGroupBy
 {
@@ -169,7 +191,28 @@ public sealed record ZoorceTimelineItem(
     ZoorceTimelineAction? Action = null,
     bool IsRead = true,
     bool IsPinned = false,
-    bool IsSelectable = true);
+    bool IsSelectable = true,
+    string? TemplateKey = null,
+    ZoorceTimelineItemClickBehavior ClickBehavior = ZoorceTimelineItemClickBehavior.Inherit,
+    string? CommandId = null,
+    string? TargetUrl = null);
+
+/// <summary>Maps an item template key to its server-rendered and client-side representations.</summary>
+public sealed record ZoorceTimelineItemTemplate(string Key, string PartialViewName, string? ClientTemplateId = null);
+
+/// <summary>Supplies normalized timeline data to a custom item partial.</summary>
+public sealed record ZoorceTimelineItemTemplateContext(
+    ZoorceTimelineOptions Timeline,
+    ZoorceTimelineItem Item,
+    int Index,
+    bool IsSelected,
+    string TimestampText,
+    string? RelativeTime,
+    ZoorceTimelineItemClickBehavior ClickBehavior)
+{
+    /// <summary>Returns a normalized metadata value when the template needs a domain-specific field.</summary>
+    public string? Metadata(string key) => Item.Metadata is not null && Item.Metadata.TryGetValue(key, out var value) ? value : null;
+}
 
 /// <summary>Groups the visual decisions shared by one timeline instance.</summary>
 public sealed record ZoorceTimelinePresentation

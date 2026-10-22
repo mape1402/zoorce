@@ -60,6 +60,9 @@ public sealed record ZoorceTimelineOptions
     /// <summary>Gets the visual options shared by every event in this instance.</summary>
     public ZoorceTimelinePresentation Presentation { get; init; } = new();
 
+    /// <summary>Gets the named content templates available to items in this timeline.</summary>
+    public IReadOnlyList<ZoorceTimelineItemTemplate> ItemTemplates { get; init; } = [];
+
     /// <summary>Gets an optional same-origin endpoint that returns a timeline snapshot.</summary>
     public string? SourceUrl { get; init; }
 
@@ -104,6 +107,13 @@ public sealed record ZoorceTimelineOptions
             throw new ArgumentException("The selected event must identify one configured item.", nameof(SelectedItemId));
         }
 
+        var templates = NormalizeItemTemplates(ItemTemplates);
+        var unknownTemplate = normalizedItems.FirstOrDefault(item => item.TemplateKey is not null && !templates.Any(template => string.Equals(template.Key, item.TemplateKey, StringComparison.OrdinalIgnoreCase)));
+        if (unknownTemplate is not null)
+        {
+            throw new ArgumentException($"Timeline item '{unknownTemplate.Id}' references unknown template '{unknownTemplate.TemplateKey}'.", nameof(Items));
+        }
+
         var variant = Enum.IsDefined(Variant) ? Variant : ZoorceTimelineVariant.Activity;
         var orientation = Enum.IsDefined(Orientation) ? Orientation : ZoorceTimelineOrientation.Auto;
 
@@ -121,6 +131,7 @@ public sealed record ZoorceTimelineOptions
             GroupBy = Enum.IsDefined(GroupBy) ? GroupBy : ZoorceTimelineGroupBy.None,
             MaxItems = MaxItems is > 0 ? MaxItems : null,
             Presentation = NormalizePresentation(Presentation),
+            ItemTemplates = templates,
             SourceUrl = TrimOrNull(SourceUrl),
             RefreshMode = Enum.IsDefined(RefreshMode) ? RefreshMode : ZoorceTimelineRefreshMode.Merge,
             RealtimeHubUrl = TrimOrNull(RealtimeHubUrl),
@@ -158,7 +169,29 @@ public sealed record ZoorceTimelineOptions
             Participants = (item.Participants ?? []).Where(actor => actor is not null).Select(NormalizeActor).Cast<ZoorceTimelineActor>().ToArray(),
             Tags = tags,
             Metadata = metadata,
-            Action = NormalizeAction(item.Action)
+            Action = NormalizeAction(item.Action),
+            TemplateKey = TrimOrNull(item.TemplateKey),
+            ClickBehavior = Enum.IsDefined(item.ClickBehavior) ? item.ClickBehavior : ZoorceTimelineItemClickBehavior.Inherit,
+            CommandId = TrimOrNull(item.CommandId),
+            TargetUrl = TrimOrNull(item.TargetUrl)
+        };
+    }
+
+    /// <summary>Resolves an item's explicit behavior against the timeline default.</summary>
+    public ZoorceTimelineItemClickBehavior ResolveClickBehavior(ZoorceTimelineItem item)
+    {
+        ArgumentNullException.ThrowIfNull(item);
+        if (item.ClickBehavior != ZoorceTimelineItemClickBehavior.Inherit)
+        {
+            return item.ClickBehavior;
+        }
+
+        return Interaction switch
+        {
+            ZoorceTimelineInteraction.Select => ZoorceTimelineItemClickBehavior.Select,
+            ZoorceTimelineInteraction.Navigate => ZoorceTimelineItemClickBehavior.Navigate,
+            ZoorceTimelineInteraction.Command => ZoorceTimelineItemClickBehavior.Select,
+            _ => ZoorceTimelineItemClickBehavior.None
         };
     }
 
@@ -185,6 +218,37 @@ public sealed record ZoorceTimelineOptions
             ConnectorStyle = Enum.IsDefined(value.ConnectorStyle) ? value.ConnectorStyle : ZoorceTimelineConnectorStyle.Solid,
             ActiveMotion = Enum.IsDefined(value.ActiveMotion) ? value.ActiveMotion : ZoorceTimelineActiveMotion.None
         };
+    }
+
+    private static IReadOnlyList<ZoorceTimelineItemTemplate> NormalizeItemTemplates(IReadOnlyList<ZoorceTimelineItemTemplate>? templates)
+    {
+        var values = (templates ?? []).Select(template =>
+        {
+            ArgumentNullException.ThrowIfNull(template);
+            if (string.IsNullOrWhiteSpace(template.Key))
+            {
+                throw new ArgumentException("Timeline item templates require a key.", nameof(ItemTemplates));
+            }
+
+            if (string.IsNullOrWhiteSpace(template.PartialViewName))
+            {
+                throw new ArgumentException($"Timeline item template '{template.Key}' requires a partial view.", nameof(ItemTemplates));
+            }
+
+            return template with
+            {
+                Key = template.Key.Trim(),
+                PartialViewName = template.PartialViewName.Trim(),
+                ClientTemplateId = TrimOrNull(template.ClientTemplateId)
+            };
+        }).ToArray();
+
+        if (values.Select(template => template.Key).Distinct(StringComparer.OrdinalIgnoreCase).Count() != values.Length)
+        {
+            throw new ArgumentException("Timeline item template keys must be unique.", nameof(ItemTemplates));
+        }
+
+        return values;
     }
 
     private static string? TrimOrNull(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();

@@ -5,6 +5,7 @@
     const states = ["Default", "Highlighted", "Pending", "Completed", "Error"];
     const tones = ["Auto", "Neutral", "Primary", "Info", "Success", "Warning", "Danger"];
     const placements = ["Auto", "Left", "Right", "Above", "Below"];
+    const clickBehaviors = ["Inherit", "None", "Select", "Navigate", "Command", "Custom"];
     const overflowModes = ["Auto", "Scroll", "Stack"];
     const enumValue = (value, values, fallback) => Number.isInteger(value) && value >= 0 && value < values.length
         ? values[value]
@@ -77,10 +78,10 @@
                     this.dispatchAction(item, action.dataset.zTimelineActionId ?? "");
                     return;
                 }
-                const select = event.target.closest("[data-z-timeline-select]");
-                if (select && this.root.contains(select)) {
+                const activate = event.target.closest("[data-z-timeline-activate]");
+                if (activate && this.root.contains(activate)) {
                     event.preventDefault();
-                    this.select(select.closest("[data-z-timeline-item]"), true);
+                    this.activate(activate.closest("[data-z-timeline-item]"), true, "card");
                 }
             }, { signal });
             this.root.addEventListener("keydown", event => this.handleKeyboard(event), { signal });
@@ -100,10 +101,10 @@
                     return;
                 }
             }
-            const select = event.target.closest("[data-z-timeline-select]");
-            if (!select || !this.root.contains(select)) return;
-            const items = this.items().filter(item => item.querySelector("[data-z-timeline-select]"));
-            const index = items.indexOf(select.closest("[data-z-timeline-item]"));
+            const activate = event.target.closest("[data-z-timeline-activate]");
+            if (!activate || !this.root.contains(activate)) return;
+            const items = this.items().filter(item => item.querySelector("[data-z-timeline-activate]"));
+            const index = items.indexOf(activate.closest("[data-z-timeline-item]"));
             let target = null;
             const horizontal = this.root.dataset.zTimelineEffectiveOrientation === "Horizontal";
             if (event.key === (horizontal ? "ArrowRight" : "ArrowDown")) target = index + 1;
@@ -112,34 +113,73 @@
             if (event.key === "End") target = items.length - 1;
             if (target === null) return;
             event.preventDefault();
-            items[Math.max(0, Math.min(items.length - 1, target))]?.querySelector("[data-z-timeline-select]")?.focus({ preventScroll: true });
+            items[Math.max(0, Math.min(items.length - 1, target))]?.querySelector("[data-z-timeline-activate]")?.focus({ preventScroll: true });
         }
 
-        dispatchAction(item, actionId) {
-            const detail = { timelineId: this.root.id, itemId: item.dataset.zTimelineItemId, actionId };
+        itemDetail(item, source = "card") {
+            return {
+                timelineId: this.root.id,
+                itemId: item.dataset.zTimelineItemId,
+                templateKey: item.dataset.zTimelineTemplateKey || null,
+                behavior: item.dataset.zTimelineClickBehavior || "None",
+                commandId: item.dataset.zTimelineCommandId || null,
+                targetUrl: item.dataset.zTimelineTargetUrl || null,
+                source
+            };
+        }
+
+        dispatchItemClick(item, source) {
+            const detail = this.itemDetail(item, source);
+            const request = new CustomEvent("zoerce:timeline:request-item-click", { bubbles: true, cancelable: true, detail });
+            if (!this.root.dispatchEvent(request)) return false;
+            this.root.dispatchEvent(new CustomEvent("zoerce:timeline:item-click", { bubbles: true, detail }));
+            return true;
+        }
+
+        dispatchAction(item, actionId, source = "action") {
+            const detail = { ...this.itemDetail(item, source), actionId };
             this.root.dispatchEvent(new CustomEvent("zoerce:timeline:action", { bubbles: true, detail }));
+        }
+
+        activate(item, focus, source) {
+            if (!item || !this.dispatchItemClick(item, source)) return;
+            const behavior = item.dataset.zTimelineClickBehavior || "None";
+            if (behavior === "Select") {
+                this.select(item, focus);
+                return;
+            }
+            if (behavior === "Command") {
+                this.dispatchAction(item, item.dataset.zTimelineCommandId || "item-click", source);
+                return;
+            }
+            if (behavior !== "Navigate") return;
+            const detail = this.itemDetail(item, source);
+            const request = new CustomEvent("zoerce:timeline:request-navigate", { bubbles: true, cancelable: true, detail });
+            if (!this.root.dispatchEvent(request)) return;
+            this.root.dispatchEvent(new CustomEvent("zoerce:timeline:navigate", { bubbles: true, detail }));
+            if (detail.targetUrl) window.location.assign(detail.targetUrl);
         }
 
         select(item, focus) {
             if (!item || item.dataset.zTimelineSelectable === "false") return;
             const id = item.dataset.zTimelineItemId;
             if (!id) return;
-            const request = new CustomEvent("zoerce:timeline:request-select", { bubbles: true, cancelable: true, detail: { timelineId: this.root.id, itemId: id } });
+            const request = new CustomEvent("zoerce:timeline:request-select", { bubbles: true, cancelable: true, detail: this.itemDetail(item) });
             if (!this.root.dispatchEvent(request)) return;
             this.root.dataset.zTimelineSelected = id;
             this.items().forEach(candidate => {
                 const selected = candidate === item;
                 candidate.classList.toggle("is-selected", selected);
-                const button = candidate.querySelector("[data-z-timeline-select]");
+                const button = candidate.querySelector("[data-z-timeline-activate]");
                 if (button) {
                     button.setAttribute("aria-pressed", String(selected));
                     button.tabIndex = selected ? 0 : -1;
                 }
             });
             this.announce(`${item.querySelector("[data-z-timeline-title]")?.textContent ?? "Event"} selected.`);
-            this.root.dispatchEvent(new CustomEvent("zoerce:timeline:select", { bubbles: true, detail: { timelineId: this.root.id, itemId: id } }));
+            this.root.dispatchEvent(new CustomEvent("zoerce:timeline:select", { bubbles: true, detail: this.itemDetail(item) }));
             this.revealItem(item);
-            if (focus) item.querySelector("[data-z-timeline-select]")?.focus({ preventScroll: true });
+            if (focus) item.querySelector("[data-z-timeline-activate]")?.focus({ preventScroll: true });
         }
 
         syncPresentation() {
@@ -231,8 +271,112 @@
                 timestamp: update.timestamp ?? new Date().toISOString(),
                 tone: enumValue(update.tone, tones, "Auto"),
                 state: enumValue(update.state, states, "Default"),
-                placement: enumValue(update.placement, placements, "Auto")
+                placement: enumValue(update.placement, placements, "Auto"),
+                templateKey: safeText(update.templateKey),
+                clickBehavior: enumValue(update.clickBehavior, clickBehaviors, "Inherit"),
+                commandId: safeText(update.commandId) || safeText(update.action?.id),
+                targetUrl: safeText(update.targetUrl) || safeText(update.action?.targetUrl),
+                metadata: update.metadata && typeof update.metadata === "object" ? update.metadata : {},
+                isSelectable: update.isSelectable !== false
             };
+        }
+
+        resolveClickBehavior(data) {
+            const explicit = enumValue(data.clickBehavior, clickBehaviors, "Inherit");
+            if (explicit !== "Inherit") return explicit;
+            return this.configuration.interaction === "Select" ? "Select"
+                : this.configuration.interaction === "Navigate" ? "Navigate"
+                    : this.configuration.interaction === "Command" ? "Select"
+                        : "None";
+        }
+
+        activationLabel(data, behavior) {
+            const verb = behavior === "Select" ? "Select" : behavior === "Navigate" ? "Open" : behavior === "Command" ? "Run" : "Inspect";
+            return `${verb} ${data.title}`;
+        }
+
+        templateFor(data) {
+            if (!data.templateKey || !Array.isArray(this.configuration.templates)) return null;
+            return this.configuration.templates.find(template => String(template?.key ?? "").toLowerCase() === data.templateKey.toLowerCase()) ?? null;
+        }
+
+        createDefaultCard() {
+            const card = document.createElement("article");
+            card.className = "z-timeline-card";
+            card.dataset.zTimelineCard = "";
+            card.innerHTML = '<div class="z-timeline-card-heading"><div><h3 data-z-timeline-title></h3><small class="z-timeline-relative" data-z-timeline-relative></small></div></div><p data-z-timeline-description></p><div class="z-timeline-meta" data-z-timeline-meta></div>';
+            return card;
+        }
+
+        createTemplateCard(data) {
+            const definition = this.templateFor(data);
+            const templateId = safeText(definition?.clientTemplateId);
+            const template = templateId ? document.getElementById(templateId) : null;
+            if (template instanceof HTMLTemplateElement) {
+                const fragment = template.content.cloneNode(true);
+                const card = fragment.querySelector("[data-z-timeline-card]");
+                if (card instanceof HTMLElement) return card;
+            }
+            return this.createDefaultCard();
+        }
+
+        templateFieldValue(data, field) {
+            const key = safeText(field);
+            if (!key) return "";
+            if (key.toLowerCase().startsWith("metadata.")) {
+                const metadataKey = key.slice("metadata.".length);
+                const entry = Object.entries(data.metadata ?? {}).find(([candidate]) => candidate.toLowerCase() === metadataKey.toLowerCase());
+                return entry ? String(entry[1] ?? "") : "";
+            }
+            const fields = {
+                id: data.id,
+                title: data.title,
+                description: data.description,
+                icon: data.icon,
+                flag: data.flag,
+                duration: data.duration,
+                location: data.location,
+                timestamp: formatTime(data.timestamp, this.configuration.variant === "Agenda"),
+                relativeTime: relativeTime(data.timestamp),
+                tone: data.tone,
+                state: data.state,
+                commandId: data.commandId,
+                targetUrl: data.targetUrl
+            };
+            return String(fields[key] ?? "");
+        }
+
+        hydrateTemplateFields(element, data) {
+            element.querySelectorAll("[data-z-timeline-field]").forEach(field => {
+                const value = this.templateFieldValue(data, field.dataset.zTimelineField);
+                field.textContent = value;
+                if (field.hasAttribute("data-z-timeline-hide-empty")) field.hidden = !value;
+            });
+        }
+
+        syncActivation(element, data) {
+            const behavior = this.resolveClickBehavior(data);
+            const shouldActivate = behavior !== "None" && (behavior !== "Select" || data.isSelectable !== false);
+            let activate = element.querySelector("[data-z-timeline-activate]");
+            if (!shouldActivate) {
+                activate?.remove();
+                return;
+            }
+            if (!activate) {
+                activate = document.createElement("button");
+                activate.type = "button";
+                activate.className = "z-timeline-select";
+                activate.dataset.zTimelineActivate = "";
+                element.append(activate);
+            }
+            activate.setAttribute("aria-label", this.activationLabel(data, behavior));
+            if (behavior === "Select") {
+                activate.setAttribute("aria-pressed", String(element.classList.contains("is-selected")));
+                activate.tabIndex = element.classList.contains("is-selected") ? 0 : -1;
+            } else {
+                activate.removeAttribute("aria-pressed");
+                activate.tabIndex = 0;
+            }
         }
 
         applyItemData(element, data) {
@@ -240,6 +384,11 @@
             element.dataset.zTimelineTone = data.tone;
             element.dataset.zTimelineState = data.state;
             element.dataset.zTimelinePlacement = data.placement;
+            element.dataset.zTimelineTemplateKey = data.templateKey;
+            element.dataset.zTimelineClickBehavior = this.resolveClickBehavior(data);
+            element.dataset.zTimelineCommandId = data.commandId;
+            element.dataset.zTimelineTargetUrl = data.targetUrl;
+            element.dataset.zTimelineSelectable = String(data.isSelectable !== false);
             states.forEach(state => element.classList.remove(`is-${state.toLowerCase()}`));
             tones.forEach(tone => element.classList.remove(`tone-${tone.toLowerCase()}`));
             placements.forEach(placement => element.classList.remove(`placement-${placement.toLowerCase()}`));
@@ -249,17 +398,24 @@
             const title = element.querySelector("[data-z-timeline-title]");
             if (title) title.textContent = data.title;
             const description = element.querySelector("[data-z-timeline-description]");
-            if (description && data.description) description.textContent = data.description;
-            if (description && !data.description) description.remove();
+            if (description) {
+                description.textContent = data.description;
+                description.hidden = !data.description;
+            }
             const marker = element.querySelector("[data-z-timeline-marker]");
-            if (marker && data.icon) marker.textContent = data.icon;
+            if (marker) marker.textContent = data.icon;
             const time = element.querySelector("[data-z-timeline-time]");
             if (time) {
                 time.dateTime = new Date(data.timestamp).toISOString();
                 time.textContent = formatTime(data.timestamp, this.configuration.variant === "Agenda");
             }
             const relative = element.querySelector("[data-z-timeline-relative]");
-            if (relative) relative.textContent = relativeTime(data.timestamp);
+            if (relative) {
+                relative.textContent = relativeTime(data.timestamp);
+                relative.hidden = this.configuration.showRelativeTime !== true;
+            }
+            this.hydrateTemplateFields(element, data);
+            this.syncActivation(element, data);
         }
 
         createItem(data) {
@@ -268,18 +424,20 @@
             item.dataset.zTimelineItem = "";
             item.dataset.zTimelineItemId = data.id;
             item.dataset.zTimelineSegment = "middle";
-            item.dataset.zTimelineSelectable = String(data.isSelectable !== false);
-            item.innerHTML = `<div class="z-timeline-rail" aria-hidden="true"><span class="z-timeline-marker" data-z-timeline-marker></span></div><div class="z-timeline-content"><time class="z-timeline-time" data-z-timeline-time></time><article class="z-timeline-card" data-z-timeline-card><div class="z-timeline-card-heading"><div><h3 data-z-timeline-title></h3><small class="z-timeline-relative" data-z-timeline-relative></small></div></div><p data-z-timeline-description></p><div class="z-timeline-meta" data-z-timeline-meta></div></article></div>`;
-            if (this.configuration.interaction === "Select" || this.configuration.interaction === "Command") {
-                const select = document.createElement("button");
-                select.type = "button";
-                select.className = "z-timeline-select";
-                select.dataset.zTimelineSelect = "";
-                select.setAttribute("aria-label", `Select ${data.title}`);
-                select.setAttribute("aria-pressed", "false");
-                select.tabIndex = -1;
-                item.append(select);
+            const rail = document.createElement("div");
+            rail.className = "z-timeline-rail";
+            rail.setAttribute("aria-hidden", "true");
+            rail.innerHTML = '<span class="z-timeline-marker" data-z-timeline-marker></span>';
+            const content = document.createElement("div");
+            content.className = "z-timeline-content";
+            if (this.configuration.showTimestamp !== false) {
+                const time = document.createElement("time");
+                time.className = "z-timeline-time";
+                time.dataset.zTimelineTime = "";
+                content.append(time);
             }
+            content.append(this.createTemplateCard(data));
+            item.append(rail, content);
             this.applyItemData(item, data);
             this.syncSegments();
             return item;
@@ -391,9 +549,10 @@
         controller?.dispose();
         controllers.delete(root);
     };
+    const applySnapshot = (root, snapshot) => controllers.get(root)?.applySnapshot(snapshot);
     const initializeAll = scope => (scope ?? document).querySelectorAll?.("[data-z-timeline]").forEach(initialize);
 
-    window.ZoorceTimeline = { initialize, initializeAll, dispose };
+    window.ZoorceTimeline = { initialize, initializeAll, dispose, applySnapshot };
     if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", () => initializeAll());
     else initializeAll();
 })();

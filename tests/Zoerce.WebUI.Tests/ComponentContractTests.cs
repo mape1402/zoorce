@@ -696,6 +696,52 @@ public sealed class ComponentContractTests
     }
 
     [Fact]
+    public void Timeline_normalizes_item_templates_and_resolves_item_click_behavior()
+    {
+        var normalized = (CreateTimeline() with
+        {
+            Interaction = ZoorceTimelineInteraction.ReadOnly,
+            SelectedItemId = "deployment",
+            ItemTemplates = [new ZoorceTimelineItemTemplate(" deployment ", " /Pages/Shared/_Deployment.cshtml ", " deployment-template ")],
+            Items =
+            [
+                new ZoorceTimelineItem("deployment", DateTimeOffset.UtcNow, "Deploy", TemplateKey: " deployment ", ClickBehavior: ZoorceTimelineItemClickBehavior.Command, CommandId: " inspect ", TargetUrl: " /deployments/1 "),
+                new ZoorceTimelineItem("notice", DateTimeOffset.UtcNow.AddMinutes(1), "Notice", ClickBehavior: (ZoorceTimelineItemClickBehavior)999)
+            ]
+        }).Normalize();
+
+        var deployment = normalized.Items.Single(item => item.Id == "deployment");
+        var notice = normalized.Items.Single(item => item.Id == "notice");
+        Assert.Equal("deployment", normalized.ItemTemplates.Single().Key);
+        Assert.Equal("/Pages/Shared/_Deployment.cshtml", normalized.ItemTemplates.Single().PartialViewName);
+        Assert.Equal("deployment-template", normalized.ItemTemplates.Single().ClientTemplateId);
+        Assert.Equal("deployment", deployment.TemplateKey);
+        Assert.Equal("inspect", deployment.CommandId);
+        Assert.Equal("/deployments/1", deployment.TargetUrl);
+        Assert.Equal(ZoorceTimelineItemClickBehavior.Command, normalized.ResolveClickBehavior(deployment));
+        Assert.Equal(ZoorceTimelineItemClickBehavior.Inherit, notice.ClickBehavior);
+        Assert.Equal(ZoorceTimelineItemClickBehavior.None, normalized.ResolveClickBehavior(notice));
+    }
+
+    [Fact]
+    public void Timeline_rejects_unknown_or_duplicate_item_templates()
+    {
+        Assert.Throws<ArgumentException>(() => (CreateTimeline() with
+        {
+            Items = [new ZoorceTimelineItem("unknown", DateTimeOffset.UtcNow, "Unknown", TemplateKey: "missing")]
+        }).Normalize());
+
+        Assert.Throws<ArgumentException>(() => (CreateTimeline() with
+        {
+            ItemTemplates =
+            [
+                new ZoorceTimelineItemTemplate("card", "/Pages/Shared/_Card.cshtml"),
+                new ZoorceTimelineItemTemplate(" CARD ", "/Pages/Shared/_AnotherCard.cshtml")
+            ]
+        }).Normalize());
+    }
+
+    [Fact]
     public void Timeline_rejects_invalid_identity_items_and_selection()
     {
         Assert.Throws<ArgumentException>(() => (CreateTimeline() with { Id = " " }).Normalize());
@@ -729,6 +775,7 @@ public sealed class ComponentContractTests
         Assert.Contains(ZoorceTimelineOrientation.Auto, Enum.GetValues<ZoorceTimelineOrientation>());
         Assert.Contains(ZoorceTimelineOverflowMode.Stack, Enum.GetValues<ZoorceTimelineOverflowMode>());
         Assert.Contains(ZoorceTimelineInteraction.Command, Enum.GetValues<ZoorceTimelineInteraction>());
+        Assert.Contains(ZoorceTimelineItemClickBehavior.Custom, Enum.GetValues<ZoorceTimelineItemClickBehavior>());
         Assert.Contains(ZoorceTimelineGroupBy.Year, Enum.GetValues<ZoorceTimelineGroupBy>());
         Assert.Contains(ZoorceTimelineTone.Danger, Enum.GetValues<ZoorceTimelineTone>());
         Assert.Contains(ZoorceTimelineState.Error, Enum.GetValues<ZoorceTimelineState>());

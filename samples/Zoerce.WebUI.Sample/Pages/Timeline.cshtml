@@ -55,6 +55,17 @@
         Event("presentation-three", 200, "Deliver confidence", "Shared controls reduced the cost of safe change.", "✓", ZoorceTimelineTone.Success, ZoorceTimelineState.Highlighted, ZoorceTimelinePlacement.Above),
         Event("presentation-four", 0, "Keep learning", "The next milestone starts with the evidence this release creates.", "↗", ZoorceTimelineTone.Primary, ZoorceTimelineState.Pending, ZoorceTimelinePlacement.Below)
     };
+    var customTemplateItems = new[]
+    {
+        new ZoorceTimelineItem("template-api", DateTimeOffset.UtcNow.AddHours(-6), "Publish API gateway", "A scoped deployment is ready for its final command.", "↑", ZoorceTimelineTone.Success, ZoorceTimelineState.Completed, TemplateKey: "deployment", ClickBehavior: ZoorceTimelineItemClickBehavior.Command, CommandId: "inspect-deployment", Metadata: new Dictionary<string, string> { ["environment"] = "Production", ["service"] = "Gateway", ["version"] = "v4.12.0" }),
+        new ZoorceTimelineItem("template-approval", DateTimeOffset.UtcNow.AddHours(-4), "Regional policy approval", "The owner can inspect the decision, but cannot execute a restricted approval.", "⌕", ZoorceTimelineTone.Warning, ZoorceTimelineState.Pending, TemplateKey: "approval", ClickBehavior: ZoorceTimelineItemClickBehavior.Custom, CommandId: "restricted-approval", Metadata: new Dictionary<string, string> { ["owner"] = "Compliance", ["scope"] = "EU residency", ["rule"] = "Two reviewers" }),
+        new ZoorceTimelineItem("template-web", DateTimeOffset.UtcNow.AddHours(-1), "Release web shell", "Inspecting this event invokes a host command without leaving the page.", "↗", ZoorceTimelineTone.Primary, ZoorceTimelineState.Highlighted, TemplateKey: "deployment", ClickBehavior: ZoorceTimelineItemClickBehavior.Command, CommandId: "inspect-deployment", Metadata: new Dictionary<string, string> { ["environment"] = "Preview", ["service"] = "Web shell", ["version"] = "v8.4.0" })
+    };
+    var customTemplates = new[]
+    {
+        new ZoorceTimelineItemTemplate("deployment", "/Pages/Shared/TimelineTemplates/_DeploymentTimelineItem.cshtml", "zoerce-timeline-template-deployment"),
+        new ZoorceTimelineItemTemplate("approval", "/Pages/Shared/TimelineTemplates/_ApprovalTimelineItem.cshtml", "zoerce-timeline-template-approval")
+    };
 }
 
 <section class="z-timeline-gallery-page">
@@ -66,6 +77,35 @@
         </div>
         <button type="button" class="z-button z-button-secondary" data-z-timeline-live-demo>Send live activity</button>
     </div>
+
+    <article class="z-timeline-example z-timeline-example--wide">
+        <header><span>Templates · host interactions</span><h2>Custom delivery events</h2><p>Each item resolves a named Razor template while the timeline remains responsible for keyboard access, click handling and command events.</p></header>
+        @await Component.InvokeAsync("ZoorceTimeline", new ZoorceTimelineOptions
+        {
+            Id = "custom-template-timeline", AriaLabel = "Custom delivery events", Items = customTemplateItems, ItemTemplates = customTemplates,
+            Variant = ZoorceTimelineVariant.Activity, Interaction = ZoorceTimelineInteraction.ReadOnly, ShowActors = false, ShowMetadata = false,
+            Presentation = new ZoorceTimelinePresentation { MarkerStyle = ZoorceTimelineMarkerStyle.Icon, ActiveMotion = ZoorceTimelineActiveMotion.HaloPulse, UseCards = true }
+        })
+        <aside class="z-timeline-selection-panel z-timeline-command-panel" data-z-timeline-command-panel aria-live="polite">
+            <span>Host command</span><strong>Choose a custom event</strong><p>Commands run locally, while the approval event demonstrates a cancelable click rule.</p>
+        </aside>
+        <button class="z-button z-button-secondary z-timeline-template-add" type="button" data-z-timeline-template-add>Add a live deployment</button>
+    </article>
+
+    <template id="zoerce-timeline-template-deployment">
+        <article class="z-timeline-card z-timeline-card--deployment" data-z-timeline-card>
+            <div class="z-timeline-template-heading"><span class="z-timeline-template-eyebrow" data-z-timeline-field="metadata.environment"></span><span class="z-timeline-template-state" data-z-timeline-field="state"></span></div>
+            <h3 data-z-timeline-title></h3><p data-z-timeline-description></p>
+            <div class="z-timeline-template-facts"><span><b>Service</b> <span data-z-timeline-field="metadata.service"></span></span><span><b>Version</b> <span data-z-timeline-field="metadata.version"></span></span></div>
+        </article>
+    </template>
+    <template id="zoerce-timeline-template-approval">
+        <article class="z-timeline-card z-timeline-card--approval" data-z-timeline-card>
+            <div class="z-timeline-template-heading"><span class="z-timeline-template-eyebrow">Approval</span><span class="z-timeline-template-state" data-z-timeline-field="metadata.owner"></span></div>
+            <h3 data-z-timeline-title></h3><p data-z-timeline-description></p>
+            <div class="z-timeline-template-facts"><span><b>Scope</b> <span data-z-timeline-field="metadata.scope"></span></span><span><b>Rule</b> <span data-z-timeline-field="metadata.rule"></span></span></div>
+        </article>
+    </template>
 
     <article class="z-timeline-example z-timeline-example--wide">
         <header><span>Activity · REST + SignalR</span><h2>Operations stream</h2><p>Source refreshes and live messages update only this timeline. Follow latest is intentionally off, so incoming activity never moves the reader.</p></header>
@@ -173,6 +213,46 @@
                 const action = event.detail.actionId?.replace(/-/g, " ") ?? "agenda action";
                 panel?.querySelector("strong")?.replaceChildren("Agenda action triggered");
                 panel?.querySelector("p")?.replaceChildren(`${action} was handled by the timeline instance without a page reload.`);
+            });
+            const customTimeline = document.querySelector("#custom-template-timeline");
+            const commandPanel = document.querySelector("[data-z-timeline-command-panel]");
+            const showCommandResult = (title, description) => {
+                commandPanel?.querySelector("strong")?.replaceChildren(title);
+                commandPanel?.querySelector("p")?.replaceChildren(description);
+            };
+            customTimeline?.addEventListener("zoerce:timeline:request-item-click", event => {
+                if (event.detail.itemId !== "template-approval") return;
+                event.preventDefault();
+                showCommandResult("Approval remains protected", "The host canceled this item click before a command could run because the approval still requires two reviewers.");
+            });
+            customTimeline?.addEventListener("zoerce:timeline:item-click", event => {
+                const item = customTimeline.querySelector(`[data-z-timeline-item-id="${event.detail.itemId}"]`);
+                const title = item?.querySelector("[data-z-timeline-title]")?.textContent ?? "Custom event";
+                showCommandResult("Item clicked", `${title} emitted its custom item-click event to the host.`);
+            });
+            customTimeline?.addEventListener("zoerce:timeline:action", event => {
+                if (event.detail.actionId !== "inspect-deployment") return;
+                const item = customTimeline.querySelector(`[data-z-timeline-item-id="${event.detail.itemId}"]`);
+                const title = item?.querySelector("[data-z-timeline-title]")?.textContent ?? "Deployment";
+                showCommandResult("Deployment inspected", `${title} invoked the inspect-deployment command without navigating away from the timeline.`);
+            });
+            document.querySelector("[data-z-timeline-template-add]")?.addEventListener("click", event => {
+                const button = event.currentTarget;
+                button.disabled = true;
+                window.ZoorceTimeline?.applySnapshot(customTimeline, {
+                    id: "template-live-deployment",
+                    timestamp: new Date().toISOString(),
+                    title: "Publish live delivery",
+                    description: "This item was created in the browser from the deployment template.",
+                    icon: "↑",
+                    tone: "Success",
+                    state: "Highlighted",
+                    templateKey: "deployment",
+                    clickBehavior: "Command",
+                    commandId: "inspect-deployment",
+                    metadata: { environment: "Live", service: "Activity feed", version: "v1.0.0" }
+                });
+                showCommandResult("Live template inserted", "The client cloned the deployment template, hydrated its fields and preserved the same command behavior.");
             });
         })();
     </script>

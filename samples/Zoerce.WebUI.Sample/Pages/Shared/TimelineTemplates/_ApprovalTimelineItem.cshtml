@@ -1,0 +1,17 @@
+@using Zoerce.WebUI.Components.Timeline
+@model ZoorceTimelineItemTemplateContext
+<article class="z-timeline-card z-timeline-card--approval" data-z-timeline-card>
+    <div class="z-timeline-template-heading">
+        <span class="z-timeline-template-eyebrow">Approval</span>
+        <span class="z-timeline-template-state" data-z-timeline-field="metadata.owner">@Model.Metadata("owner")</span>
+    </div>
+    <h3 data-z-timeline-title>@Model.Item.Title</h3>
+    @if (!string.IsNullOrWhiteSpace(Model.Item.Description))
+    {
+        <p data-z-timeline-description>@Model.Item.Description</p>
+    }
+    <div class="z-timeline-template-facts">
+        <span><b>Scope</b> <span data-z-timeline-field="metadata.scope">@Model.Metadata("scope")</span></span>
+        <span><b>Rule</b> <span data-z-timeline-field="metadata.rule">@Model.Metadata("rule")</span></span>
+    </div>
+</article>
