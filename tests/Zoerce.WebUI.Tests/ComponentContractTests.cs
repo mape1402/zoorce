@@ -3,6 +3,7 @@ using Zoerce.WebUI.Abstractions.Data;
 using Zoerce.WebUI.Components.Charts;
 using Zoerce.WebUI.Components.DataGrid;
 using Zoerce.WebUI.Components.Stepper;
+using Zoerce.WebUI.Components.Timeline;
 
 namespace Zoerce.WebUI.Tests;
 
@@ -577,6 +578,168 @@ public sealed class ComponentContractTests
         Assert.Contains(ZoorceStepperRealtimeTransport.ServerSentEvents, Enum.GetValues<ZoorceStepperRealtimeTransport>());
     }
 
+    [Fact]
+    public void Timeline_normalizes_items_presentation_and_explicit_overflow_behavior()
+    {
+        var normalized = (CreateTimeline() with
+        {
+            Id = " timeline ",
+            AriaLabel = " ",
+            SelectedItemId = "later",
+            SortAscending = false,
+            ShowRelativeTime = true,
+            FollowLatest = true,
+            Variant = ZoorceTimelineVariant.Milestones,
+            Orientation = ZoorceTimelineOrientation.Vertical,
+            OverflowMode = ZoorceTimelineOverflowMode.Stack,
+            ShowOverflowControls = false,
+            MaxItems = 4,
+            SourceUrl = " /api/timeline ",
+            RealtimeHubUrl = " /hubs/timeline ",
+            RealtimeEventName = " timeline-update ",
+            RealtimeTransport = ZoorceTimelineRealtimeTransport.LongPolling,
+            Presentation = new ZoorceTimelinePresentation
+            {
+                MarkerStyle = ZoorceTimelineMarkerStyle.Icon,
+                ConnectorStyle = ZoorceTimelineConnectorStyle.Dashed,
+                ActiveMotion = ZoorceTimelineActiveMotion.HaloPulse,
+                UseCards = false
+            },
+            Items =
+            [
+                new ZoorceTimelineItem(" later ", DateTimeOffset.Parse("2026-10-22T12:00:00+00:00"), " ", " details ", " ✦ ", ZoorceTimelineTone.Success, ZoorceTimelineState.Completed, ZoorceTimelinePlacement.Left, " launch ", new ZoorceTimelineActor(" Ada ", " A ", " /ada.png ", " Owner "), [" stable ", "STABLE", " " ], new Dictionary<string, string> { [" Region "] = " us-east ", [" "] = "ignored", ["Empty"] = " " }, " 10 min ", " studio ", [new ZoorceTimelineActor(" Bea ", " B ")], new ZoorceTimelineAction(" open ", " Open item ", " ↗ ", " /open "), false, true),
+                new ZoorceTimelineItem(" earlier ", DateTimeOffset.Parse("2026-10-20T12:00:00+00:00"), "Earlier")
+            ]
+        }).Normalize();
+
+        Assert.Equal("timeline", normalized.Id);
+        Assert.Equal("Timeline", normalized.AriaLabel);
+        Assert.Equal(ZoorceTimelineOrientation.Vertical, normalized.Orientation);
+        Assert.Equal(ZoorceTimelineOverflowMode.Stack, normalized.OverflowMode);
+        Assert.False(normalized.ShowOverflowControls);
+        Assert.Equal("later", normalized.Items[0].Id);
+        Assert.Equal("Event", normalized.Items[0].Title);
+        Assert.Equal("details", normalized.Items[0].Description);
+        Assert.Equal("✦", normalized.Items[0].Icon);
+        Assert.Equal("launch", normalized.Items[0].Flag);
+        Assert.Equal("Ada", normalized.Items[0].Actor!.Name);
+        Assert.Equal("A", normalized.Items[0].Actor!.Initials);
+        Assert.Equal("Owner", normalized.Items[0].Actor!.Role);
+        Assert.Equal(new[] { "stable" }, normalized.Items[0].Tags);
+        Assert.Equal("us-east", normalized.Items[0].Metadata!["Region"]);
+        Assert.Equal("Bea", normalized.Items[0].Participants!.Single().Name);
+        Assert.Equal("open", normalized.Items[0].Action!.Id);
+        Assert.Equal(4, normalized.MaxItems);
+        Assert.True(normalized.ShowRelativeTime);
+        Assert.True(normalized.FollowLatest);
+        Assert.Equal("/api/timeline", normalized.SourceUrl);
+        Assert.Equal("/hubs/timeline", normalized.RealtimeHubUrl);
+        Assert.Equal("timeline-update", normalized.RealtimeEventName);
+        Assert.Equal(ZoorceTimelineRealtimeTransport.LongPolling, normalized.RealtimeTransport);
+        Assert.Equal(ZoorceTimelineMarkerStyle.Icon, normalized.Presentation.MarkerStyle);
+        Assert.False(normalized.Presentation.UseCards);
+    }
+
+    [Fact]
+    public void Timeline_uses_safe_defaults_for_invalid_optional_configuration()
+    {
+        var normalized = (CreateTimeline() with
+        {
+            Variant = (ZoorceTimelineVariant)999,
+            SelectedItemId = "one",
+            Orientation = (ZoorceTimelineOrientation)999,
+            OverflowMode = (ZoorceTimelineOverflowMode)999,
+            Interaction = (ZoorceTimelineInteraction)999,
+            Density = (ZoorceTimelineDensity)999,
+            GroupBy = (ZoorceTimelineGroupBy)999,
+            RefreshMode = (ZoorceTimelineRefreshMode)999,
+            RealtimeTransport = (ZoorceTimelineRealtimeTransport)999,
+            MaxItems = 0,
+            EmptyMessage = " ",
+            Presentation = new ZoorceTimelinePresentation
+            {
+                MarkerStyle = (ZoorceTimelineMarkerStyle)999,
+                ConnectorStyle = (ZoorceTimelineConnectorStyle)999,
+                ActiveMotion = (ZoorceTimelineActiveMotion)999
+            },
+            Items =
+            [
+                new ZoorceTimelineItem("one", DateTimeOffset.UtcNow, "One", Tone: (ZoorceTimelineTone)999, State: (ZoorceTimelineState)999, Placement: (ZoorceTimelinePlacement)999, Actor: new ZoorceTimelineActor(" "), Action: new ZoorceTimelineAction(" ", " ")),
+                new ZoorceTimelineItem("two", DateTimeOffset.UtcNow.AddMinutes(1), "Two", Tags: null, Metadata: null, Participants: null)
+            ]
+        }).Normalize();
+
+        Assert.Equal(ZoorceTimelineVariant.Activity, normalized.Variant);
+        Assert.Equal(ZoorceTimelineOrientation.Auto, normalized.Orientation);
+        Assert.Equal(ZoorceTimelineOverflowMode.Auto, normalized.OverflowMode);
+        Assert.Equal(ZoorceTimelineInteraction.ReadOnly, normalized.Interaction);
+        Assert.Equal(ZoorceTimelineDensity.Default, normalized.Density);
+        Assert.Equal(ZoorceTimelineGroupBy.None, normalized.GroupBy);
+        Assert.Equal(ZoorceTimelineRefreshMode.Merge, normalized.RefreshMode);
+        Assert.Equal(ZoorceTimelineRealtimeTransport.Auto, normalized.RealtimeTransport);
+        Assert.Null(normalized.MaxItems);
+        Assert.Equal("No events to display.", normalized.EmptyMessage);
+        Assert.Equal(ZoorceTimelineMarkerStyle.Auto, normalized.Presentation.MarkerStyle);
+        Assert.Equal(ZoorceTimelineConnectorStyle.Solid, normalized.Presentation.ConnectorStyle);
+        Assert.Equal(ZoorceTimelineActiveMotion.None, normalized.Presentation.ActiveMotion);
+        Assert.Equal(ZoorceTimelineTone.Auto, normalized.Items[0].Tone);
+        Assert.Equal(ZoorceTimelineState.Default, normalized.Items[0].State);
+        Assert.Equal(ZoorceTimelinePlacement.Auto, normalized.Items[0].Placement);
+        Assert.Null(normalized.Items[0].Actor);
+        Assert.Null(normalized.Items[0].Action);
+        Assert.Empty(normalized.Items[1].Tags!);
+        Assert.Empty(normalized.Items[1].Metadata!);
+        Assert.Empty(normalized.Items[1].Participants!);
+
+        var withNullPresentation = (CreateTimeline() with { Presentation = null! }).Normalize();
+        Assert.Equal(new ZoorceTimelinePresentation(), withNullPresentation.Presentation);
+    }
+
+    [Fact]
+    public void Timeline_rejects_invalid_identity_items_and_selection()
+    {
+        Assert.Throws<ArgumentException>(() => (CreateTimeline() with { Id = " " }).Normalize());
+        Assert.Throws<ArgumentNullException>(() => (CreateTimeline() with { Items = null! }).Normalize());
+        Assert.Throws<ArgumentNullException>(() => (CreateTimeline() with { Items = [null!] }).Normalize());
+        Assert.Throws<ArgumentException>(() => (CreateTimeline() with { Items = [new ZoorceTimelineItem(" ", DateTimeOffset.UtcNow, "One")] }).Normalize());
+        Assert.Throws<ArgumentException>(() => (CreateTimeline() with { Items = [new ZoorceTimelineItem("same", DateTimeOffset.UtcNow, "One"), new ZoorceTimelineItem(" SAME ", DateTimeOffset.UtcNow, "Two")] }).Normalize());
+        Assert.Throws<ArgumentException>(() => (CreateTimeline() with { SelectedItemId = "missing" }).Normalize());
+    }
+
+    [Fact]
+    public void Timeline_contracts_and_view_component_are_available()
+    {
+        var actor = new ZoorceTimelineActor("Ada", "A", "/ada.png", "Owner");
+        var action = new ZoorceTimelineAction("open", "Open", "↗", "/open");
+        var item = new ZoorceTimelineItem("welcome", DateTimeOffset.UtcNow, "Welcome", Actor: actor, Action: action, IsRead: false, IsPinned: true, IsSelectable: false);
+        var component = new ZoorceTimelineViewComponent();
+
+        Assert.Equal("Ada", actor.Name);
+        Assert.Equal("open", action.Id);
+        Assert.False(item.IsRead);
+        Assert.True(item.IsPinned);
+        Assert.False(item.IsSelectable);
+        Assert.Throws<ArgumentNullException>(() => component.Invoke(null!));
+        var result = Assert.IsType<ViewViewComponentResult>(component.Invoke(CreateTimeline() with { Id = " timeline-view " }));
+        var model = Assert.IsType<ZoorceTimelineOptions>(result.ViewData!.Model);
+        Assert.Equal("timeline-view", model.Id);
+        Assert.Contains(ZoorceTimelineVariant.Presentation, Enum.GetValues<ZoorceTimelineVariant>());
+        Assert.DoesNotContain("Roadmap", Enum.GetNames<ZoorceTimelineVariant>());
+        Assert.Null(typeof(ZoorceTimelinePresentation).GetProperty("UseArrowSegments"));
+        Assert.Contains(ZoorceTimelineOrientation.Auto, Enum.GetValues<ZoorceTimelineOrientation>());
+        Assert.Contains(ZoorceTimelineOverflowMode.Stack, Enum.GetValues<ZoorceTimelineOverflowMode>());
+        Assert.Contains(ZoorceTimelineInteraction.Command, Enum.GetValues<ZoorceTimelineInteraction>());
+        Assert.Contains(ZoorceTimelineGroupBy.Year, Enum.GetValues<ZoorceTimelineGroupBy>());
+        Assert.Contains(ZoorceTimelineTone.Danger, Enum.GetValues<ZoorceTimelineTone>());
+        Assert.Contains(ZoorceTimelineState.Error, Enum.GetValues<ZoorceTimelineState>());
+        Assert.Contains(ZoorceTimelinePlacement.Below, Enum.GetValues<ZoorceTimelinePlacement>());
+        Assert.Contains(ZoorceTimelineMarkerStyle.Ring, Enum.GetValues<ZoorceTimelineMarkerStyle>());
+        Assert.Contains(ZoorceTimelineConnectorStyle.Curved, Enum.GetValues<ZoorceTimelineConnectorStyle>());
+        Assert.Contains(ZoorceTimelineActiveMotion.Reveal, Enum.GetValues<ZoorceTimelineActiveMotion>());
+        Assert.Contains(ZoorceTimelineRefreshMode.Replace, Enum.GetValues<ZoorceTimelineRefreshMode>());
+        Assert.Contains(ZoorceTimelineRealtimeTransport.ServerSentEvents, Enum.GetValues<ZoorceTimelineRealtimeTransport>());
+    }
+
     private static ZoorceDataGridOptions CreateGrid() => new()
     {
         Id = "catalogue",
@@ -605,6 +768,18 @@ public sealed class ComponentContractTests
         [
             new ZoorceStepperStep("brief", "Brief", State: ZoorceStepperState.Active),
             new ZoorceStepperStep("validate", "Validate")
+        ]
+    };
+
+    private static ZoorceTimelineOptions CreateTimeline() => new()
+    {
+        Id = "operations",
+        AriaLabel = "Operations timeline",
+        SelectedItemId = "first",
+        Items =
+        [
+            new ZoorceTimelineItem("first", DateTimeOffset.UtcNow, "First"),
+            new ZoorceTimelineItem("second", DateTimeOffset.UtcNow.AddHours(1), "Second")
         ]
     };
 }

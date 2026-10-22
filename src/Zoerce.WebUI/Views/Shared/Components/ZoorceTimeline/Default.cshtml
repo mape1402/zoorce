@@ -1,0 +1,176 @@
+@using System.Globalization
+@using System.Text.Json
+@using System.Text.Json.Serialization
+@using Zoerce.WebUI.Components.Timeline
+@model ZoorceTimelineOptions
+@{
+    var serializerOptions = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
+    serializerOptions.Converters.Add(new JsonStringEnumConverter());
+    var configuration = JsonSerializer.Serialize(new
+    {
+        selectedItemId = Model.SelectedItemId,
+        variant = Model.Variant,
+        orientation = Model.Orientation,
+        overflowMode = Model.OverflowMode,
+        showOverflowControls = Model.ShowOverflowControls,
+        interaction = Model.Interaction,
+        groupBy = Model.GroupBy,
+        sortAscending = Model.SortAscending,
+        showTimestamp = Model.ShowTimestamp,
+        showRelativeTime = Model.ShowRelativeTime,
+        showActors = Model.ShowActors,
+        showMetadata = Model.ShowMetadata,
+        followLatest = Model.FollowLatest,
+        maxItems = Model.MaxItems,
+        presentation = Model.Presentation,
+        sourceUrl = Model.SourceUrl,
+        refreshMode = Model.RefreshMode,
+        realtimeHubUrl = Model.RealtimeHubUrl,
+        realtimeEventName = Model.RealtimeEventName,
+        realtimeTransport = Model.RealtimeTransport
+    }, serializerOptions);
+    var rootClasses = $"z-component z-timeline z-timeline--{Model.Variant.ToString().ToLowerInvariant()} z-timeline--{Model.Density.ToString().ToLowerInvariant()}";
+    var dateFormat = Model.Variant == ZoorceTimelineVariant.Agenda ? "HH:mm" : "MMM d, yyyy";
+    string GroupKey(ZoorceTimelineItem item) => Model.GroupBy switch
+    {
+        ZoorceTimelineGroupBy.Day => item.Timestamp.ToLocalTime().ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+        ZoorceTimelineGroupBy.Week => $"{ISOWeek.GetYear(item.Timestamp.Date)}-W{ISOWeek.GetWeekOfYear(item.Timestamp.Date):00}",
+        ZoorceTimelineGroupBy.Month => item.Timestamp.ToLocalTime().ToString("yyyy-MM", CultureInfo.InvariantCulture),
+        ZoorceTimelineGroupBy.Year => item.Timestamp.ToLocalTime().ToString("yyyy", CultureInfo.InvariantCulture),
+        _ => string.Empty
+    };
+    string GroupLabel(ZoorceTimelineItem item) => Model.GroupBy switch
+    {
+        ZoorceTimelineGroupBy.Day => item.Timestamp.ToLocalTime().ToString("dddd, MMMM d", CultureInfo.CurrentCulture),
+        ZoorceTimelineGroupBy.Week => $"Week {ISOWeek.GetWeekOfYear(item.Timestamp.Date)} · {ISOWeek.GetYear(item.Timestamp.Date)}",
+        ZoorceTimelineGroupBy.Month => item.Timestamp.ToLocalTime().ToString("MMMM yyyy", CultureInfo.CurrentCulture),
+        ZoorceTimelineGroupBy.Year => item.Timestamp.ToLocalTime().ToString("yyyy", CultureInfo.InvariantCulture),
+        _ => string.Empty
+    };
+    string RelativeTime(ZoorceTimelineItem item)
+    {
+        var span = DateTimeOffset.UtcNow - item.Timestamp.ToUniversalTime();
+        if (Math.Abs(span.TotalMinutes) < 1) return "Just now";
+        if (Math.Abs(span.TotalHours) < 1) return $"{Math.Abs((int)span.TotalMinutes)}m ago";
+        if (Math.Abs(span.TotalDays) < 1) return $"{Math.Abs((int)span.TotalHours)}h ago";
+        return $"{Math.Abs((int)span.TotalDays)}d ago";
+    }
+    string MarkerText(ZoorceTimelineItem item, int index) => Model.Presentation.MarkerStyle switch
+    {
+        ZoorceTimelineMarkerStyle.Dot => string.Empty,
+        ZoorceTimelineMarkerStyle.Number => (index + 1).ToString(CultureInfo.InvariantCulture),
+        ZoorceTimelineMarkerStyle.Icon when !string.IsNullOrWhiteSpace(item.Icon) => item.Icon,
+        _ when !string.IsNullOrWhiteSpace(item.Icon) => item.Icon,
+        _ => "•"
+    };
+    var previousGroup = string.Empty;
+}
+<section id="@Model.Id" class="@rootClasses" data-z-timeline data-z-timeline-variant="@Model.Variant" data-z-timeline-orientation="@Model.Orientation" data-z-timeline-overflow-mode="@Model.OverflowMode" data-z-timeline-selected="@Model.SelectedItemId" data-z-timeline-marker-style="@Model.Presentation.MarkerStyle" data-z-timeline-connector-style="@Model.Presentation.ConnectorStyle" data-z-timeline-active-motion="@Model.Presentation.ActiveMotion" data-z-timeline-use-cards="@Model.Presentation.UseCards.ToString().ToLowerInvariant()" aria-label="@Model.AriaLabel">
+    <script type="application/json" data-z-timeline-config>@Html.Raw(configuration)</script>
+    <div class="z-timeline-scroll-shell" data-z-timeline-scroll-shell>
+        @if (Model.ShowOverflowControls)
+        {
+            <button class="z-timeline-scroll-control z-timeline-scroll-control--previous" type="button" data-z-timeline-scroll="previous" aria-controls="@Model.Id-list" aria-label="Show earlier timeline events" hidden>‹</button>
+        }
+        <div class="z-timeline-scroll-viewport" data-z-timeline-scroll-viewport tabindex="-1" aria-describedby="@Model.Id-scroll-instructions">
+    <ol id="@Model.Id-list" class="z-timeline-list" data-z-timeline-list aria-label="@Model.AriaLabel">
+        @if (Model.Items.Count == 0)
+        {
+            <li class="z-timeline-empty" data-z-timeline-empty>@Model.EmptyMessage</li>
+        }
+        @for (var index = 0; index < Model.Items.Count; index++)
+        {
+            var item = Model.Items[index];
+            var group = GroupKey(item);
+            if (Model.GroupBy != ZoorceTimelineGroupBy.None && !string.Equals(group, previousGroup, StringComparison.Ordinal))
+            {
+                <li class="z-timeline-group" data-z-timeline-group data-z-timeline-group-key="@group"><span>@GroupLabel(item)</span></li>
+                previousGroup = group;
+            }
+            var selected = string.Equals(item.Id, Model.SelectedItemId, StringComparison.OrdinalIgnoreCase);
+            var hasAction = item.Action is not null && Model.Interaction != ZoorceTimelineInteraction.ReadOnly;
+            var itemClasses = $"z-timeline-item is-{item.State.ToString().ToLowerInvariant()} tone-{item.Tone.ToString().ToLowerInvariant()} placement-{item.Placement.ToString().ToLowerInvariant()}" + (selected ? " is-selected" : string.Empty) + (!item.IsRead ? " is-unread" : string.Empty) + (item.IsPinned ? " is-pinned" : string.Empty);
+            var segment = Model.Items.Count == 1 ? "only" : index == 0 ? "start" : index == Model.Items.Count - 1 ? "end" : "middle";
+            <li class="@itemClasses" data-z-timeline-item data-z-timeline-item-id="@item.Id" data-z-timeline-index="@index" data-z-timeline-segment="@segment" data-z-timeline-selectable="@item.IsSelectable.ToString().ToLowerInvariant()" data-z-timeline-timestamp="@item.Timestamp.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture)" data-z-timeline-tone="@item.Tone" data-z-timeline-state="@item.State" data-z-timeline-placement="@item.Placement">
+                @if (!string.IsNullOrWhiteSpace(item.Flag))
+                {
+                    <span class="z-timeline-flag" data-z-timeline-flag>@item.Flag</span>
+                }
+                <div class="z-timeline-rail" aria-hidden="true">
+                    <span class="z-timeline-marker" data-z-timeline-marker>@MarkerText(item, index)</span>
+                </div>
+                <div class="z-timeline-content">
+                    @if (Model.ShowTimestamp)
+                    {
+                        <time class="z-timeline-time" datetime="@item.Timestamp.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture)" data-z-timeline-time>@item.Timestamp.ToLocalTime().ToString(dateFormat, CultureInfo.CurrentCulture)</time>
+                    }
+                    <article class="z-timeline-card" data-z-timeline-card>
+                        <div class="z-timeline-card-heading">
+                            <div>
+                                <h3 data-z-timeline-title>@item.Title</h3>
+                                @if (Model.ShowRelativeTime)
+                                {
+                                    <small class="z-timeline-relative" data-z-timeline-relative>@RelativeTime(item)</small>
+                                }
+                            </div>
+                            @if (item.IsPinned)
+                            {
+                                <span class="z-timeline-pin" aria-label="Pinned event">⌖</span>
+                            }
+                        </div>
+                        @if (!string.IsNullOrWhiteSpace(item.Description))
+                        {
+                            <p data-z-timeline-description>@item.Description</p>
+                        }
+                        @if (Model.ShowActors && item.Actor is not null)
+                        {
+                            <div class="z-timeline-actor" data-z-timeline-actor>
+                                <span class="z-timeline-avatar" aria-hidden="true">@(item.Actor.Initials ?? item.Actor.Name[..1].ToUpperInvariant())</span>
+                                <span><strong>@item.Actor.Name</strong>@if (!string.IsNullOrWhiteSpace(item.Actor.Role)) { <small> · @item.Actor.Role</small> }</span>
+                            </div>
+                        }
+                        @if (Model.Variant == ZoorceTimelineVariant.Agenda && (!string.IsNullOrWhiteSpace(item.Duration) || !string.IsNullOrWhiteSpace(item.Location) || item.Participants?.Count > 0))
+                        {
+                            <div class="z-timeline-agenda-meta">
+                                @if (!string.IsNullOrWhiteSpace(item.Duration)) { <span>◷ @item.Duration</span> }
+                                @if (!string.IsNullOrWhiteSpace(item.Location)) { <span>⌖ @item.Location</span> }
+                                @if (item.Participants?.Count > 0) { <span>◉ @item.Participants.Count attending</span> }
+                            </div>
+                        }
+                        @if (Model.ShowMetadata && (item.Tags?.Count > 0 || item.Metadata?.Count > 0))
+                        {
+                            <div class="z-timeline-meta" data-z-timeline-meta>
+                                @foreach (var tag in item.Tags ?? []) { <span class="z-timeline-tag">@tag</span> }
+                                @foreach (var pair in item.Metadata ?? new Dictionary<string, string>()) { <span class="z-timeline-detail"><b>@pair.Key</b> @pair.Value</span> }
+                            </div>
+                        }
+                        @if (hasAction)
+                        {
+                            if (Model.Interaction == ZoorceTimelineInteraction.Navigate && !string.IsNullOrWhiteSpace(item.Action!.TargetUrl))
+                            {
+                                <a class="z-timeline-action" href="@item.Action.TargetUrl" data-z-timeline-action data-z-timeline-action-id="@item.Action.Id">@(item.Action.Icon ?? "→") @item.Action.Label</a>
+                            }
+                            else
+                            {
+                                <button class="z-timeline-action" type="button" data-z-timeline-action data-z-timeline-action-id="@item.Action!.Id">@(item.Action.Icon ?? "→") @item.Action.Label</button>
+                            }
+                        }
+                    </article>
+                </div>
+                @if (Model.Interaction is ZoorceTimelineInteraction.Select or ZoorceTimelineInteraction.Command)
+                {
+                    <button class="z-timeline-select" type="button" data-z-timeline-select aria-label="Select @item.Title" aria-pressed="@selected.ToString().ToLowerInvariant()" tabindex="@(selected ? "0" : "-1")"></button>
+                }
+            </li>
+        }
+    </ol>
+        </div>
+        @if (Model.ShowOverflowControls)
+        {
+            <button class="z-timeline-scroll-control z-timeline-scroll-control--next" type="button" data-z-timeline-scroll="next" aria-controls="@Model.Id-list" aria-label="Show later timeline events" hidden>›</button>
+        }
+    </div>
+    <p id="@Model.Id-scroll-instructions" class="z-visually-hidden">When this timeline has more content than fits, use the previous and next controls, the arrow keys, or horizontal scrolling to view more events.</p>
+    <p class="z-visually-hidden" data-z-timeline-live aria-live="polite"></p>
+    <noscript><p class="z-timeline-noscript">@Model.AriaLabel</p></noscript>
+</section>

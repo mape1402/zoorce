@@ -5,6 +5,7 @@ using Zoerce.WebUI.Options;
 using Zoerce.WebUI.Sample.Infrastructure;
 using Zoerce.WebUI.Abstractions.Data;
 using Zoerce.WebUI.Components.Stepper;
+using Zoerce.WebUI.Components.Timeline;
 using Zoerce.WebUI.Components.Diagrams;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -73,6 +74,7 @@ app.MapGet("/api/diagrams/{key}", (string key, SampleDiagramCatalog catalog) => 
 app.MapPut("/api/diagrams/{key}", (string key, ZoorceDiagramDocument document, SampleDiagramCatalog catalog) => Results.Ok(catalog.Save(key, document)));
 app.MapGet("/api/steppers/release", () => Results.Ok(SampleStepperData.Create()));
 app.MapPost("/api/steppers/policy-transition", (ZoorceStepperTransitionRequest request) => Results.Ok(SampleStepperData.Authorize(request)));
+app.MapGet("/api/timelines/operations", () => Results.Ok(SampleTimelineData.CreateOperationsSnapshot()));
 app.MapPost("/api/demo/activity", async (SampleRealtimePublisher publisher, CancellationToken cancellationToken) =>
 {
     var changed = await publisher.PublishAsync(cancellationToken);
@@ -82,6 +84,11 @@ app.MapPost("/api/demo/stepper", async (SampleRealtimePublisher publisher, Cance
 {
     var snapshot = await publisher.PublishStepperAsync(cancellationToken);
     return Results.Ok(snapshot);
+});
+app.MapPost("/api/demo/timeline", async (SampleRealtimePublisher publisher, CancellationToken cancellationToken) =>
+{
+    var update = await publisher.PublishTimelineAsync(cancellationToken);
+    return Results.Ok(update);
 });
 
 app.Run();

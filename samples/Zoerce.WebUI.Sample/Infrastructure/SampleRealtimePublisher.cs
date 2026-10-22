@@ -9,6 +9,7 @@ public sealed class SampleRealtimePublisher(
 {
     private int chartRevision;
     private int stepperRevision;
+    private int timelineRevision;
 
     /// <summary>
     /// Emits one demonstrative update only when a person explicitly asks for it.
@@ -28,5 +29,13 @@ public sealed class SampleRealtimePublisher(
         var snapshot = SampleStepperData.Create(Interlocked.Increment(ref stepperRevision));
         await hub.Clients.All.SendAsync("release-stepper-update", snapshot, cancellationToken);
         return snapshot;
+    }
+
+    /// <summary>Publishes one append-only event for the live timeline demonstration.</summary>
+    public async Task<object> PublishTimelineAsync(CancellationToken cancellationToken = default)
+    {
+        var update = SampleTimelineData.CreateLiveEvent(Interlocked.Increment(ref timelineRevision));
+        await hub.Clients.All.SendAsync("timeline-operations-update", update, cancellationToken);
+        return update;
     }
 }
