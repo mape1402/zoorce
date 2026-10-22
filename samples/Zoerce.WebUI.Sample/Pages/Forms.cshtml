@@ -114,9 +114,9 @@
         <section class="z-form-catalog-section" aria-labelledby="files-title">
             <div class="z-form-catalog-heading"><div><span class="z-section-kicker">05 · Assets and verification</span><h2 id="files-title">Files, images and identity</h2></div><p>Drop a file, see a local preview and submit it through the browser’s normal multipart form behavior.</p></div>
             <div class="z-form-demo-grid z-form-demo-grid--thirds">
-                @await Component.InvokeAsync("ZoorceFormControl", new ZoorceFormControlOptions { Id = "release-files", Name = "files", Kind = ZoorceFormControlKind.FileUpload, Label = "Release attachments", Placeholder = "Add release notes or evidence", Accept = ".pdf,.docx,.png", Multiple = true })
-                @await Component.InvokeAsync("ZoorceFormControl", new ZoorceFormControlOptions { Id = "release-cover", Name = "cover", Kind = ZoorceFormControlKind.ImageUpload, Label = "Release cover", Placeholder = "Add a cover image", Accept = "image/png,image/jpeg,image/webp" })
-                @await Component.InvokeAsync("ZoorceFormControl", new ZoorceFormControlOptions { Id = "release-owner-avatar", Name = "avatar", Kind = ZoorceFormControlKind.AvatarPicker, Label = "Owner avatar", Placeholder = "Choose avatar" })
+                @await Component.InvokeAsync("ZoorceFormControl", new ZoorceFormControlOptions { Id = "release-files", Name = "files", Kind = ZoorceFormControlKind.FileUpload, Label = "Release attachments", Placeholder = "Add release notes or evidence", Accept = ".pdf,.docx,.png", Multiple = true, MaximumFiles = 3, MaximumFileSizeBytes = 2 * 1024 * 1024, MaximumTotalFileSizeBytes = 5 * 1024 * 1024 })
+                @await Component.InvokeAsync("ZoorceFormControl", new ZoorceFormControlOptions { Id = "release-cover", Name = "cover", Kind = ZoorceFormControlKind.ImageUpload, Label = "Release cover", Placeholder = "Add a cover image", Accept = "image/png,image/jpeg,image/webp,image/svg+xml", Multiple = true, MaximumFiles = 5, MaximumFileSizeBytes = 4 * 1024 * 1024, MaximumTotalFileSizeBytes = 12 * 1024 * 1024, UploadUrl = "/api/demo/uploads", FileUploadBehavior = ZoorceFileUploadBehavior.Manual, UploadButtonText = "Upload images" })
+                @await Component.InvokeAsync("ZoorceFormControl", new ZoorceFormControlOptions { Id = "release-owner-avatar", Name = "avatar", Kind = ZoorceFormControlKind.AvatarPicker, Label = "Owner avatar", Placeholder = "Choose avatar", Accept = "image/png,image/jpeg,image/webp,image/svg+xml", MaximumFileSizeBytes = 2 * 1024 * 1024 })
             </div>
         </section>
 
@@ -142,6 +142,9 @@
             form.addEventListener("zoerce:form:change", event => show(`${labelFor(event.detail.id)} updated`, "Its value remains synchronized with this form."));
             form.addEventListener("zoerce:form:complete", event => show(`${labelFor(event.detail.id)} complete`, "The full verification code is ready for the host form."));
             form.addEventListener("zoerce:form:filechange", event => show("File selection updated", "The browser will include the selected file when the host submits this form."));
+            form.addEventListener("zoerce:form:uploadprogress", event => show("Uploading file", `${event.detail.file.name} is ${event.detail.progress}% complete.`));
+            form.addEventListener("zoerce:form:uploadcomplete", event => show("File uploaded", `${event.detail.file.name} was accepted by the sample endpoint.`));
+            form.addEventListener("zoerce:form:uploaderror", event => show("Upload needs attention", `${event.detail.file.name} could not be uploaded. You can try again.`));
             form.addEventListener("zoerce:form:invalid", event => show(`${labelFor(event.detail.id)} needs attention`, event.detail.message));
             form.addEventListener("submit", event => {
                 event.preventDefault();

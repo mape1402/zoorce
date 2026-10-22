@@ -75,6 +75,27 @@ public sealed record ZoorceFormControlOptions
     /// <summary>Gets whether the file selector accepts multiple files.</summary>
     public bool Multiple { get; init; }
 
+    /// <summary>Gets the maximum number of files the control can retain. Avatar pickers always retain one.</summary>
+    public int? MaximumFiles { get; init; }
+
+    /// <summary>Gets the maximum size in bytes for one selected file.</summary>
+    public long? MaximumFileSizeBytes { get; init; }
+
+    /// <summary>Gets the maximum aggregate size in bytes for all selected files.</summary>
+    public long? MaximumTotalFileSizeBytes { get; init; }
+
+    /// <summary>Gets assets already persisted by the host and shown before a user makes a new selection.</summary>
+    public IReadOnlyList<ZoorceFileUploadItem> ExistingFiles { get; init; } = [];
+
+    /// <summary>Gets the optional same-origin endpoint used for managed file uploads.</summary>
+    public string? UploadUrl { get; init; }
+
+    /// <summary>Gets when a selected file is sent to <see cref="UploadUrl"/>.</summary>
+    public ZoorceFileUploadBehavior FileUploadBehavior { get; init; } = ZoorceFileUploadBehavior.Deferred;
+
+    /// <summary>Gets the optional label for the managed-upload action.</summary>
+    public string? UploadButtonText { get; init; }
+
     /// <summary>Gets whether the user can create values not in <see cref="Choices"/>.</summary>
     public bool AllowCustomValues { get; init; }
 
@@ -111,6 +132,8 @@ public sealed record ZoorceFormControlOptions
     /// <summary>Validates and normalizes the field configuration.</summary>
     public ZoorceFormControlOptions Normalize()
     {
+        ArgumentNullException.ThrowIfNull(ExistingFiles);
+
         if (string.IsNullOrWhiteSpace(Id))
         {
             throw new ArgumentException("A form control requires an id.", nameof(Id));
@@ -146,6 +169,31 @@ public sealed record ZoorceFormControlOptions
             throw new ArgumentOutOfRangeException(nameof(CodeLength), "Code length must be greater than zero.");
         }
 
+        if (MaximumFiles is <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(MaximumFiles), "Maximum file count must be greater than zero.");
+        }
+
+        if (MaximumFileSizeBytes is <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(MaximumFileSizeBytes), "Maximum file size must be greater than zero.");
+        }
+
+        if (MaximumTotalFileSizeBytes is <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(MaximumTotalFileSizeBytes), "Maximum total file size must be greater than zero.");
+        }
+
+        if (!Enum.IsDefined(FileUploadBehavior))
+        {
+            throw new ArgumentOutOfRangeException(nameof(FileUploadBehavior), "The file upload behavior is not supported.");
+        }
+
+        if (FileUploadBehavior != ZoorceFileUploadBehavior.Deferred && string.IsNullOrWhiteSpace(UploadUrl))
+        {
+            throw new ArgumentException("Managed file upload requires an upload URL.", nameof(UploadUrl));
+        }
+
         if (!Enum.IsDefined(OtpCharacterSet))
         {
             throw new ArgumentOutOfRangeException(nameof(OtpCharacterSet), "The OTP character set is not supported.");
@@ -171,6 +219,23 @@ public sealed record ZoorceFormControlOptions
 
         var normalizedValue = NormalizeValue(Value);
         var normalizedCodeLength = Kind == ZoorceFormControlKind.Otp ? CodeLength ?? MaximumLength ?? 6 : CodeLength;
+        var normalizedFiles = ExistingFiles.Select(file => file?.Normalize() ?? throw new ArgumentException("Uploaded files cannot contain null values.", nameof(ExistingFiles))).ToArray();
+        var effectiveMaximumFiles = Kind == ZoorceFormControlKind.AvatarPicker ? 1 : MaximumFiles;
+        if (Kind == ZoorceFormControlKind.AvatarPicker && normalizedFiles.Length > 1)
+        {
+            throw new ArgumentException("An avatar picker can show only one image.", nameof(ExistingFiles));
+        }
+
+        if (effectiveMaximumFiles is not null && normalizedFiles.Length > effectiveMaximumFiles)
+        {
+            throw new ArgumentException("Existing files exceed the configured maximum.", nameof(ExistingFiles));
+        }
+
+        var duplicateFile = normalizedFiles.GroupBy(file => file.Id, StringComparer.OrdinalIgnoreCase).FirstOrDefault(group => group.Count() > 1);
+        if (duplicateFile is not null)
+        {
+            throw new ArgumentException($"Uploaded file '{duplicateFile.Key}' is duplicated.", nameof(ExistingFiles));
+        }
         if (Kind == ZoorceFormControlKind.Otp)
         {
             normalizedValue = NormalizeOtpValue(normalizedValue, normalizedCodeLength!.Value, OtpCharacterSet, OtpTextTransform);
@@ -189,6 +254,13 @@ public sealed record ZoorceFormControlOptions
             Prefix = NormalizeText(Prefix),
             Suffix = NormalizeText(Suffix),
             Accept = NormalizeText(Accept),
+            Multiple = Kind == ZoorceFormControlKind.AvatarPicker ? false : Multiple,
+            MaximumFiles = effectiveMaximumFiles,
+            MaximumFileSizeBytes = MaximumFileSizeBytes,
+            MaximumTotalFileSizeBytes = MaximumTotalFileSizeBytes,
+            ExistingFiles = normalizedFiles,
+            UploadUrl = NormalizeText(UploadUrl),
+            UploadButtonText = NormalizeText(UploadButtonText),
             ValidationMessage = NormalizeText(ValidationMessage),
             Autocomplete = NormalizeText(Autocomplete),
             Locale = NormalizeLocale(Locale),

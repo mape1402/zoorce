@@ -1,4 +1,5 @@
 @using System.Globalization
+@using System.Text.Json
 @using Zoerce.WebUI.Components.Forms
 @model ZoorceFormControlOptions
 @{
@@ -21,6 +22,10 @@
     var otpInputMode = Model.OtpCharacterSet == ZoorceOtpCharacterSet.Numeric ? "numeric" : "text";
     var otpAutocomplete = Model.Autocomplete ?? (Model.OtpCharacterSet == ZoorceOtpCharacterSet.Numeric ? "one-time-code" : "off");
     var otpCellName = Model.OtpCharacterSet == ZoorceOtpCharacterSet.Numeric ? "Digit" : "Character";
+    var isAvatarPicker = Model.Kind == ZoorceFormControlKind.AvatarPicker;
+    var fileAccept = Model.Kind is ZoorceFormControlKind.ImageUpload or ZoorceFormControlKind.AvatarPicker ? (Model.Accept ?? "image/*") : Model.Accept;
+    var fileAllowsMultiple = !isAvatarPicker && Model.Multiple;
+    var existingFilesJson = JsonSerializer.Serialize(Model.ExistingFiles);
     string StateClass() => Model.State == ZoorceFormControlState.Default ? string.Empty : $"is-{Model.State.ToString().ToLowerInvariant()}";
     string ChoiceId(ZoorceFormChoice choice, int index) => $"{Model.Id}-{index}";
 }
@@ -166,7 +171,37 @@
                 case ZoorceFormControlKind.FileUpload:
                 case ZoorceFormControlKind.ImageUpload:
                 case ZoorceFormControlKind.AvatarPicker:
-                    <div class="z-file-upload @(Model.Kind == ZoorceFormControlKind.AvatarPicker ? "z-file-upload--avatar" : string.Empty)" data-z-file-upload><input id="@Model.Id" class="z-file-input" type="file" name="@name" accept="@(Model.Kind == ZoorceFormControlKind.ImageUpload || Model.Kind == ZoorceFormControlKind.AvatarPicker ? (Model.Accept ?? "image/*") : Model.Accept)" multiple="@(Model.Multiple && Model.Kind == ZoorceFormControlKind.FileUpload)" disabled="@Model.Disabled" data-z-file-input /><label for="@Model.Id"><span class="z-file-upload-icon" aria-hidden="true">@(Model.Kind == ZoorceFormControlKind.AvatarPicker ? "◉" : "↑")</span><strong>@(Model.Placeholder ?? "Choose a file or drop it here")</strong><small>@(Model.Accept ?? "Files are kept in this browser until the form is submitted.")</small></label><div class="z-file-preview" data-z-file-preview aria-live="polite"></div></div>
+                    <div class="z-file-upload @(isAvatarPicker ? "z-file-upload--avatar" : string.Empty) @(Model.Kind == ZoorceFormControlKind.ImageUpload ? "z-file-upload--images" : string.Empty)" data-z-file-upload data-z-file-kind="@Model.Kind" data-z-file-max-files="@Model.MaximumFiles" data-z-file-max-size="@Model.MaximumFileSizeBytes" data-z-file-max-total="@Model.MaximumTotalFileSizeBytes" data-z-file-upload-url="@Model.UploadUrl" data-z-file-upload-behavior="@Model.FileUploadBehavior" data-z-file-initial="@existingFilesJson">
+                        <input id="@Model.Id" class="z-file-input" type="file" name="@name" accept="@fileAccept" multiple="@fileAllowsMultiple" required="@Model.Required" disabled="@Model.Disabled" data-z-file-input />
+                        @if (isAvatarPicker)
+                        {
+                            <div class="z-avatar-picker" data-z-avatar-picker>
+                                <button class="z-avatar-picker-preview" type="button" data-z-avatar-preview data-z-file-picker aria-live="polite" aria-label="Add avatar image" disabled="@Model.Disabled">
+                                    <span class="z-avatar-picker-empty-icon" aria-hidden="true">↑</span>
+                                    <span class="z-avatar-picker-empty-copy">Add image</span>
+                                    <span class="z-visually-hidden" data-z-avatar-status>No avatar selected.</span>
+                                </button>
+                                <div class="z-avatar-picker-actions">
+                                    <button class="z-button z-button-ghost z-button-sm" type="button" data-z-avatar-edit data-z-file-picker hidden @(Model.Disabled ? "disabled" : null)>Edit</button>
+                                    <button class="z-button z-button-ghost z-button-sm" type="button" data-z-file-remove-all hidden @(Model.Disabled ? "disabled" : null)>Remove</button>
+                                </div>
+                            </div>
+                        }
+                        else
+                        {
+                            <label class="z-file-dropzone" for="@Model.Id" data-z-file-picker>
+                                <span class="z-file-upload-icon" aria-hidden="true">↑</span>
+                                <strong>@(Model.Placeholder ?? "Choose a file or drop it here")</strong>
+                                <small>@(fileAccept ?? "Files are kept in this browser until the form is submitted.")</small>
+                            </label>
+                        }
+                        <div class="z-file-upload-feedback" role="status" aria-live="polite" data-z-file-feedback></div>
+                        <div class="z-file-preview" data-z-file-preview aria-live="polite"></div>
+                        @if (Model.FileUploadBehavior == ZoorceFileUploadBehavior.Manual)
+                        {
+                            <button class="z-button z-button-secondary z-button-sm z-file-upload-trigger" type="button" data-z-file-upload-trigger disabled="@Model.Disabled">@(Model.UploadButtonText ?? "Upload selected")</button>
+                        }
+                    </div>
                     break;
                 case ZoorceFormControlKind.Phone:
                     <div class="z-phone-input"><select name="@name-country" aria-label="Country code" disabled="@Model.Disabled" data-z-phone-country>@foreach (var choice in Model.Choices) { <option value="@choice.Value" selected="@string.Equals(configuredCountry, choice.Value, StringComparison.OrdinalIgnoreCase)">@choice.Label</option> }</select><input id="@Model.Id" class="z-form-input" type="tel" name="@name" value="@Model.Value" placeholder="@Model.Placeholder" autocomplete="tel" required="@Model.Required" disabled="@Model.Disabled" readonly="@Model.ReadOnly" data-z-form-input /></div>

@@ -221,37 +221,364 @@
     };
 
     const bindFiles = root => {
+        const surface = root.querySelector("[data-z-file-upload]");
         const input = root.querySelector("[data-z-file-input]");
         const preview = root.querySelector("[data-z-file-preview]");
-        const label = root.querySelector("label");
-        const isAvatar = root.classList.contains("z-file-upload--avatar");
-        if (!input || !preview) return;
-        const show = files => {
-            preview.replaceChildren();
-            label?.querySelector("[data-z-avatar-image]")?.remove();
-            label?.classList.remove("has-preview");
-            [...files].slice(0, isAvatar ? 1 : files.length).forEach(file => {
-                if (isAvatar && file.type.startsWith("image/") && label) {
-                    const image = document.createElement("img");
-                    image.alt = "Selected avatar preview";
-                    image.className = "z-avatar-upload-preview";
-                    image.dataset.zAvatarImage = "";
-                    image.src = URL.createObjectURL(file);
-                    image.addEventListener("load", () => URL.revokeObjectURL(image.src));
-                    label.append(image);
-                    label.classList.add("has-preview");
-                    return;
-                }
-                const row = document.createElement("span"); row.className = "z-file-name";
-                if (file.type.startsWith("image/")) { const image = document.createElement("img"); image.alt = ""; image.src = URL.createObjectURL(file); image.addEventListener("load", () => URL.revokeObjectURL(image.src)); row.append(image); }
-                const text = document.createElement("strong"); text.textContent = `${file.name} · ${Math.ceil(file.size / 1024)} KB`; row.append(text); preview.append(row);
-            });
-            root.dispatchEvent(new CustomEvent("zoerce:form:filechange", { bubbles: true, detail: { id: root.dataset.zFormId, files: [...files].map(file => ({ name: file.name, size: file.size, type: file.type })) } }));
+        const feedback = root.querySelector("[data-z-file-feedback]");
+        const avatarPreview = root.querySelector("[data-z-avatar-preview]");
+        const avatarStatus = root.querySelector("[data-z-avatar-status]");
+        const avatarEdit = root.querySelector("[data-z-avatar-edit]");
+        const removeAll = root.querySelector("[data-z-file-remove-all]");
+        const uploadTrigger = root.querySelector("[data-z-file-upload-trigger]");
+        if (!surface || !input || !preview) return null;
+
+        const isAvatar = surface.classList.contains("z-file-upload--avatar");
+        const legacyAvatarDropzone = isAvatar && !avatarPreview ? surface.querySelector("label") : null;
+        const acceptsImages = (input.accept || "").split(",").some(rule => rule.trim().toLowerCase().startsWith("image/"));
+        const isImageUpload = surface.classList.contains("z-file-upload--images") || acceptsImages || isAvatar;
+        const allowsMultiple = input.multiple && !isAvatar;
+        const maximumFiles = Number.parseInt(surface.dataset.zFileMaxFiles || "", 10) || (isAvatar ? 1 : Number.POSITIVE_INFINITY);
+        const maximumFileSize = Number.parseInt(surface.dataset.zFileMaxSize || "", 10) || Number.POSITIVE_INFINITY;
+        const maximumTotalSize = Number.parseInt(surface.dataset.zFileMaxTotal || "", 10) || Number.POSITIVE_INFINITY;
+        const uploadUrl = surface.dataset.zFileUploadUrl || "";
+        const uploadBehavior = surface.dataset.zFileUploadBehavior || "Deferred";
+        const objectUrls = new Set();
+        const removedExisting = new Set();
+        let serial = 0;
+        let existing = [];
+        let selected = [];
+
+        try {
+            const initial = JSON.parse(surface.dataset.zFileInitial || "[]");
+            existing = Array.isArray(initial) ? initial.map(item => ({
+                id: String(item.id ?? item.Id ?? `existing-${++serial}`),
+                name: String(item.name ?? item.Name ?? "File"),
+                type: String(item.contentType ?? item.ContentType ?? ""),
+                size: Number(item.sizeBytes ?? item.SizeBytes ?? 0) || 0,
+                url: item.url ?? item.Url ?? null,
+                status: "uploaded",
+                progress: 100,
+                existing: true
+            })) : [];
+        } catch {
+            existing = [];
+        }
+
+        const fileKey = file => `${file.name.toLowerCase()}-${file.size}-${file.lastModified}`;
+        const itemKey = item => item.file ? fileKey(item.file) : `existing-${item.id}`;
+        const formatBytes = value => {
+            if (!value) return "";
+            if (value < 1024) return `${value} B`;
+            if (value < 1024 * 1024) return `${Math.ceil(value / 1024)} KB`;
+            return `${(value / (1024 * 1024)).toFixed(value >= 10 * 1024 * 1024 ? 0 : 1)} MB`;
         };
-        input.addEventListener("change", () => show(input.files));
-        root.addEventListener("dragover", event => { event.preventDefault(); root.classList.add("is-dragging"); });
-        root.addEventListener("dragleave", () => root.classList.remove("is-dragging"));
-        root.addEventListener("drop", event => { event.preventDefault(); root.classList.remove("is-dragging"); if (!input.disabled && event.dataTransfer?.files?.length) { try { input.files = event.dataTransfer.files; } catch { /* Browser forbids file assignment; preview still works. */ } show(event.dataTransfer.files); } });
+        const isImage = item => (item.type || "").toLowerCase().startsWith("image/") || /\.(avif|gif|jpe?g|png|svg|webp)$/i.test(item.name || "");
+        const accepted = file => {
+            const rules = (input.accept || "").split(",").map(rule => rule.trim().toLowerCase()).filter(Boolean);
+            if (!rules.length) return true;
+            const type = (file.type || "").toLowerCase();
+            const name = (file.name || "").toLowerCase();
+            return rules.some(rule => rule.endsWith("/*") ? type.startsWith(rule.slice(0, -1)) : rule.startsWith(".") ? name.endsWith(rule) : type === rule);
+        };
+        const emit = (name, detail) => root.dispatchEvent(new CustomEvent(name, { bubbles: true, detail: { id: root.dataset.zFormId, ...detail } }));
+        const emitChange = () => {
+            const files = selected.map(item => ({ name: item.name, size: item.size, type: item.type, status: item.status, progress: item.progress }));
+            emit("zoerce:form:filechange", { files, existingFiles: existing.map(item => ({ id: item.id, name: item.name, size: item.size, type: item.type })), removedFileIds: [...removedExisting] });
+            changed(root, "files", { files, removedFileIds: [...removedExisting] });
+        };
+        const setFeedback = (messages = [], tone = "") => {
+            if (!feedback) return;
+            feedback.replaceChildren();
+            feedback.className = `z-file-upload-feedback${tone ? ` is-${tone}` : ""}`;
+            messages.filter(Boolean).forEach(message => {
+                const item = document.createElement("span");
+                item.textContent = message;
+                feedback.append(item);
+            });
+        };
+        const syncNativeInput = () => {
+            try {
+                const transfer = new DataTransfer();
+                selected.forEach(item => transfer.items.add(item.file));
+                input.files = transfer.files;
+            } catch {
+                // Browsers without DataTransfer keep their native selection; visual removal remains available.
+            }
+        };
+        const release = item => {
+            if (item?.url && objectUrls.has(item.url)) {
+                URL.revokeObjectURL(item.url);
+                objectUrls.delete(item.url);
+            }
+        };
+        const createItem = file => {
+            const url = isImage({ type: file.type, name: file.name }) ? URL.createObjectURL(file) : null;
+            if (url) objectUrls.add(url);
+            return { id: `selected-${Date.now()}-${++serial}`, name: file.name, type: file.type, size: file.size, url, file, status: "selected", progress: 0, existing: false, xhr: null };
+        };
+        const allItems = () => [...existing, ...selected];
+        const renderAvatar = items => {
+            const item = items[0];
+            if (avatarPreview) {
+                avatarPreview.replaceChildren();
+                if (item && item.url && isImage(item)) {
+                    const image = document.createElement("img");
+                    image.src = item.url;
+                    image.alt = item.name ? `Avatar: ${item.name}` : "Selected avatar";
+                    avatarPreview.append(image);
+                    avatarPreview.classList.add("has-image");
+                    avatarPreview.disabled = true;
+                    avatarPreview.setAttribute("aria-label", "Avatar selected. Use Edit to replace the image.");
+                    avatarPreview.title = "Use Edit to replace the avatar";
+                } else {
+                    const icon = document.createElement("span");
+                    icon.className = "z-avatar-picker-empty-icon";
+                    icon.setAttribute("aria-hidden", "true");
+                    icon.textContent = "↑";
+                    const copy = document.createElement("span");
+                    copy.className = "z-avatar-picker-empty-copy";
+                    copy.textContent = "Add image";
+                    avatarPreview.append(icon, copy);
+                    avatarPreview.classList.remove("has-image");
+                    avatarPreview.disabled = input.disabled;
+                    avatarPreview.setAttribute("aria-label", "Add avatar image");
+                    avatarPreview.title = "Add avatar image";
+                }
+                if (avatarStatus) {
+                    avatarStatus.textContent = item ? `${item.name} selected.` : "No avatar selected.";
+                    avatarPreview.append(avatarStatus);
+                }
+                if (avatarEdit) {
+                    avatarEdit.toggleAttribute("hidden", !item);
+                    avatarEdit.disabled = input.disabled;
+                }
+                return;
+            }
+            if (!legacyAvatarDropzone) return;
+            legacyAvatarDropzone.querySelector(".z-avatar-upload-preview")?.remove();
+            if (item && item.url && isImage(item)) {
+                const image = document.createElement("img");
+                image.className = "z-avatar-upload-preview";
+                image.src = item.url;
+                image.alt = item.name ? `Avatar: ${item.name}` : "Selected avatar";
+                legacyAvatarDropzone.append(image);
+                legacyAvatarDropzone.classList.add("has-preview");
+            } else {
+                legacyAvatarDropzone.classList.remove("has-preview");
+            }
+        };
+        const createRemove = item => {
+            const button = document.createElement("button");
+            button.type = "button";
+            button.className = "z-file-remove";
+            button.setAttribute("aria-label", `Remove ${item.name}`);
+            button.title = `Remove ${item.name}`;
+            button.textContent = "×";
+            button.disabled = input.disabled;
+            button.addEventListener("click", () => remove(item));
+            return button;
+        };
+        const createProgress = item => {
+            if (item.status !== "uploading" && item.status !== "error" && item.status !== "uploaded") return null;
+            const wrap = document.createElement("div");
+            wrap.className = "z-file-progress";
+            const bar = document.createElement("span");
+            bar.style.setProperty("--z-file-progress", `${Math.min(100, Math.max(0, item.progress || 0))}%`);
+            const label = document.createElement("small");
+            label.textContent = item.status === "error" ? "Upload failed" : item.status === "uploaded" ? "Uploaded" : `${item.progress || 0}% uploaded`;
+            wrap.append(bar, label);
+            return wrap;
+        };
+        const createCard = item => {
+            const card = document.createElement("article");
+            card.className = `z-file-item is-${item.status}${item.existing ? " is-existing" : ""}`;
+            card.dataset.zFileItem = item.id;
+            if (isImage(item) && item.url) {
+                const image = document.createElement("img");
+                image.className = "z-file-thumbnail";
+                image.src = item.url;
+                image.alt = "";
+                card.append(image);
+            } else {
+                const icon = document.createElement("span");
+                icon.className = "z-file-kind";
+                icon.setAttribute("aria-hidden", "true");
+                icon.textContent = isImage(item) ? "▧" : "↗";
+                card.append(icon);
+            }
+            const copy = document.createElement("div");
+            copy.className = "z-file-copy";
+            const name = document.createElement("strong");
+            name.title = item.name;
+            name.textContent = item.name;
+            const meta = document.createElement("small");
+            meta.textContent = [formatBytes(item.size), item.existing ? "Saved" : item.status === "selected" ? "Ready" : null].filter(Boolean).join(" · ");
+            copy.append(name, meta);
+            const progress = createProgress(item);
+            if (progress) copy.append(progress);
+            card.append(copy, createRemove(item));
+            return card;
+        };
+        const renderCarousel = items => {
+            const carousel = document.createElement("div");
+            carousel.className = "z-file-carousel";
+            const track = document.createElement("div");
+            track.className = "z-file-carousel-track";
+            track.tabIndex = 0;
+            track.setAttribute("role", "list");
+            track.setAttribute("aria-label", "Selected images");
+            items.forEach(item => {
+                const slide = document.createElement("article");
+                slide.className = `z-file-image-slide is-${item.status}${item.existing ? " is-existing" : ""}`;
+                slide.setAttribute("role", "listitem");
+                slide.setAttribute("aria-label", item.name);
+                if (item.url) {
+                    const image = document.createElement("img");
+                    image.src = item.url;
+                    image.alt = item.name;
+                    slide.append(image);
+                }
+                const name = document.createElement("span");
+                name.className = "z-file-image-name";
+                name.title = item.name;
+                name.textContent = item.name;
+                slide.append(name, createRemove(item));
+                track.append(slide);
+            });
+            carousel.append(track);
+            return carousel;
+        };
+        const render = () => {
+            const items = allItems();
+            preview.replaceChildren();
+            surface.classList.toggle("has-files", items.length > 0);
+            removeAll?.toggleAttribute("hidden", items.length === 0);
+            if (uploadTrigger) {
+                const canUpload = selected.some(item => item.status === "selected" || item.status === "error");
+                uploadTrigger.hidden = !canUpload;
+                uploadTrigger.disabled = input.disabled || !canUpload;
+            }
+            if (isAvatar) {
+                renderAvatar(items);
+                return;
+            }
+            if (!items.length) return;
+            if (isImageUpload && (allowsMultiple || items.length > 1)) {
+                preview.append(renderCarousel(items));
+                return;
+            }
+            const list = document.createElement("div");
+            list.className = "z-file-list";
+            items.forEach(item => list.append(createCard(item)));
+            preview.append(list);
+        };
+        const remove = item => {
+            if (item.xhr) item.xhr.abort();
+            if (item.existing) {
+                existing = existing.filter(current => current !== item);
+                removedExisting.add(item.id);
+            } else {
+                selected = selected.filter(current => current !== item);
+                release(item);
+            }
+            syncNativeInput();
+            setFeedback();
+            render();
+            emitChange();
+        };
+        const upload = item => new Promise(resolve => {
+            if (!uploadUrl || !item?.file || item.status === "uploading" || item.status === "uploaded") { resolve(); return; }
+            item.status = "uploading";
+            item.progress = 0;
+            render();
+            const request = new XMLHttpRequest();
+            item.xhr = request;
+            request.open("POST", uploadUrl, true);
+            request.responseType = "json";
+            request.upload.addEventListener("progress", event => {
+                if (!event.lengthComputable) return;
+                item.progress = Math.round((event.loaded / event.total) * 100);
+                render();
+                emit("zoerce:form:uploadprogress", { file: { name: item.name, size: item.size, type: item.type }, progress: item.progress });
+            });
+            request.addEventListener("load", () => {
+                item.xhr = null;
+                if (request.status >= 200 && request.status < 300) {
+                    item.status = "uploaded";
+                    item.progress = 100;
+                    setFeedback([`${item.name} uploaded.`], "success");
+                    emit("zoerce:form:uploadcomplete", { file: { name: item.name, size: item.size, type: item.type }, response: request.response });
+                } else {
+                    item.status = "error";
+                    setFeedback([`${item.name} could not be uploaded.`], "error");
+                    emit("zoerce:form:uploaderror", { file: { name: item.name, size: item.size, type: item.type }, status: request.status });
+                }
+                render();
+                resolve();
+            });
+            request.addEventListener("error", () => {
+                item.xhr = null;
+                item.status = "error";
+                setFeedback([`${item.name} could not be uploaded.`], "error");
+                emit("zoerce:form:uploaderror", { file: { name: item.name, size: item.size, type: item.type }, status: 0 });
+                render();
+                resolve();
+            });
+            request.addEventListener("abort", () => { item.xhr = null; resolve(); });
+            const payload = new FormData();
+            payload.append(input.name || root.dataset.zFormId || "file", item.file, item.name);
+            request.send(payload);
+        });
+        const uploadSelected = items => Promise.all(items.filter(item => item.status === "selected" || item.status === "error").map(upload));
+        const addFiles = incoming => {
+            if (input.disabled) return;
+            const files = [...(incoming || [])];
+            if (!files.length) return;
+            const messages = [];
+            const added = [];
+            const used = new Set(selected.map(itemKey));
+            let totalSize = allowsMultiple ? allItems().reduce((total, item) => total + (item.size || 0), 0) : 0;
+            files.forEach(file => {
+                if (!accepted(file)) { messages.push(`${file.name} does not match the accepted format.`); return; }
+                if (file.size > maximumFileSize) { messages.push(`${file.name} exceeds the file-size limit.`); return; }
+                if (used.has(fileKey(file))) { messages.push(`${file.name} is already selected.`); return; }
+                if (!allowsMultiple && added.length) { messages.push("This control accepts one file only."); return; }
+                if (allowsMultiple && allItems().length + added.length >= maximumFiles) { messages.push(`You can select up to ${maximumFiles} file${maximumFiles === 1 ? "" : "s"}.`); return; }
+                if (totalSize + file.size > maximumTotalSize) { messages.push("The selected files exceed the total-size limit."); return; }
+                const item = createItem(file);
+                used.add(fileKey(file));
+                totalSize += file.size;
+                added.push(item);
+            });
+            if (!allowsMultiple && added.length) {
+                selected.forEach(release);
+                existing.forEach(item => removedExisting.add(item.id));
+                existing = [];
+                selected = [added[0]];
+            } else {
+                selected.push(...added);
+            }
+            syncNativeInput();
+            setFeedback(messages, messages.length ? "error" : "");
+            render();
+            emitChange();
+            if (uploadBehavior === "Automatic" && uploadUrl && added.length) void uploadSelected(added);
+        };
+
+        input.addEventListener("change", () => addFiles(input.files));
+        root.querySelectorAll("[data-z-file-picker]").forEach(trigger => {
+            if (trigger.tagName === "LABEL") return;
+            trigger.addEventListener("click", () => {
+                if (!input.disabled) input.click();
+            });
+        });
+        surface.addEventListener("dragover", event => { if (!input.disabled) { event.preventDefault(); surface.classList.add("is-dragging"); } });
+        surface.addEventListener("dragleave", event => { if (!surface.contains(event.relatedTarget)) surface.classList.remove("is-dragging"); });
+        surface.addEventListener("drop", event => { event.preventDefault(); surface.classList.remove("is-dragging"); addFiles(event.dataTransfer?.files); });
+        removeAll?.addEventListener("click", () => [...allItems()].forEach(remove));
+        uploadTrigger?.addEventListener("click", () => void uploadSelected(selected));
+        render();
+        return { dispose: () => { selected.forEach(item => { item.xhr?.abort(); release(item); }); } };
     };
 
     const bindOtp = root => {
@@ -383,8 +710,8 @@
 
     const mount = root => {
         if (!root || instances.has(root)) return instances.get(root);
-        bindInputEvents(root); bindNumber(root); bindRanges(root); bindPassword(root); bindMask(root); bindSelections(root); bindMultiSelect(root); bindTags(root); bindColor(root); bindFiles(root); bindOtp(root); bindKeyValue(root); bindTransfer(root);
-        const controller = { root, dispose: () => instances.delete(root) };
+        bindInputEvents(root); bindNumber(root); bindRanges(root); bindPassword(root); bindMask(root); bindSelections(root); bindMultiSelect(root); bindTags(root); bindColor(root); const fileController = bindFiles(root); bindOtp(root); bindKeyValue(root); bindTransfer(root);
+        const controller = { root, dispose: () => { fileController?.dispose(); instances.delete(root); } };
         instances.set(root, controller);
         return controller;
     };

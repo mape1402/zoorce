@@ -868,6 +868,64 @@ public sealed class ComponentContractTests
     }
 
     [Fact]
+    public void File_upload_normalizes_limits_existing_assets_and_avatar_rules()
+    {
+        var gallery = new ZoorceFormControlOptions
+        {
+            Id = " release-gallery ",
+            Kind = ZoorceFormControlKind.ImageUpload,
+            Accept = " image/png, image/webp ",
+            Multiple = true,
+            MaximumFiles = 4,
+            MaximumFileSizeBytes = 4_000_000,
+            MaximumTotalFileSizeBytes = 8_000_000,
+            UploadUrl = " /api/uploads ",
+            FileUploadBehavior = ZoorceFileUploadBehavior.Manual,
+            UploadButtonText = " Upload now ",
+            ExistingFiles = [new(" cover ", " Cover.png ", " /assets/cover.png ", " IMAGE/PNG ", 512)]
+        }.Normalize();
+
+        var avatar = new ZoorceFormControlOptions
+        {
+            Id = "avatar",
+            Kind = ZoorceFormControlKind.AvatarPicker,
+            Multiple = true,
+            ExistingFiles = [new("owner", "Owner.webp", "/assets/owner.webp", "image/webp", 300)]
+        }.Normalize();
+
+        Assert.Equal("release-gallery", gallery.Id);
+        Assert.Equal("image/png, image/webp", gallery.Accept);
+        Assert.True(gallery.Multiple);
+        Assert.Equal(4, gallery.MaximumFiles);
+        Assert.Equal("/api/uploads", gallery.UploadUrl);
+        Assert.Equal("Upload now", gallery.UploadButtonText);
+        Assert.Equal("cover", gallery.ExistingFiles.Single().Id);
+        Assert.Equal("image/png", gallery.ExistingFiles.Single().ContentType);
+        Assert.False(avatar.Multiple);
+        Assert.Equal(1, avatar.MaximumFiles);
+        Assert.Single(avatar.ExistingFiles);
+    }
+
+    [Fact]
+    public void File_upload_rejects_invalid_limits_behaviors_and_avatar_collections()
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(() => new ZoorceFormControlOptions { Id = "files", MaximumFiles = 0 }.Normalize());
+        Assert.Throws<ArgumentOutOfRangeException>(() => new ZoorceFormControlOptions { Id = "files", MaximumFileSizeBytes = 0 }.Normalize());
+        Assert.Throws<ArgumentException>(() => new ZoorceFormControlOptions { Id = "files", FileUploadBehavior = ZoorceFileUploadBehavior.Automatic }.Normalize());
+        Assert.Throws<ArgumentException>(() => new ZoorceFormControlOptions
+        {
+            Id = "avatar",
+            Kind = ZoorceFormControlKind.AvatarPicker,
+            ExistingFiles = [new("one", "one.png"), new("two", "two.png")]
+        }.Normalize());
+        Assert.Throws<ArgumentException>(() => new ZoorceFormControlOptions
+        {
+            Id = "files",
+            ExistingFiles = [new("same", "one.png"), new(" SAME ", "two.png")]
+        }.Normalize());
+    }
+
+    [Fact]
     public void Form_controls_and_chips_are_available_as_isolated_view_components()
     {
         var control = new ZoorceFormControlViewComponent();

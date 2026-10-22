@@ -90,5 +90,16 @@ app.MapPost("/api/demo/timeline", async (SampleRealtimePublisher publisher, Canc
     var update = await publisher.PublishTimelineAsync(cancellationToken);
     return Results.Ok(update);
 });
+app.MapPost("/api/demo/uploads", async (HttpRequest request, CancellationToken cancellationToken) =>
+{
+    var form = await request.ReadFormAsync(cancellationToken);
+    var files = form.Files;
+    await Task.Delay(180, cancellationToken);
+    return Results.Ok(new
+    {
+        uploaded = files.Select(file => new { file.FileName, file.ContentType, file.Length }).ToArray(),
+        message = $"{files.Count} file(s) accepted by the sample endpoint."
+    });
+});
 
 app.Run();
