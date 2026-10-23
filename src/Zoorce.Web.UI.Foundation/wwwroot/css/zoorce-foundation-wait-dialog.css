@@ -1,0 +1,4 @@
+.z-wait-dialog-layer { position: fixed; inset: 0; z-index: 90; display: grid; place-items: center; padding: 1.5rem; background: var(--z-overlay); }
+.z-wait-dialog { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 1rem; width: min(100%, 34rem); padding: 1.25rem; color: var(--z-text); background: var(--z-elevated); border: 1px solid var(--z-border); border-radius: 1rem; box-shadow: 0 1.4rem 4rem var(--z-shadow); }
+.z-wait-dialog-copy h2, .z-wait-dialog-copy p { margin: 0; }.z-wait-dialog-copy p { margin-top: .3rem; color: var(--z-muted); }
+@media (max-width: 34rem) { .z-wait-dialog { grid-template-columns: auto 1fr; }.z-wait-dialog .z-button { grid-column: 1 / -1; justify-self: end; } }

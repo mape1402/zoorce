@@ -1,0 +1,14 @@
+@using Zoorce.Web.UI.Abstractions.Navigation
+@model IReadOnlyList<NavigationItem>
+<div class="z-command-layer" data-z-command-layer hidden>
+    <section class="z-command-palette" role="dialog" aria-modal="true" aria-labelledby="z-command-title">
+        <h2 id="z-command-title" class="z-visually-hidden">Quick search</h2>
+        <div class="z-command-search"><span aria-hidden="true">⌕</span><input data-z-command-input type="search" aria-label="Search pages and actions" placeholder="Search pages and actions..." autocomplete="off" /><kbd>Esc</kbd></div>
+        <div class="z-command-list" data-z-command-list>
+            @foreach (var item in Model)
+            {
+                <a class="z-command-item" href="@item.Url" data-z-command-item><span>@item.Icon</span><span>@item.Text</span><kbd>↵</kbd></a>
+            }
+        </div>
+    </section>
+</div>

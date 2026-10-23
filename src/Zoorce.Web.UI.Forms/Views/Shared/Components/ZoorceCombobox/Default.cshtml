@@ -1,0 +1,49 @@
+@using Zoorce.Web.UI.Forms
+@model ZoorceFormControlOptions
+@{
+    var name = Model.Name ?? Model.Id;
+    var selected = Model.Choices.FirstOrDefault(choice => string.Equals(choice.Value, Model.Value, StringComparison.OrdinalIgnoreCase));
+    var messageId = $"{Model.Id}-message";
+    var describedBy = !string.IsNullOrWhiteSpace(Model.Description) || !string.IsNullOrWhiteSpace(Model.ValidationMessage) ? messageId : null;
+    var hasError = Model.State == ZoorceFormControlState.Error;
+    var stateClass = Model.State == ZoorceFormControlState.Default ? string.Empty : $"is-{Model.State.ToString().ToLowerInvariant()}";
+    var inputValue = selected?.Label ?? Model.Value ?? string.Empty;
+    var listboxId = $"{Model.Id}-options";
+}
+<div class="z-form-field z-form-field--combobox @stateClass @(Model.Disabled ? "is-disabled" : string.Empty)" data-z-form-control data-z-form-kind="@Model.Kind" data-z-form-id="@Model.Id" data-z-combobox-open-on-focus="@Model.OpenOnFocus.ToString().ToLowerInvariant()" data-z-combobox-allow-custom="@Model.AllowCustomValues.ToString().ToLowerInvariant()">
+    @if (!string.IsNullOrWhiteSpace(Model.Label))
+    {
+        <label class="z-form-label" for="@Model.Id">@Model.Label @if (Model.Required) { <span class="z-form-required" aria-hidden="true">*</span> }</label>
+    }
+    <div class="z-form-control-surface">
+        <input type="hidden" name="@name" value="@Model.Value" data-z-form-value />
+        <div class="z-combobox" data-z-combobox>
+            <input id="@Model.Id" class="z-form-input z-combobox-input" type="text" value="@inputValue" placeholder="@Model.Placeholder" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="@listboxId" aria-describedby="@describedBy" aria-invalid="@hasError.ToString().ToLowerInvariant()" data-z-combobox-input disabled="@Model.Disabled" readonly="@Model.ReadOnly" />
+            <button class="z-combobox-toggle" type="button" aria-label="Show @Model.Label options" aria-haspopup="listbox" aria-expanded="false" aria-controls="@listboxId" data-z-combobox-toggle disabled="@(Model.Disabled || Model.ReadOnly)">
+                <svg class="z-choice-trigger-chevron" viewBox="0 0 16 16" aria-hidden="true"><path d="m3.25 5.75 4.75 4.5 4.75-4.5" /></svg>
+            </button>
+            <div id="@listboxId" class="z-choice-menu z-combobox-menu" role="listbox" aria-label="@Model.Label options" data-z-combobox-menu hidden>
+                @foreach (var choice in Model.Choices)
+                {
+                    var isSelected = string.Equals(choice.Value, selected?.Value, StringComparison.OrdinalIgnoreCase);
+                    <button class="z-choice-option @(isSelected ? "is-selected" : string.Empty)" type="button" role="option" aria-selected="@isSelected.ToString().ToLowerInvariant()" data-z-combobox-option data-z-choice-value="@choice.Value" data-z-choice-label="@choice.Label" disabled="@(Model.Disabled || choice.Disabled)">
+                        @if (Model.ChoiceTemplate is not null)
+                        {
+                            @Model.ChoiceTemplate(choice)
+                        }
+                        else
+                        {
+                            @if (!string.IsNullOrWhiteSpace(choice.Icon)) { <span class="z-choice-option-icon" aria-hidden="true">@choice.Icon</span> }
+                            <span class="z-choice-option-copy"><strong>@choice.Label</strong>@if (!string.IsNullOrWhiteSpace(choice.Description)) { <small>@choice.Description</small> }</span>
+                        }
+                    </button>
+                }
+                <p class="z-combobox-empty" data-z-combobox-empty hidden>@(Model.EmptyResultsText ?? "No matching options.")</p>
+            </div>
+        </div>
+    </div>
+    @if (!string.IsNullOrWhiteSpace(Model.Description) || !string.IsNullOrWhiteSpace(Model.ValidationMessage))
+    {
+        <div id="@messageId" class="z-form-message" data-z-form-message aria-live="polite"><span>@(Model.ValidationMessage ?? Model.Description)</span></div>
+    }
+</div>

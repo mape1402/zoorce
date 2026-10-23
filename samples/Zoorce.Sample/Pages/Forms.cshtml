@@ -1,0 +1,194 @@
+@page "/forms"
+@using Zoorce.Web.UI.Forms
+@{
+    ViewData["Title"] = "Form controls";
+    var teams = new[]
+    {
+        new ZoorceFormChoice("platform", "Platform", "Shared systems", "▦"),
+        new ZoorceFormChoice("design", "Design", "Product experience", "◇"),
+        new ZoorceFormChoice("growth", "Growth", "Acquisition and adoption", "↗"),
+        new ZoorceFormChoice("security", "Security", "Risk and assurance", "◈")
+    };
+    var colors = new[]
+    {
+        new ZoorceFormChoice("#7C5CFF", "Amethyst"), new ZoorceFormChoice("#22C8A2", "Mint"), new ZoorceFormChoice("#2AA8FF", "Sky"), new ZoorceFormChoice("#F2AE3D", "Amber"), new ZoorceFormChoice("#DE4B69", "Rose")
+    };
+    var icons = new[]
+    {
+        new ZoorceFormChoice("spark", "Spark", Icon: "✦"), new ZoorceFormChoice("rocket", "Rocket", Icon: "🚀"), new ZoorceFormChoice("shield", "Shield", Icon: "◈")
+    };
+}
+
+<section class="z-form-catalog" data-z-form-catalog>
+    <div class="z-page-heading">
+        <div><span class="z-section-kicker">Form system · reusable controls</span><h1>Every input, one visual language.</h1><p>Every example invokes a concrete component with typed options. Values remain ordinary named fields so the surrounding host form can submit or persist them.</p></div>
+    </div>
+
+    <section class="z-release-editor" aria-labelledby="release-editor-title">
+        <header class="z-form-catalog-heading"><div><span class="z-section-kicker">Live host example · release editor</span><h2 id="release-editor-title">Prepare a release for approval</h2></div><p>A host composes the controls into a real workflow: readiness updates locally and saving posts the normal form data to the sample endpoint.</p></header>
+        <div class="z-release-editor-grid">
+            <form class="z-release-editor-form" data-z-release-editor novalidate>
+                @await Component.InvokeAsync("ZoorceTextInput", new ZoorceTextInputOptions { Id = "editor-release-name", Name = "releaseName", Label = "Release name", Value = "Autumn release", Required = true, Placeholder = "e.g. Autumn release" })
+                @await Component.InvokeAsync("ZoorceSelect", new ZoorceSelectOptions { Id = "editor-risk", Name = "risk", Label = "Release risk", Value = "standard", Placeholder = "Choose risk", AllowClear = true, Choices = [new("low", "Low risk", "Normal operating change", "↓"), new("standard", "Standard", "Cross-team delivery", "◇"), new("high", "High risk", "Needs strong launch confidence", "!")] })
+                @await Component.InvokeAsync("ZoorceCombobox", new ZoorceComboboxOptions { Id = "editor-owner", Name = "owner", Label = "Release owner", Value = "platform", Placeholder = "Find a delivery team", Choices = teams, EmptyResultsText = "No delivery team matches this search." })
+                @await Component.InvokeAsync("ZoorceRating", new ZoorceRatingOptions { Id = "editor-confidence", Name = "confidence", Label = "Launch confidence", Value = "4", Description = "High-risk releases require at least four stars.", Choices = Enumerable.Range(1, 5).Select(value => new ZoorceFormChoice(value.ToString(), $"{value} of 5 confidence")).ToArray() })
+                @await Component.InvokeAsync("ZoorceCheckboxGroup", new ZoorceCheckboxGroupOptions { Id = "editor-checks", Name = "checks", Label = "Approval checks", Value = "tests,notes", Choices = [new("tests", "Tests passed"), new("notes", "Release notes prepared"), new("rollback", "Rollback plan verified")] })
+                <div class="z-page-actions"><button class="z-button z-button-primary" type="submit">Save release draft</button><button class="z-button z-button-ghost" type="reset">Reset release</button></div>
+            </form>
+            <aside class="z-release-editor-preview" aria-live="polite" data-z-release-preview>
+                <span>Release readiness</span><strong data-z-release-readiness>Ready for review</strong><p data-z-release-summary>Autumn release is assigned to Platform with standard risk and 4/5 confidence.</p>
+                <dl><div><dt>Risk</dt><dd data-z-release-risk>Standard</dd></div><div><dt>Owner</dt><dd data-z-release-owner>Platform</dd></div><div><dt>Confidence</dt><dd data-z-release-confidence>4 / 5</dd></div></dl>
+                <p class="z-release-editor-status" data-z-release-status>Make a change to see the host summary update.</p>
+            </aside>
+        </div>
+    </section>
+
+    <form data-z-form-demo novalidate>
+        @await Component.InvokeAsync("ZoorceHiddenInput", new ZoorceHiddenInputOptions { Id = "form-revision", Name = "formRevision", Value = "forms-catalog-v2" })
+
+        <section class="z-form-catalog-section" aria-labelledby="foundation-title">
+            <div class="z-form-catalog-heading"><div><span class="z-section-kicker">01 · Core entry</span><h2 id="foundation-title">Text, values and quantities</h2></div><p>Compact numeric entry and a separate touch-friendly quantity control use different components and contracts.</p></div>
+            <div class="z-form-demo-grid">
+                @await Component.InvokeAsync("ZoorceTextInput", new ZoorceTextInputOptions { Id = "release-name", Name = "releaseName", Label = "Release name", Description = "A concise, customer-facing title.", Value = "Autumn release", Required = true, Placeholder = "e.g. Autumn release", Autocomplete = "off" })
+                @await Component.InvokeAsync("ZoorceTextArea", new ZoorceTextAreaOptions { Id = "release-summary", Name = "summary", Label = "Summary", Value = "Improves the delivery workflow while keeping migration work predictable.", MaximumLength = 240, Rows = 4 })
+                @await Component.InvokeAsync("ZoorcePasswordInput", new ZoorcePasswordInputOptions { Id = "release-password", Name = "password", Label = "Deployment password", Description = "Strength feedback remains local to this field.", Placeholder = "Use a strong secret", Autocomplete = "new-password" })
+                @await Component.InvokeAsync("ZoorceMaskedInput", new ZoorceMaskedInputOptions { Id = "release-id", Name = "releaseId", Label = "Release identifier", Value = "REL-2026-104", Mask = "AAA-####-###", State = ZoorceFormControlState.Success, ValidationMessage = "Identifier is available." })
+                @await Component.InvokeAsync("ZoorceNumericInput", new ZoorceNumericInputOptions { Id = "retry-count", Name = "retries", Label = "Retry budget", Value = "3", Minimum = 0, Maximum = 12, Step = 1 })
+                @await Component.InvokeAsync("ZoorceQuantityStepper", new ZoorceQuantityStepperOptions { Id = "dependents", Name = "dependents", Label = "Number of dependents", Description = "A spacious counter for a direct-touch quantity.", Value = "3", Minimum = 0, Maximum = 12, Step = 1 })
+                @await Component.InvokeAsync("ZoorceCurrencyInput", new ZoorceCurrencyInputOptions { Id = "budget", Name = "budget", Label = "Monthly budget", Value = "12500", Prefix = "$", CurrencyCode = "MXN", Locale = "es-MX", Minimum = 0, Maximum = 1000000, Step = 500 })
+                @await Component.InvokeAsync("ZoorcePercentageInput", new ZoorcePercentageInputOptions { Id = "rollout", Name = "rollout", Label = "Rollout percentage", Value = "35", Minimum = 0, Maximum = 100, Step = 5 })
+            </div>
+        </section>
+
+        <section class="z-form-catalog-section" aria-labelledby="selection-title">
+            <div class="z-form-catalog-heading"><div><span class="z-section-kicker">02 · Selection</span><h2 id="selection-title">Choices, chips and toggles</h2></div><p>Each control emits only scoped field events and keeps a standard submitted value.</p></div>
+            <div class="z-form-demo-grid">
+                @await Component.InvokeAsync("ZoorceSelect", new ZoorceSelectOptions { Id = "release-risk", Name = "risk", Label = "Release risk", Placeholder = "Choose risk", Value = "standard", Choices = [new("low", "Low risk"), new("standard", "Standard"), new("high", "High risk")] })
+                @await Component.InvokeAsync("ZoorceMultiSelect", new ZoorceMultiSelectOptions { Id = "owners", Name = "owners", Label = "Reviewing teams", Value = "platform,design", Choices = teams })
+                @await Component.InvokeAsync("ZoorceCombobox", new ZoorceComboboxOptions { Id = "owner-search", Name = "ownerSearch", Label = "Release owner", Value = "platform", Placeholder = "Find a team", Choices = teams, AllowCustomValues = true })
+                @await Component.InvokeAsync("ZoorceSegmentedControl", new ZoorceSegmentedControlOptions { Id = "environment", Name = "environment", Label = "Environment", Value = "staging", Choices = [new("sandbox", "Sandbox", Icon: "◇"), new("staging", "Staging", Icon: "◈"), new("production", "Production", Icon: "↗")] })
+                @await Component.InvokeAsync("ZoorceCheckboxGroup", new ZoorceCheckboxGroupOptions { Id = "release-flags", Name = "flags", Label = "Release checks", Value = "tests,notes", Choices = [new("tests", "Tests passed"), new("notes", "Notes prepared"), new("migration", "Migration confirmed")] })
+                @await Component.InvokeAsync("ZoorceRadioGroup", new ZoorceRadioGroupOptions { Id = "release-window", Name = "window", Label = "Release window", Value = "scheduled", Choices = [new("scheduled", "Scheduled"), new("manual", "Manual")] })
+                @await Component.InvokeAsync("ZoorceToggleSwitch", new ZoorceToggleSwitchOptions { Id = "telemetry", Name = "telemetry", Label = "Telemetry", Value = "true", Placeholder = "Enable delivery telemetry" })
+                @await Component.InvokeAsync("ZoorceCheckbox", new ZoorceCheckboxOptions { Id = "catalog-opt-in", Name = "catalog", Label = "Catalog visibility", Value = "true", Placeholder = "Include this release in the catalog" })
+                @await Component.InvokeAsync("ZoorceRating", new ZoorceRatingOptions { Id = "confidence", Name = "confidence", Label = "Launch confidence", Value = "4", Choices = Enumerable.Range(1, 5).Select(value => new ZoorceFormChoice(value.ToString(), $"{value} stars")).ToArray() })
+                @await Component.InvokeAsync("ZoorceTransferList", new ZoorceTransferListOptions { Id = "capabilities", Name = "capabilities", Label = "Enabled capabilities", Value = "timeline,diagram", Choices = [new("grid", "Data grid"), new("charts", "Charts"), new("timeline", "Timeline"), new("diagram", "Diagram"), new("forms", "Forms")] })
+            </div>
+            <div class="z-filter-row" aria-label="Standalone chips">
+                @await Component.InvokeAsync("ZoorceChip", new ZoorceChipOptions { Text = "Stable", Icon = "✓", Tone = "success" })
+                @await Component.InvokeAsync("ZoorceChip", new ZoorceChipOptions { Text = "Needs review", Icon = "!", Tone = "warning", Removable = true })
+                @await Component.InvokeAsync("ZoorceChip", new ZoorceChipOptions { Text = "Selected", Icon = "◇", Selected = true })
+            </div>
+        </section>
+
+        <section class="z-form-catalog-section" aria-labelledby="schedule-title">
+            <div class="z-form-catalog-heading"><div><span class="z-section-kicker">03 · Time and ranges</span><h2 id="schedule-title">Dates, durations and thresholds</h2></div><p>Native values remain portable while the component adds readable feedback and responsive behavior.</p></div>
+            <div class="z-form-demo-grid">
+                @await Component.InvokeAsync("ZoorceDateInput", new ZoorceDateInputOptions { Id = "delivery-date", Name = "deliveryDate", Label = "Delivery date", Value = "2026-10-30", Required = true })
+                @await Component.InvokeAsync("ZoorceTimeInput", new ZoorceTimeInputOptions { Id = "delivery-time", Name = "deliveryTime", Label = "Delivery time", Value = "17:30" })
+                @await Component.InvokeAsync("ZoorceDateTimeInput", new ZoorceDateTimeInputOptions { Id = "review-at", Name = "reviewAt", Label = "Review appointment", Value = "2026-10-28T10:00" })
+                @await Component.InvokeAsync("ZoorceDateRange", new ZoorceDateRangeOptions { Id = "release-range", Name = "releaseRange", Label = "Release window", Value = "2026-10-28", EndValue = "2026-10-30" })
+                @await Component.InvokeAsync("ZoorceDurationInput", new ZoorceDurationInputOptions { Id = "duration", Name = "duration", Label = "Maintenance duration", Hours = "2", Minutes = "30" })
+                @await Component.InvokeAsync("ZoorceSlider", new ZoorceSliderOptions { Id = "adoption", Name = "adoption", Label = "Target adoption", Value = "65", Minimum = 0, Maximum = 100, Step = 5 })
+                @await Component.InvokeAsync("ZoorceRangeSlider", new ZoorceRangeSliderOptions { Id = "audience", Name = "audience", Label = "Audience size", Value = "20", EndValue = "80", Minimum = 0, Maximum = 100, Step = 5 })
+                @await Component.InvokeAsync("ZoorceColorPicker", new ZoorceColorPickerOptions { Id = "brand-color", Name = "brandColor", Label = "Release color", Value = "#7C5CFF", Choices = colors, AllowAlpha = true })
+            </div>
+        </section>
+
+        <section class="z-form-catalog-section" aria-labelledby="structured-title">
+            <div class="z-form-catalog-heading"><div><span class="z-section-kicker">04 · Structured inputs</span><h2 id="structured-title">Richer data without leaving the form</h2></div><p>Composite controls still retain values that a conventional host form can validate and persist.</p></div>
+            <div class="z-form-demo-grid">
+                @await Component.InvokeAsync("ZoorceTagInput", new ZoorceTagInputOptions { Id = "release-tags", Name = "tags", Label = "Release tags", Value = "workflow,priority", Placeholder = "Type and press Enter" })
+                @await Component.InvokeAsync("ZoorceChipGroup", new ZoorceChipGroupOptions { Id = "feature-chips", Name = "featureChips", Label = "Feature areas", Value = "timeline,forms", Choices = [new("timeline", "Timeline", Icon: "◌"), new("diagram", "Diagram", Icon: "◇"), new("forms", "Forms", Icon: "▦")] })
+                @await Component.InvokeAsync("ZoorceIconPicker", new ZoorceIconPickerOptions { Id = "release-icon", Name = "releaseIcon", Label = "Release icon", Value = "spark", Choices = icons })
+                @await Component.InvokeAsync("ZoorceEmojiPicker", new ZoorceEmojiPickerOptions { Id = "release-emoji", Name = "releaseEmoji", Label = "Release emoji", Value = "sparkles", Choices = [new("sparkles", "Sparkles", Icon: "✨"), new("fire", "Fire", Icon: "🔥"), new("party", "Party", Icon: "🎉")] })
+                @await Component.InvokeAsync("ZoorcePhoneInput", new ZoorcePhoneInputOptions { Id = "contact-phone", Name = "phone", Label = "Release contact", Value = "55 1234 5678", Placeholder = "55 1234 5678", CountryCode = "+52", Choices = [new("+52", "MX +52"), new("+1", "US +1"), new("+34", "ES +34")] })
+                @await Component.InvokeAsync("ZoorceAddressInput", new ZoorceAddressInputOptions { Id = "release-address", Name = "address", Label = "Deployment address", Value = "Av. Reforma 250", CountryCode = "MX", Choices = [new("MX", "Mexico"), new("US", "United States"), new("ES", "Spain")] })
+                @await Component.InvokeAsync("ZoorceOtpInput", new ZoorceOtpInputOptions { Id = "approval-code", Name = "approvalCode", Label = "Approval code", Description = "Six-digit numeric code. Paste a whole code, use arrows to move, or Backspace to correct the previous digit.", Value = "2479", CodeLength = 6, Required = true })
+                @await Component.InvokeAsync("ZoorceOtpInput", new ZoorceOtpInputOptions { Id = "release-access-code", Name = "accessCode", Label = "Release access code", Description = "An uppercase alphanumeric code.", Value = "r9m", CodeLength = 8, CharacterSet = ZoorceOtpCharacterSet.Alphanumeric, TextTransform = ZoorceOtpTextTransform.Uppercase })
+                @await Component.InvokeAsync("ZoorceKeyValueEditor", new ZoorceKeyValueEditorOptions { Id = "release-metadata", Name = "metadata", Label = "Release metadata", Value = "{&quot;service&quot;:&quot;activity&quot;,&quot;region&quot;:&quot;mx-central&quot;}" })
+            </div>
+        </section>
+
+        <section class="z-form-catalog-section" aria-labelledby="files-title">
+            <div class="z-form-catalog-heading"><div><span class="z-section-kicker">05 · Assets and verification</span><h2 id="files-title">Files, images and identity</h2></div><p>File controls keep native multipart behavior; image controls add local thumbnails and managed-upload progress where configured.</p></div>
+            <div class="z-form-demo-grid z-form-demo-grid--thirds">
+                @await Component.InvokeAsync("ZoorceFileUpload", new ZoorceFileUploadOptions { Id = "release-files", Name = "files", Label = "Release attachments", Placeholder = "Add release notes or evidence", Accept = ".pdf,.docx,.png", Multiple = true, MaximumFiles = 3, MaximumFileSizeBytes = 2 * 1024 * 1024, MaximumTotalFileSizeBytes = 5 * 1024 * 1024 })
+                @await Component.InvokeAsync("ZoorceImageUpload", new ZoorceImageUploadOptions { Id = "release-cover", Name = "cover", Label = "Release cover", Placeholder = "Add a cover image", Accept = "image/png,image/jpeg,image/webp,image/svg+xml", Multiple = true, MaximumFiles = 5, MaximumFileSizeBytes = 4 * 1024 * 1024, MaximumTotalFileSizeBytes = 12 * 1024 * 1024, UploadUrl = "/api/demo/uploads", UploadBehavior = ZoorceFileUploadBehavior.Manual, UploadButtonText = "Upload images" })
+                @await Component.InvokeAsync("ZoorceAvatarPicker", new ZoorceAvatarPickerOptions { Id = "release-owner-avatar", Name = "avatar", Label = "Owner avatar", Placeholder = "Choose avatar", Accept = "image/png,image/jpeg,image/webp,image/svg+xml", MaximumFileSizeBytes = 2 * 1024 * 1024 })
+            </div>
+        </section>
+
+        <section class="z-form-catalog-section z-form-catalog-section--submit" aria-labelledby="submission-title">
+            <div class="z-form-catalog-heading"><div><span class="z-section-kicker">Host boundary</span><h2 id="submission-title">Ready for host integration</h2></div><p>Controls keep standard values and events without a page-wide coordinator.</p></div>
+            <div class="z-form-submit-row">
+                <div class="z-form-feedback" aria-live="polite"><strong data-z-form-event-title>Try any control</strong><p data-z-form-event>Its value stays ready for the surrounding form.</p></div>
+                <div class="z-page-actions"><button class="z-button z-button-primary" type="submit">Validate draft</button><button class="z-button z-button-ghost" type="reset" data-z-form-reset>Reset demo</button></div>
+            </div>
+        </section>
+    </form>
+</section>
+
+@section Scripts {
+    <script>
+        (() => {
+            const editor = document.querySelector("[data-z-release-editor]");
+            const preview = document.querySelector("[data-z-release-preview]");
+            if (editor && preview) {
+                const output = selector => preview.querySelector(selector);
+                const read = name => new FormData(editor).get(name)?.toString().trim() ?? "";
+                const ownerLabel = () => editor.querySelector(`[data-z-form-id="editor-owner"] [data-z-combobox-option][data-z-choice-value="${CSS.escape(read("owner"))}"]`)?.dataset.zChoiceLabel ?? read("owner") ?? "Unassigned";
+                const riskLabel = () => editor.querySelector(`[data-z-form-id="editor-risk"] [data-z-select-option][data-z-choice-value="${CSS.escape(read("risk"))}"]`)?.dataset.zChoiceLabel ?? "Not selected";
+                const refreshEditor = message => {
+                    const name = read("releaseName") || "Unnamed release";
+                    const risk = read("risk");
+                    const owner = ownerLabel() || "Unassigned";
+                    const confidence = Number(read("confidence") || 0);
+                    const ready = Boolean(name && owner && (!risk || risk !== "high" || confidence >= 4));
+                    output("[data-z-release-readiness]").textContent = ready ? "Ready for review" : "Needs attention";
+                    output("[data-z-release-summary]").textContent = `${name} is assigned to ${owner} with ${riskLabel().toLowerCase()} and ${confidence}/5 confidence.`;
+                    output("[data-z-release-risk]").textContent = riskLabel();
+                    output("[data-z-release-owner]").textContent = owner;
+                    output("[data-z-release-confidence]").textContent = `${confidence} / 5`;
+                    if (message) output("[data-z-release-status]").textContent = message;
+                    preview.classList.toggle("is-ready", ready);
+                    preview.classList.toggle("is-blocked", !ready);
+                };
+                editor.addEventListener("zoorce:form:change", () => refreshEditor("Draft updated locally. Save it when the readiness summary looks right."));
+                editor.addEventListener("submit", async event => {
+                    event.preventDefault();
+                    const submit = editor.querySelector("button[type=submit]");
+                    if (submit) { submit.disabled = true; submit.textContent = "Saving…"; }
+                    try {
+                        const response = await fetch("/api/demo/release-drafts", { method: "POST", body: new FormData(editor), headers: { Accept: "application/json" } });
+                        const result = await response.json();
+                        if (!response.ok) throw new Error(Object.values(result.errors ?? {}).flat().join(" ") || "The release draft needs attention.");
+                        refreshEditor(`Draft ${result.id} saved at ${new Date(result.savedAt).toLocaleTimeString()}.`);
+                    } catch (error) {
+                        refreshEditor(error instanceof Error ? error.message : "The release draft could not be saved.");
+                    } finally {
+                        if (submit) { submit.disabled = false; submit.textContent = "Save release draft"; }
+                    }
+                });
+                editor.addEventListener("reset", () => window.setTimeout(() => refreshEditor("Release values were restored."), 0));
+                refreshEditor();
+            }
+
+            const form = document.querySelector("[data-z-form-demo]");
+            const title = document.querySelector("[data-z-form-event-title]");
+            const output = document.querySelector("[data-z-form-event]");
+            if (!form || !title || !output) return;
+            const labelFor = id => document.querySelector(`[data-z-form-id="${CSS.escape(id)}"] .z-form-label`)?.textContent?.replace("*", "").trim() || "This control";
+            const show = (heading, message) => { title.textContent = heading; output.textContent = message; };
+            form.addEventListener("zoorce:form:change", event => show(`${labelFor(event.detail.id)} updated`, "Its value remains synchronized with this form."));
+            form.addEventListener("zoorce:form:complete", event => show(`${labelFor(event.detail.id)} complete`, "The full verification code is ready for the host form."));
+            form.addEventListener("zoorce:form:filechange", () => show("File selection updated", "The browser will include selected files when the host submits this form."));
+            form.addEventListener("zoorce:form:uploadprogress", event => show("Uploading file", `${event.detail.file.name} is ${event.detail.progress}% complete.`));
+            form.addEventListener("zoorce:form:uploadcomplete", event => show("File uploaded", `${event.detail.file.name} was accepted by the sample endpoint.`));
+            form.addEventListener("zoorce:form:uploaderror", event => show("Upload needs attention", `${event.detail.file.name} could not be uploaded. You can try again.`));
+            form.addEventListener("zoorce:form:invalid", event => show(`${labelFor(event.detail.id)} needs attention`, event.detail.message));
+            form.addEventListener("submit", event => { event.preventDefault(); show("Draft validated", "All current values are ready for the host form to submit or persist."); });
+            form.addEventListener("reset", () => window.setTimeout(() => show("Demo reset", "The sample values have been restored."), 0));
+        })();
+    </script>
+}

@@ -1,0 +1,52 @@
+@using Zoorce.Web.UI.Forms
+@model ZoorceFormControlOptions
+@{
+    var name = Model.Name ?? Model.Id;
+    var selected = Model.Choices.FirstOrDefault(choice => string.Equals(choice.Value, Model.Value, StringComparison.OrdinalIgnoreCase));
+    var messageId = $"{Model.Id}-message";
+    var describedBy = !string.IsNullOrWhiteSpace(Model.Description) || !string.IsNullOrWhiteSpace(Model.ValidationMessage) ? messageId : null;
+    var hasError = Model.State == ZoorceFormControlState.Error;
+    var stateClass = Model.State == ZoorceFormControlState.Default ? string.Empty : $"is-{Model.State.ToString().ToLowerInvariant()}";
+    var displayValue = selected?.Label ?? Model.Placeholder ?? "Select an option";
+    var listboxId = $"{Model.Id}-options";
+}
+<div class="z-form-field z-form-field--select @stateClass @(Model.Disabled ? "is-disabled" : string.Empty)" data-z-form-control data-z-form-kind="@Model.Kind" data-z-form-id="@Model.Id">
+    @if (!string.IsNullOrWhiteSpace(Model.Label))
+    {
+        <label class="z-form-label" for="@Model.Id-trigger">@Model.Label @if (Model.Required) { <span class="z-form-required" aria-hidden="true">*</span> }</label>
+    }
+    <div class="z-form-control-surface">
+        <input id="@Model.Id" type="hidden" name="@name" value="@Model.Value" data-z-form-value />
+        <div class="z-select" data-z-select>
+            <button id="@Model.Id-trigger" class="z-choice-trigger" type="button" aria-haspopup="listbox" aria-expanded="false" aria-controls="@listboxId" aria-describedby="@describedBy" data-z-select-trigger disabled="@(Model.Disabled || Model.ReadOnly)">
+                <span class="z-choice-trigger-value @(selected is null ? "is-placeholder" : string.Empty)" data-z-select-value>@displayValue</span>
+                <svg class="z-choice-trigger-chevron" viewBox="0 0 16 16" aria-hidden="true"><path d="m3.25 5.75 4.75 4.5 4.75-4.5" /></svg>
+            </button>
+            <div id="@listboxId" class="z-choice-menu" role="listbox" aria-labelledby="@Model.Id-trigger" data-z-select-menu hidden>
+                @if (Model.AllowClear && !Model.Required)
+                {
+                    <button class="z-choice-option z-choice-option--clear" type="button" role="option" aria-selected="@(selected is null ? "true" : "false")" data-z-select-clear>Clear selection</button>
+                }
+                @foreach (var choice in Model.Choices)
+                {
+                    var isSelected = string.Equals(choice.Value, selected?.Value, StringComparison.OrdinalIgnoreCase);
+                    <button class="z-choice-option @(isSelected ? "is-selected" : string.Empty)" type="button" role="option" aria-selected="@isSelected.ToString().ToLowerInvariant()" data-z-select-option data-z-choice-value="@choice.Value" data-z-choice-label="@choice.Label" disabled="@(Model.Disabled || choice.Disabled)">
+                        @if (Model.ChoiceTemplate is not null)
+                        {
+                            @Model.ChoiceTemplate(choice)
+                        }
+                        else
+                        {
+                            @if (!string.IsNullOrWhiteSpace(choice.Icon)) { <span class="z-choice-option-icon" aria-hidden="true">@choice.Icon</span> }
+                            <span class="z-choice-option-copy"><strong>@choice.Label</strong>@if (!string.IsNullOrWhiteSpace(choice.Description)) { <small>@choice.Description</small> }</span>
+                        }
+                    </button>
+                }
+            </div>
+        </div>
+    </div>
+    @if (!string.IsNullOrWhiteSpace(Model.Description) || !string.IsNullOrWhiteSpace(Model.ValidationMessage))
+    {
+        <div id="@messageId" class="z-form-message" data-z-form-message aria-live="polite"><span>@(Model.ValidationMessage ?? Model.Description)</span></div>
+    }
+</div>

@@ -1,0 +1,22 @@
+@using Microsoft.AspNetCore.Mvc.ViewFeatures
+@model Zoorce.Web.UI.Layout.Components.ZoorceSidebarNavigationModel
+<aside class="z-sidebar" id="zoorce-sidebar" data-z-sidebar aria-label="Primary navigation">
+    <div class="z-sidebar-brand">
+        <a class="z-brand" href="/" aria-label="@Model.Shell.ApplicationName home">
+            <span class="z-brand-mark" aria-hidden="true">@Model.Shell.BrandMark</span>
+            <span class="z-brand-copy"><strong>@Model.Shell.ApplicationName</strong><small>Design system</small></span>
+        </a>
+        <button class="z-icon-button z-sidebar-close" type="button" data-z-sidebar-close aria-label="Close navigation">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" /></svg>
+        </button>
+    </div>
+    <nav class="z-nav">
+        <p class="z-nav-label">Workspace</p>
+        @await Html.PartialAsync("_ZoorceNavigation", Model.Items, new ViewDataDictionary(ViewData)
+        {
+            ["ZoorceNavigationDepth"] = 0,
+            ["ZoorceNavigationPath"] = "root"
+        })
+    </nav>
+    <div class="z-sidebar-footer"><div class="z-pro-status"><span class="z-pro-orb" aria-hidden="true"></span><span><strong>All systems ready</strong><small>99.99% availability</small></span></div></div>
+</aside>

@@ -1,0 +1,12 @@
+@using Zoorce.Web.UI.Abstractions.Notifications
+@model IReadOnlyList<ZoorceToastMessage>
+<div class="z-toast-stack" data-z-toast-stack aria-live="polite" aria-atomic="false">
+    @foreach (var toast in Model)
+    {
+        <article class="z-toast z-toast-@toast.Kind.ToString().ToLowerInvariant()" data-z-toast-item data-z-timeout="@toast.DurationMilliseconds" role="status">
+            <span class="z-toast-symbol" aria-hidden="true"></span>
+            <div><strong>@toast.Title</strong><p>@toast.Message</p></div>
+            <button type="button" class="z-toast-dismiss" data-z-toast-dismiss aria-label="Dismiss notification">×</button>
+        </article>
+    }
+</div>

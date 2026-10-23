@@ -1,236 +1,85 @@
 # Component catalog
 
-Zoorce provides a dark-first, semantic-token UI foundation for Razor Pages. The sample project demonstrates each pattern in a single running application.
+## Foundation and layout
 
-## Shell and navigation
+`Zoorce.Web.UI.Foundation` contains reusable progress bars (linear and circular), skeletons, wait dialog/spinner, confirmation dialog, toast region, buttons, message surfaces, and chips. `Zoorce.Web.UI.Layout` composes those primitives into a semantic application shell; sidebar navigation, top bar, user menu, command palette, and layout regions remain separately reusable components.
 
-- Application shell, responsive sidebar, topbar, product brand and user profile surface.
-- Desktop sidebar that can hide completely, preserves the visitor preference, and can be configured as fixed instead.
-- Navigation density from `Comfortable` through `Dense`, plus an independent, styled scrollbar for long menus.
-- Recursive grouped navigation, single current-page state on the final leaf, keyboard disclosure controls, mobile overlay, skip link and quick command palette.
-- Light/Dark switcher, with colors injected through `ZoerceWebUiOptions` in dependency injection.
+The shell receives `ZoorceShellOptions` from the host. `ZoorceThemeCatalogOptions` supplies the initial palette while `IZoorceThemeService` supports a runtime replacement. Do not copy layout markup into a sample or host page—use `ZoorceLayout` and customize providers/options instead.
 
-Navigation entries come from the host application's `INavigationProvider`; Zoorce never hard-codes product sections. `NavigationItem.Children` may nest indefinitely, but three visible levels is the recommended information-architecture limit. Use `NavigationMatchMode.Exact` for a single route, `Prefix` for a route branch, `Hash` for a one-page section, `None` for a passive item, or `Auto` for the default behavior. `ActiveUrls` can add aliases without changing the visible target.
+## Data-bound components
 
-The sample’s density selector is a live visual preview. Production defaults continue to come from `ZoerceWebUiOptions.NavigationDensity` during service registration.
-
-## Actions and feedback
-
-- Primary, secondary, ghost, danger, icon and disabled button treatments.
-- Client and server-backed toasts via `IToastService`.
-- Confirmation dialog, modal, drawer, tooltip, skeleton loader and empty state.
-
-## Encapsulated data components
-
-`ZoorceDataGrid` and `ZoorceChart` are Razor View Components. Every rendered instance has its own root element, config payload, request lifecycle and optional realtime subscription. They can live together on the same document without shared selectors or a page-level coordinator. Server-rendered rows and SVG provide a usable first paint; JavaScript only enhances each individual root.
-
-The host owns the backend implementation through transport-neutral contracts in `Zoerce.WebUI.Abstractions.Data`:
-
-- `IZoorceDataSource<T>` receives a `ZoorceDataQuery` and `ZoorcePageRequest`, then returns `ZoorceDataPage<T>`.
-- `ZoorceDataChange<T>` describes optional SignalR mutations (`Upsert`, `Remove`, or `Invalidate`).
-- REST uses the same envelope in JSON. A grid needs a URL that returns `{ items, totalCount, hasMore, nextCursor }`.
-
-Use `ZoorceDataGridOptions.LoadMode` to select `Pagination` (previous/next controls) or `InfiniteScroll` (intersection observer plus a keyboard-accessible fallback). Both send the same query and page parameters; the difference is entirely presentational. `Virtualize` bounds appended DOM rows for long streams.
-
-For isolated local integrations, a grid root also accepts `zoerce:grid:insert` with an `{ item }` detail and `zoerce:grid:refresh`. These events update only that grid instance; they are useful for a host action, a modal workflow, or a SignalR adapter without coupling the rest of the document.
+Grid, charts, timelines, steppers, and diagrams expose `Binding`. A binding is not tied to any backend technology:
 
 ```cshtml
 @await Component.InvokeAsync("ZoorceDataGrid", new ZoorceDataGridOptions
 {
     Id = "orders",
     AriaLabel = "Orders",
-    SourceUrl = "/api/orders",
+    Binding = new ZoorceDataBindingOptions
+    {
+        Source = "/api/orders",
+        InvalidationScope = "orders"
+    },
     LoadMode = ZoorceDataLoadMode.InfiniteScroll,
-    RealtimeHubUrl = "/hubs/orders",
-    RealtimeEventName = "order-change",
-    Columns = [new("number", "Order"), new("status", "Status")]
-})
-```
-
-`ZoorceChart` renders native SVG—there is no charting library dependency. Charts can be static, REST-backed, SignalR-backed, or all three. Its data contract is a collection of named series composed of `ZoorceChartPoint` values, and every root owns its own render loop, ResizeObserver, tooltip, hidden-series state and realtime subscription.
-
-The visual catalog includes Line, Area, Sparkline, vertical Bar, HorizontalBar, Donut, Gauge, Funnel, Heatmap, Scatter, Bubble, Bullet, Histogram and Waterfall. Vertical bars support `Grouped`, `Stacked`, and `Stacked100` composition; line-style charts support `Straight`, `Smooth`, and `Step` interpolation.
-
-`ZoorceChartPoint` keeps the simple `Label` / `Value` pair for normal categorical charts and exposes optional `X`, `Low`, `High`, `Size`, and `Group` dimensions for continuous, ranged, bubble and matrix data. `ZoorceChartSeries.Color` can override a series color; otherwise the component uses the analytical `DataPrimary` through `DataQuinary` palette from the configured theme. Those tokens are intentionally independent from `Primary`, so a product brand does not turn every data series into the same color.
-
-Use `ShowLegend`, `ShowGrid`, `ShowAxes`, and `ShowTooltip` to tune presentation per instance. `MinimumValue`, `MaximumValue`, and `TargetValue` make bounded metrics, gauges and bullet charts deterministic. The legend is keyboard accessible and toggles only its own component instance. SVG paths use CSS-pixel view boxes and non-scaling strokes, avoiding blurred lines at normal browser zoom levels.
-
-A chart root can receive `zoerce:chart:replace` with `{ series }` for an instance-only data update, or `zoerce:chart:refresh` to reload its configured source. Both preserve the rest of the host page and make local, REST, and realtime demos follow the same boundary.
-
-```cshtml
-@await Component.InvokeAsync("ZoorceChart", new ZoorceChartOptions
-{
-    Id = "release-confidence",
-    Title = "Release confidence",
-    Summary = "Confidence against the deployment target",
-    Kind = ZoorceChartKind.Bullet,
-    MinimumValue = 0,
-    MaximumValue = 100,
-    TargetValue = 92,
-    ValueSuffix = "%",
-    ShowLegend = false,
-    Series = [new ZoorceChartSeries("Confidence", [new("Current", 87)])]
-})
-```
-
-SignalR is deliberately an opt-in adapter rather than a global shell dependency. When a component is given both realtime options, load the official SignalR browser client and Zoorce's `zoerce-signalr.js` adapter on the page that uses it. Static and REST-only components require neither script.
-
-## Workflow steppers
-
-`ZoorceStepper` is a Razor View Component for server-rendered progress, navigation and wizard flows. Every instance carries its own state payload, keyboard handling, optional REST refresh, and optional SignalR subscription; an update changes only that root and never reconstructs the surrounding page.
-
-Choose `Rail`, `Segmented`, `Sidebar`, `Workflow`, `NumberedRail`, `FlatSegments`, `WizardHeader`, or `MinimalRail` through `ZoorceStepperVariant`. `NumberedRail` uses square ordered milestones; `FlatSegments` is a rectangular, non-chevron stage bar; `WizardHeader` binds previous/next actions to a named current-stage header; and `MinimalRail` reveals only the active label above a compact marker rail. `Orientation` can be `Horizontal`, `Vertical`, or `Auto`; auto rails switch to a vertical arrangement when their own container becomes narrow. The normalizer deliberately keeps segmented, flat-segment, and header-wizard controls horizontal, while sidebar journeys stay vertical. `ZoorceStepperInteraction` separates a passive `Progress` display from direct `Navigation` and one-step-at-a-time `Wizard` behavior.
-
-Each `ZoorceStepperStep` has an id, title, optional supporting text or icon, semantic state (`Pending`, `Active`, `Completed`, `Attention`, `Error`, or `Disabled`), optional status text, target URL, panel id, and an optional `Tone` (`Neutral`, `Primary`, `Success`, `Warning`, `Danger`, or `Info`). `AllowCompletedNavigation` and `AllowFutureNavigation` define the basic navigation policy instead of baking product rules into the component.
-
-`Presentation` supplies instance-level visual choices without global CSS overrides: `MarkerStyle` (`Number`, `Icon`, `Check`, `Dot`, or `None`), `ActiveIndicator` (`Ring`, `Halo`, `Solid`, or `Outline`), `ActiveMotion` (`HaloPulse`, `RingPulse`, `MarkerPulse`, or `ConnectorDraw`), `LabelPlacement`, and `ConnectorStyle`. Motion automatically respects the visitor's reduced-motion setting. Semantic colors always come from the injected `Light` and `Dark` palette tokens (`Primary`, `Success`, `Warning`, `Danger`, and `Info`), so changing a host palette in `AddZoerceWebUI` immediately changes every stepper without component-specific color duplication.
-
-`TransitionRules` makes state movement explicit: configure forward movement (`AdjacentOnly`, `AnyEligible`, or `Block`), backward movement (`CompletedOnly`, `AnyEligible`, or `Block`), warning/error behavior, and whether moving backward preserves or resets later steps. For business authorization, add `TransitionUrl`; the component posts a `ZoorceStepperTransitionRequest` and changes only when the endpoint returns an allowed `ZoorceStepperTransitionDecision`. An accepted decision may include a `ZoorceStepperSnapshot`, letting REST or SignalR update an individual step's state, tone, copy, icon, destination, and navigability without rerendering the page.
-
-```cshtml
-@await Component.InvokeAsync("ZoorceStepper", new ZoorceStepperOptions
-{
-    Id = "release-workflow",
-    AriaLabel = "Release readiness",
-    Variant = ZoorceStepperVariant.Rail,
-    Orientation = ZoorceStepperOrientation.Auto,
-    Interaction = ZoorceStepperInteraction.Wizard,
-    Presentation = new ZoorceStepperPresentation
-    {
-        MarkerStyle = ZoorceStepperMarkerStyle.Number,
-        ActiveIndicator = ZoorceStepperActiveIndicator.Halo,
-        ActiveMotion = ZoorceStepperActiveMotion.HaloPulse,
-        ConnectorStyle = ZoorceStepperConnectorStyle.Progress
-    },
-    TransitionRules = new ZoorceStepperTransitionRules
-    {
-        Forward = ZoorceStepperForwardRule.AdjacentOnly,
-        Backward = ZoorceStepperBackwardRule.CompletedOnly,
-        Warning = ZoorceStepperWarningRule.RequireAuthorization,
-        Error = ZoorceStepperErrorRule.Block,
-        OnBackward = ZoorceStepperBackwardEffect.ResetFollowing
-    },
-    TransitionUrl = "/api/releases/authorize-transition",
-    SourceUrl = "/api/releases/current",
-    RealtimeHubUrl = "/hubs/releases",
-    RealtimeEventName = "release-update",
-    Steps =
+    Columns =
     [
-        new("brief", "Release brief", State: ZoorceStepperState.Completed),
-        new("validation", "Validation", State: ZoorceStepperState.Active),
-        new("handoff", "Handoff")
+        new("number", "Order"),
+        new("status", "Status")
     ]
 })
 ```
 
-REST and realtime snapshots use `{ currentStepId, steps: [{ id, state, tone, title, supportingText, statusText, icon, isNavigable, targetUrl }] }`. A transition request contains `stepperId`, `stepId`, `previousStepId`, `reason`, and `isBackward`. `RealtimeTransport` defaults to `Auto` and can explicitly select `WebSockets`, `ServerSentEvents`, or `LongPolling` when a host browser environment has a known transport constraint. The component emits cancelable `zoerce:stepper:request-change` before a local navigation request, followed by `zoerce:stepper:change`; listen on that one component root to run validation or synchronize adjacent content. `zoerce:stepper:loaded`, `zoerce:stepper:realtime`, and `zoerce:stepper:error` provide isolated transport lifecycle hooks. `IZoorceStepperTransitionPolicy` is the host-side contract when an application prefers injecting a policy service behind its own transition endpoint.
+The browser data runtime registers source adapters and scoped subscribers. An HTTP adapter is included. A host can call `ZoorceData.register("orders", adapter)` for another source type, and can publish `{ scope, strategy, change }` through `ZoorceData.invalidate(...)`. SignalR is optional: its adapter bridges a hub event to that same function.
+
+`ZoorceLoadingOptions` is enabled by default. Initial loads use skeleton/progress feedback and refreshes retain the last useful content unless an instance chooses otherwise. A grid, chart, timeline, or diagram updates its own root only.
+
+### Templates
+
+`ZoorceDataGridColumn` can declare a cell template key and `ZoorceTimelineItem` can choose an `ItemTemplates` key. The host provides the Razor partial/template once; each data item is rendered inside the component’s isolated root. This provides custom columns and timeline cards without reimplementing paging, keyboard behavior, overflow, data binding, or realtime invalidation.
+
+## Timeline
+
+`ZoorceTimeline` supports activity, agenda, rail, journal, milestones, horizontal, and presentation variants through `ZoorceTimelineVariant`, `Orientation`, and overflow configuration. Use `Interaction` to select read-only, selectable, actionable, or navigable behavior. The component dispatches scoped item events, so a host can open a detail panel or navigate without a global listener.
+
+When a horizontal sequence exceeds its viewport, the instance creates its own horizontal scroll surface. It never converts a long timeline into a compressed set of overlapping cards; controls and focus stay local to that instance.
 
 ## Diagram workspace
 
-`ZoorceDiagram` is a dependency-free diagram surface. It keeps its document and interaction state inside its own component root: it never relies on a global page controller. The camera projects HTML nodes and native SVG connections into screen space rather than scaling a single DOM layer, so text, cards and connection paths remain sharp at browser zoom.
+`ZoorceDiagram` supports flowchart, mind map, organization chart, and architecture profiles. It renders a portable `ZoorceDiagramDocument` with typed nodes, ports, edges, appearance, permissions, and export options. Node/edge changes remain local to the component’s document and can be saved through an optional host endpoint.
 
-Choose `Flowchart`, `MindMap`, `OrgChart`, or `Architecture` with `ZoorceDiagramProfile`; choose `Viewer`, `ReadOnly`, or `Editor` with `ZoorceDiagramMode`. The editor includes pan, grid snapping, palette insertion, selection, multi-select, drag positioning, keyboard delete, `Ctrl/Cmd+C` and `Ctrl/Cmd+V` node duplication, undo/redo, an inspector, navigator and an interactive overview. Inspector values persist automatically after a brief debounce, while the Save icon remains available to flush immediately. Mind maps and org charts also collapse a branch with a double-click or inspector control.
-
-Nodes use profile-aware SVG geometry rather than one generic card: decisions are spacious diamonds with a compact icon and title-only treatment, starts and ends are capsules, data stores are cylinders, documents have a curved foot, and semantic mind-map, org and architecture nodes retain their own silhouettes. The palette supports both click-to-add and native drag-and-drop, placing a new node under the release point on the canvas. Connections begin directly on any visible node anchor; drag to a target node to snap the preview onto its appropriate anchor, or click an anchor and then a target node. `ZoorceDiagramEdge.FromPort` and `ToPort` accept `Auto`, `Top`, `Right`, `Bottom`, or `Left`, making a JSON document able to preserve intentional routing. Org charts use top/bottom anchors and shared hierarchical bus lines by default, while explicit non-auto anchors retain their direct route. The Focus button elevates one diagram into an escape-key-dismissable full-viewport workspace without using browser fullscreen permissions.
-
-Set `PanMode` to `Background`, `SpaceKey`, `MiddleButton`, or `Disabled` to make viewport movement match the host product. The overview appears only when a diagram warrants it, labels itself clearly, shows the current viewport, and can be clicked or dragged to navigate.
-
-Documents are portable JSON through `ZoorceDiagramDocument`, `ZoorceDiagramNode`, and `ZoorceDiagramEdge`. Flowcharts allow a maximum of one `start` node and block outgoing connections from `end` nodes. Mind maps and org charts require exactly one root and one parent at most for every descendant. The client repeats these structural checks before save so a user gets immediate feedback; hosts should enforce their domain-specific rules at the receiving endpoint too.
-
-`ZoorceDiagramNodeStyle` supplies per-node fill, border, two-stop gradient, text colour, font family, size, weight, corner radius and opacity. `ZoorceDiagramEdgeStyle` supplies a connection colour, width and dashed treatment. The Appearance tab edits those values without changing other nodes; both styles travel in the document JSON. The inspector scrolls independently from the canvas, so appearance controls never alter the diagram viewport. The editor separates parallel flow connections into lanes and keeps each connection's configured stroke through its arrowhead, so decision branches such as `yes` and `no` remain visually unambiguous.
-
-```cshtml
-@await Component.InvokeAsync("ZoorceDiagram", new ZoorceDiagramOptions
-{
-    Id = "release-routing",
-    Title = "Release routing",
-    Summary = "An editable release decision flow",
-    Profile = ZoorceDiagramProfile.Flowchart,
-    Mode = ZoorceDiagramMode.Editor,
-    Layout = ZoorceDiagramLayout.Flow,
-    SourceUrl = "/api/diagrams/release-routing",
-    SaveUrl = "/api/diagrams/release-routing",
-    Document = new ZoorceDiagramDocument(1,
-    [
-        new("start", "start", "Request received", new(80, 220)),
-        new("review", "process", "Review request", new(350, 220)),
-        new("done", "end", "Completed", new(660, 220))
-    ],
-    [
-        new("start-review", "start", "review"),
-        new("review-done", "review", "done")
-    ])
-})
-```
-
-Set `SourceUrl` to reload one diagram document and `SaveUrl` to `PUT` its full JSON document. Editor changes autosave after a short debounce; the toolbar save icon and the host `zoerce:diagram:save` event both flush immediately. Its canvas controls retain zoom out, an editable percentage (press Enter to apply), zoom in and Fit alongside Undo and Redo; every toolbar action has a keyboard-visible tooltip. The same control group includes a scroll-zoom toggle: off by default so normal scrolling keeps its page behavior, on when direct mouse-wheel zoom is wanted; Ctrl/Command + wheel remains available either way. When `ShowMinimap` is enabled, the overview button can show or hide the mini map at any time, including after its in-canvas close control is used. Focus moves the diagram into a full-viewport workspace without changing the user's current zoom or pan position. Provide `RealtimeHubUrl` plus `RealtimeEventName` for an optional SignalR full-document subscription. The component also accepts host-dispatched `zoerce:diagram:replace`, `zoerce:diagram:focus`, `zoerce:diagram:validate`, and `zoerce:diagram:save` events; these act on one root only.
-
-Its emitted events are `zoerce:diagram:nodeclick`, `zoerce:diagram:edgeclick`, `zoerce:diagram:selectionchanged`, `zoerce:diagram:changed`, `zoerce:diagram:validated`, `zoerce:diagram:saved`, `zoerce:diagram:replaced`, and `zoerce:diagram:error`. Node actions are declarative (`Navigate`, `Panel`, `Modal`, `Event`, `Command`, or `Endpoint`): hosts can intercept the cancelable `zoerce:diagram:action` event without exposing raw scripts in a JSON document.
-
-## Markdown
-
-`IZoorceMarkdownRenderer` is registered in dependency injection and uses Markdig with advanced Markdown extensions, GitHub-style heading identifiers and raw HTML disabled. Generated heading metadata is available through `ZoorceMarkdownRenderResult.TableOfContents`. The renderer preserves only fragment, application-relative, `./`, `../`, HTTP(S), and `mailto` links; other protocols and protocol-relative URLs are replaced with `#`.
-
-For direct Razor use, add `@addTagHelper *, Zoerce.WebUI` and render an independent semantic surface:
-
-```cshtml
-<zoerce-markdown markdown="@Model.Documentation" css-class="z-panel"></zoerce-markdown>
-```
-
-## Data and content
-
-- Metric cards, insight cards, progress indicators, charts, status chips and badges.
-- Data grid with search, filter chips, row actions and pagination controls.
-- Documentation layout with navigation, table of contents, callouts, code blocks and copy control.
+Read-only behavior is capability-based: hosts independently allow adding nodes, moving nodes/connectors, editing content, editing appearance, importing, and exporting. Editor-only controls are not merely disabled; they are absent when their capability is unavailable. Tooltips, minimap, zoom, focus mode, connector anchors, and keyboard shortcuts stay encapsulated in the diagram root.
 
 ## Forms
 
-`ZoorceFormControl` is an isolated Razor View Component. It renders usable HTML form fields first, then enhances only its own root with `zoerce-forms.js`. A host can place any number of controls on a page or inside a normal `<form>`; values remain standard named inputs and do not require a client framework.
-
-The one typed contract, `ZoorceFormControlOptions`, supplies a stable `Id`, optional `Name`, label, supporting text, current values, choices, bounds, validation state, disabled/read-only state, semantic tokens, and optional host metadata. The host selects the visual behavior with `ZoorceFormControlKind`.
+Each form field has a dedicated View Component and typed options contract. Examples:
 
 ```cshtml
-@await Component.InvokeAsync("ZoorceFormControl", new ZoorceFormControlOptions
+@await Component.InvokeAsync("ZoorceQuantityStepper", new ZoorceQuantityStepperOptions
 {
     Id = "dependents",
     Name = "dependents",
-    Kind = ZoorceFormControlKind.QuantityStepper,
     Label = "Number of dependents",
     Value = "3",
     Minimum = 0,
     Maximum = 12,
     Step = 1
 })
+
+@await Component.InvokeAsync("ZoorceAvatarPicker", new ZoorceAvatarPickerOptions
+{
+    Id = "owner-avatar",
+    Name = "avatar",
+    Accept = "image/png,image/jpeg,image/webp",
+    MaximumFileSizeBytes = 2 * 1024 * 1024
+})
 ```
 
-The available kinds are grouped below:
+The current catalog includes text, textarea, password, hidden, masked, numeric up/down, quantity stepper, currency, percentage, date/time/range/duration, sliders, checkbox, toggle, single/multi-select, combobox, radio/checkbox/chip groups, segmented control, transfer list, rating, tags, color, icon, emoji, phone, address, OTP, key/value, file upload, image gallery, and single-image avatar picker.
 
-- **Entry:** `Text`, `TextArea`, `Password`, `Hidden`, `Masked`, `NumericUpDown`, `QuantityStepper`, `Currency`, and `Percentage`.
-- **Range and scheduling:** `Slider`, `RangeSlider`, `Date`, `Time`, `DateTime`, `DateRange`, and `Duration`.
-- **Selection:** `Checkbox`, `CheckboxGroup`, `RadioGroup`, `ToggleSwitch`, `Select`, `MultiSelect`, `Combobox`, `SegmentedControl`, `TransferList`, `Rating`, `ChipGroup`, and `TagInput`.
-- **Visual selection:** `ColorPicker`, `IconPicker`, and `EmojiPicker`.
-- **Files and structured values:** `FileUpload`, `ImageUpload`, `AvatarPicker`, `Phone`, `Address`, `Otp`, and `KeyValue`.
+Named options expose the common label/value/state contract plus only relevant settings. File/image controls support accepted formats, one or many files, size/count limits, deferred/manual/automatic same-origin upload, persisted assets, and progress events. Avatar is intentionally a single image: its visual target opens selection, Edit replaces the image, and Remove clears it.
 
-`Masked` understands `#` (digit), `A` (letter), and `*` (alphanumeric) placeholders. This covers fiscal references, phone formats, card-like inputs, postal codes, and product-specific values without hardcoding local rules in the package. Currency and percentage controls build on the numeric behavior; phone, OTP, address, and key/value editors retain regular submitted values so the server stays authoritative.
+Form enhancement is progressive. Every field keeps an ordinary named HTML input and emits bubbling `zoorce:form:*` events only within its containing form/control scope.
 
-`Otp` uses `CodeLength` (default: 6) to render its cells; `MaximumLength` remains a backwards-compatible fallback. Set `OtpCharacterSet` to `Numeric`, `Alphabetic`, or `Alphanumeric`, and choose `OtpTextTransform` (`Preserve`, `Uppercase`, or `Lowercase`) for letters. It accepts paste from the current cell, keeps the aggregate value in its normal named hidden field, supports arrows, Home/End, Backspace/Delete, read-only/disabled states, native required validation, and emits `zoerce:form:complete` once when a code becomes complete.
+`ZoorceSelect` owns its trigger, chevron, listbox and submitted hidden value, so its appearance and interaction do not vary by browser. Set `AllowClear` for an optional clear action. `ZoorceCombobox` owns filtering, its disclosure button, keyboard navigation and empty-result state; `AllowCustomValues`, `OpenOnFocus`, and `EmptyResultsText` configure its behavior. Both controls can render richer option content through `ChoiceTemplate` while retaining their selection semantics.
 
-`FileUpload`, `ImageUpload`, and `AvatarPicker` keep the native file input, so deferred uploads continue to work with normal multipart form submissions. `Accept` accepts standard MIME types and extensions; `Multiple`, `MaximumFiles`, `MaximumFileSizeBytes`, and `MaximumTotalFileSizeBytes` constrain a selection before it reaches the host. `AvatarPicker` is intentionally single-image even when `Multiple` is supplied. Use `ExistingFiles` to render persisted host assets; image uploads use a thumbnail carousel when multiple assets are present, while ordinary files use a compact list with individual removal.
-
-For managed uploads, set `UploadUrl` and choose `FileUploadBehavior.Automatic` or `Manual`. The browser sends each selected file to that same-origin endpoint with `XMLHttpRequest`, exposing per-file progress and emitting `zoerce:form:uploadprogress`, `zoerce:form:uploadcomplete`, and `zoerce:form:uploaderror`. `Deferred` remains the default and emits `zoerce:form:filechange` without making a request.
-
-`QuantityStepper` is deliberately separate from `NumericUpDown`: the former has large, touch-friendly circular controls and a centered discrete value, while the latter supports compact, direct numeric entry. Both honor `Minimum`, `Maximum`, `Step`, disabled state, keyboard entry, and scoped change events.
-
-`ColorPicker` accepts six-digit HEX values; set `AllowAlpha` to expose an opacity control and serialize an eight-digit HEX value when opacity is below 100%. Choices may provide product-specific swatches. `ZoorceChip` is also exposed as a small standalone View Component for status, filters, removable labels, and selected states.
-
-Listen at an individual component root or a containing form for `zoerce:form:change`, `zoerce:form:complete`, `zoerce:form:filechange`, and `zoerce:form:invalid`. Each event bubbles with `{ id, kind, name, value, source }`; selection controls also include their selected values. `zoerce:form:complete` is emitted when an OTP transitions from incomplete to complete. No global page coordinator is necessary.
-
-```js
-document.querySelector("[data-z-form-demo]").addEventListener("zoerce:form:change", event => {
-    console.log(event.detail.id, event.detail.value);
-});
-```
-
-All controls share label, hint, required marker, disabled/read-only, warning, success, and error states; theme colors come only from the semantic `--z-*` palette. The sample’s **Forms** page is a live catalog that exercises every type, demonstrates native form readiness without exposing a debug payload, and covers desktop and responsive layouts.
-
-All visual colors consume `--z-*` semantic variables emitted by the Razor layout, including canvas, surfaces, code surfaces, overlay, shadow, foreground, and semantic success/warning/danger/info states. Configure `Light.DataPrimary` through `Light.DataQuinary` and their `Dark` equivalents in `AddZoerceWebUI` to establish a product's analytical palette independently from its brand accent. A host can brand both themes without editing Zoorce's generated Tailwind CSS.
+`ZoorceRating` stores one selected value but uses cumulative visual fill by default: a value of four fills icons one through four. `DisplayMode`, `AllowClear`, choice labels, and choice icons make the control suitable for other scales. Arrow keys, Home, End, Enter, and Space work without requiring a pointer.

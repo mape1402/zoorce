@@ -1,0 +1,20 @@
+@using Zoorce.Web.UI.Foundation.WaitDialog
+@model ZoorceWaitDialogOptions
+<div id="@Model.Id" class="z-wait-dialog-layer" data-z-wait-dialog hidden>
+    <section class="z-wait-dialog" role="dialog" aria-modal="true" aria-labelledby="@Model.Id-title" aria-describedby="@Model.Id-description" aria-busy="true" tabindex="-1">
+        <div class="z-wait-dialog-progress" data-z-wait-dialog-progress>
+            @await Component.InvokeAsync("ZoorceProgress", Model.Progress)
+        </div>
+        <div class="z-wait-dialog-copy">
+            <h2 id="@Model.Id-title" data-z-wait-dialog-title>@Model.Title</h2>
+            @if (Model.Description is not null)
+            {
+                <p id="@Model.Id-description" data-z-wait-dialog-description>@Model.Description</p>
+            }
+        </div>
+        @if (Model.CanCancel)
+        {
+            <button class="z-button z-button-ghost" type="button" data-z-wait-dialog-cancel>@Model.CancelLabel</button>
+        }
+    </section>
+</div>

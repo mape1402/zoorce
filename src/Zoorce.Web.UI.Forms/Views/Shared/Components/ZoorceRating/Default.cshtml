@@ -1,0 +1,31 @@
+@using Zoorce.Web.UI.Forms
+@model ZoorceFormControlOptions
+@{
+    var name = Model.Name ?? Model.Id;
+    var selectedIndex = Model.Choices.Select((choice, index) => new { choice, index }).FirstOrDefault(item => string.Equals(item.choice.Value, Model.Value, StringComparison.OrdinalIgnoreCase))?.index ?? -1;
+    var messageId = $"{Model.Id}-message";
+    var describedBy = !string.IsNullOrWhiteSpace(Model.Description) || !string.IsNullOrWhiteSpace(Model.ValidationMessage) ? messageId : null;
+    var stateClass = Model.State == ZoorceFormControlState.Default ? string.Empty : $"is-{Model.State.ToString().ToLowerInvariant()}";
+}
+<div class="z-form-field z-form-field--rating @stateClass @(Model.Disabled ? "is-disabled" : string.Empty)" data-z-form-control data-z-form-kind="@Model.Kind" data-z-form-id="@Model.Id" data-z-rating-mode="@Model.RatingDisplayMode" data-z-rating-allow-clear="@Model.AllowClear.ToString().ToLowerInvariant()">
+    @if (!string.IsNullOrWhiteSpace(Model.Label))
+    {
+        <label class="z-form-label" id="@Model.Id-label">@Model.Label @if (Model.Required) { <span class="z-form-required" aria-hidden="true">*</span> }</label>
+    }
+    <div class="z-form-control-surface">
+        <input id="@Model.Id" type="hidden" name="@name" value="@Model.Value" data-z-form-value />
+        <div class="z-rating" role="radiogroup" aria-labelledby="@Model.Id-label" aria-describedby="@describedBy" data-z-rating>
+            @for (var index = 0; index < Model.Choices.Count; index++)
+            {
+                var choice = Model.Choices[index];
+                var isSelected = index == selectedIndex;
+                var isFilled = Model.RatingDisplayMode == ZoorceRatingDisplayMode.Cumulative ? index <= selectedIndex : isSelected;
+                <button class="@(isSelected ? "is-selected" : string.Empty) @(isFilled ? "is-filled" : string.Empty)" type="button" role="radio" aria-checked="@isSelected.ToString().ToLowerInvariant()" aria-label="@choice.Label" tabindex="@(isSelected || (selectedIndex < 0 && index == 0) ? "0" : "-1")" data-z-rating-option data-z-rating-value="@choice.Value" disabled="@(Model.Disabled || Model.ReadOnly || choice.Disabled)"><span aria-hidden="true">@(string.IsNullOrWhiteSpace(choice.Icon) ? "★" : choice.Icon)</span></button>
+            }
+        </div>
+    </div>
+    @if (!string.IsNullOrWhiteSpace(Model.Description) || !string.IsNullOrWhiteSpace(Model.ValidationMessage))
+    {
+        <div id="@messageId" class="z-form-message" data-z-form-message aria-live="polite"><span>@(Model.ValidationMessage ?? Model.Description)</span></div>
+    }
+</div>

@@ -1,0 +1,23 @@
+<Solution>
+  <Folder Name="/samples/">
+    <Project Path="samples/Zoorce.Sample/Zoorce.Sample.csproj" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/Zoorce.Web.UI.Abstractions/Zoorce.Web.UI.Abstractions.csproj" />
+    <Project Path="src/Zoorce.Web.UI.Data/Zoorce.Web.UI.Data.csproj" />
+    <Project Path="src/Zoorce.Web.UI.Foundation/Zoorce.Web.UI.Foundation.csproj" />
+    <Project Path="src/Zoorce.Web.UI.Layout/Zoorce.Web.UI.Layout.csproj" />
+    <Project Path="src/Zoorce.Web.UI.Realtime.SignalR/Zoorce.Web.UI.Realtime.SignalR.csproj" />
+    <Project Path="src/Zoorce.Web.UI.Theming/Zoorce.Web.UI.Theming.csproj" />
+    <Project Path="src/Zoorce.Web.UI.Timelines/Zoorce.Web.UI.Timelines.csproj" />
+    <Project Path="src/Zoorce.Web.UI.Charts/Zoorce.Web.UI.Charts.csproj" />
+    <Project Path="src/Zoorce.Web.UI.DataGrid/Zoorce.Web.UI.DataGrid.csproj" />
+    <Project Path="src/Zoorce.Web.UI.Diagrams/Zoorce.Web.UI.Diagrams.csproj" />
+    <Project Path="src/Zoorce.Web.UI.Forms/Zoorce.Web.UI.Forms.csproj" />
+    <Project Path="src/Zoorce.Web.UI.Navigation/Zoorce.Web.UI.Navigation.csproj" />
+    <Project Path="src/Zoorce.Web.UI/Zoorce.Web.UI.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Zoorce.Web.UI.Tests/Zoorce.Web.UI.Tests.csproj" />
+  </Folder>
+</Solution>

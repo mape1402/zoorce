@@ -1,0 +1,13 @@
+@using Zoorce.Web.UI.Forms
+@model ZoorceChipOptions
+<span class="z-chip @(Model.Selected ? "is-selected" : string.Empty) @(Model.Disabled ? "is-disabled" : string.Empty) @(Model.Tone is null ? string.Empty : $"z-chip--{Model.Tone}")" data-z-chip aria-label="@Model.AriaLabel">
+    @if (!string.IsNullOrWhiteSpace(Model.Icon))
+    {
+        <span class="z-chip-icon" aria-hidden="true">@Model.Icon</span>
+    }
+    <span>@Model.Text</span>
+    @if (Model.Removable)
+    {
+        <button class="z-chip-remove" type="button" data-z-chip-remove aria-label="Remove @Model.Text" @(Model.Disabled ? "disabled" : null)>×</button>
+    }
+</span>

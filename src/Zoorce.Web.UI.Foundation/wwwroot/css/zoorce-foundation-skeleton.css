@@ -1,0 +1,6 @@
+.z-skeleton-group { display: grid; gap: .5rem; }
+.z-skeleton { display: block; width: var(--z-skeleton-width, 100%); height: var(--z-skeleton-height, 1rem); border-radius: .35rem; background: var(--z-subtle); }
+.z-skeleton-block { min-height: var(--z-skeleton-height, 7rem); }.z-skeleton-circle { width: var(--z-skeleton-width, 2.5rem); height: var(--z-skeleton-height, 2.5rem); border-radius: 50%; }
+.z-skeleton-animate { background: linear-gradient(100deg, var(--z-subtle) 30%, var(--z-elevated) 48%, var(--z-subtle) 66%); background-size: 220% 100%; animation: z-skeleton-shimmer 1.3s ease-in-out infinite; }
+@keyframes z-skeleton-shimmer { to { background-position: -220% 0; } }
+@media (prefers-reduced-motion: reduce) { .z-skeleton-animate { animation: none; } }

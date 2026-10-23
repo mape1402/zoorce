@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AddRazorSupportForMvc>true</AddRazorSupportForMvc>
+    <IsPackable>true</IsPackable>
+    <PackageId>Zoorce.Web.UI.Forms</PackageId>
+    <Description>Reusable and independently configurable form controls for Zoorce web UI.</Description>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <WarningsAsErrors>$(WarningsAsErrors);1591</WarningsAsErrors>
+  </PropertyGroup>
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <ProjectReference Include="..\Zoorce.Web.UI.Abstractions\Zoorce.Web.UI.Abstractions.csproj" />
+    <ProjectReference Include="..\Zoorce.Web.UI.Foundation\Zoorce.Web.UI.Foundation.csproj" />
+  </ItemGroup>
+</Project>

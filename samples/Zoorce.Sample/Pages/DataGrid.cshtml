@@ -1,0 +1,52 @@
+@page "/data-grid"
+@using Zoorce.Web.UI.Abstractions.Data
+@using Zoorce.Web.UI.DataGrid
+@{
+    ViewData["Title"] = "Infinite data grid";
+    var starterRows = new IReadOnlyDictionary<string, string?>[]
+    {
+        new Dictionary<string, string?> { ["id"] = "shell-01", ["name"] = "Application shell", ["category"] = "Layout", ["theme"] = "Dark / Light", ["status"] = "Stable", ["adoption"] = "92" },
+        new Dictionary<string, string?> { ["id"] = "grid-01", ["name"] = "Data grid", ["category"] = "Data", ["theme"] = "Dark / Light", ["status"] = "Stable", ["adoption"] = "87" },
+        new Dictionary<string, string?> { ["id"] = "markdown-01", ["name"] = "Markdown reader", ["category"] = "Content", ["theme"] = "Dark / Light", ["status"] = "Preview", ["adoption"] = "68" }
+    };
+    var columns = new[]
+    {
+        new ZoorceDataGridColumn("name", "Component", true),
+        new ZoorceDataGridColumn("category", "Category", true),
+        new ZoorceDataGridColumn("theme", "Theme"),
+        new ZoorceDataGridColumn("status", "Status", true),
+        new ZoorceDataGridColumn("adoption", "Adoption", true)
+    };
+}
+
+<section class="z-infinite-grid-page" aria-labelledby="infinite-grid-title">
+    <div class="z-infinite-grid-intro">
+        <div>
+            <span class="z-section-kicker">DataGrid · REST + scoped invalidation</span>
+            <h1 id="infinite-grid-title">Infinite scroll, in its own space.</h1>
+            <p>This is an inner, fixed-height data viewport. Scroll inside it to fetch the next slice; the surrounding page never grows while the grid streams records.</p>
+        </div>
+        <div class="z-page-actions"><span class="z-infinite-grid-status">Live catalogue</span><button class="z-button z-button-secondary z-button-sm" type="button" data-z-live-demo data-z-live-endpoint="/api/demo/activity">Simulate catalogue update</button></div>
+    </div>
+
+    @await Component.InvokeAsync("ZoorceDataGrid", new ZoorceDataGridOptions
+    {
+        Id = "dedicated-infinite-grid",
+        AriaLabel = "Live component catalogue with infinite scroll",
+        Binding = new() { Source = "/api/components", InvalidationScope = "components" },
+        LoadMode = ZoorceDataLoadMode.InfiniteScroll,
+        PageSize = 30,
+        Virtualize = true,
+        ViewportHeight = 560,
+        RealtimeBehavior = ZoorceDataGridRealtimeBehavior.Badge,
+        Columns = columns,
+        InitialItems = starterRows,
+        InitialTotalCount = 280
+    })
+</section>
+
+@section Scripts {
+    <script src="/vendor/signalr/signalr.min.js"></script>
+    <script src="~/_content/Zoorce.Web.UI.Realtime.SignalR/js/zoorce-realtime-signalr.js" asp-append-version="true"></script>
+    <script src="/js/sample-demos.js" asp-append-version="true"></script>
+}

@@ -1,0 +1,66 @@
+@page "/charts"
+@using Zoorce.Web.UI.Charts
+@{
+    ViewData["Title"] = "Native charts";
+    ZoorceChartSeries Series(string name, params ZoorceChartPoint[] points) => new(name, points);
+
+    var adoption = new[]
+    {
+        Series("Adoption", new("May", 48), new("Jun", 56), new("Jul", 54), new("Aug", 67), new("Sep", 74), new("Oct", 82), new("Nov", 88)),
+        Series("Target", new("May", 52), new("Jun", 58), new("Jul", 64), new("Aug", 68), new("Sep", 74), new("Oct", 80), new("Nov", 84))
+    };
+    var channels = new[]
+    {
+        Series("Product", new("Direct", 42), new("Partners", 31), new("Community", 18), new("Inbound", 9)),
+        Series("Expansion", new("Direct", 21), new("Partners", 34), new("Community", 25), new("Inbound", 20))
+    };
+    var ranking = new[] { Series("Response time", new("Search", 97), new("Checkout", 88), new("Analytics", 76), new("Imports", 61), new("Exports", 43)) };
+    var distribution = new[] { Series("Status", new("Healthy", 72), new("Watch", 18), new("Risk", 10)) };
+    var gauge = new[] { Series("SLA met", new ZoorceChartPoint("Current", 96.4m)) };
+    var funnel = new[] { Series("Journey", new("Visited", 18400), new("Signed up", 7200), new("Activated", 3980), new("Converted", 1840)) };
+    var heatmap = new[] { Series("Activity",
+        new("08", 18, Group: "Mon"), new("12", 42, Group: "Mon"), new("16", 71, Group: "Mon"), new("20", 26, Group: "Mon"),
+        new("08", 27, Group: "Tue"), new("12", 58, Group: "Tue"), new("16", 94, Group: "Tue"), new("20", 40, Group: "Tue"),
+        new("08", 13, Group: "Wed"), new("12", 38, Group: "Wed"), new("16", 63, Group: "Wed"), new("20", 22, Group: "Wed"),
+        new("08", 46, Group: "Thu"), new("12", 79, Group: "Thu"), new("16", 86, Group: "Thu"), new("20", 54, Group: "Thu"),
+        new("08", 21, Group: "Fri"), new("12", 49, Group: "Fri"), new("16", 77, Group: "Fri"), new("20", 31, Group: "Fri")) };
+    var scatter = new[]
+    {
+        Series("Enterprise", new("Atlas", 82, X: 71), new("KnOwl", 68, X: 58), new("Orbit", 91, X: 86)),
+        Series("Growth", new("Nova", 56, X: 35), new("Axis", 74, X: 64), new("Flow", 63, X: 49))
+    };
+    var bubbles = new[] { Series("Accounts", new("North", 74, X: 55, Size: 17), new("West", 48, X: 37, Size: 11), new("South", 88, X: 79, Size: 24), new("East", 64, X: 68, Size: 14)) };
+    var histogram = new[] { Series("Latency", new("0–50", 18), new("50–100", 44), new("100–150", 72), new("150–200", 39), new("200–250", 16), new("250+", 7)) };
+    var waterfall = new[] { Series("Revenue", new("Base", 120), new("New", 46), new("Expansion", 28), new("Churn", -31), new("Credits", -12), new("Close", 19)) };
+}
+
+<section class="z-chart-gallery-page">
+    <div class="z-chart-gallery-intro" data-z-demo-chart-gallery>
+        <div>
+            <span class="z-section-kicker">Native SVG visualization system</span>
+            <h1>Sharp data, no external charting runtime.</h1>
+            <p>Every visual below is its own configurable component. Hover or focus data marks for details, and toggle any multi-series legend without changing the rest of the page.</p>
+        </div>
+        <div class="z-page-actions"><button class="z-button z-button-primary" type="button" data-z-demo-chart-update>Simulate data pulse</button><span class="z-card-caption" data-z-demo-chart-status aria-live="polite"></span></div>
+    </div>
+
+    <div class="z-chart-gallery">
+        @await Component.InvokeAsync("ZoorceChart", new ZoorceChartOptions { Id = "chart-trend", Title = "Product adoption", Summary = "Monthly adoption compared with target", Kind = ZoorceChartKind.Area, Size = ZoorceChartSize.Wide, ValueSuffix = "%", Curve = ZoorceChartCurve.Smooth, Series = adoption })
+        @await Component.InvokeAsync("ZoorceChart", new ZoorceChartOptions { Id = "chart-bars", Title = "Channel composition", Summary = "Acquisition channel composition", Kind = ZoorceChartKind.Bar, BarMode = ZoorceChartBarMode.Stacked100, ValueSuffix = "%", Series = channels })
+        @await Component.InvokeAsync("ZoorceChart", new ZoorceChartOptions { Id = "chart-ranking", Title = "Service ranking", Summary = "Services ranked by response score", Kind = ZoorceChartKind.HorizontalBar, ValueSuffix = " ms", Series = ranking })
+        @await Component.InvokeAsync("ZoorceChart", new ZoorceChartOptions { Id = "chart-donut", Title = "Portfolio health", Summary = "Health status distribution", Kind = ZoorceChartKind.Donut, ValueSuffix = "%", Series = distribution })
+        @await Component.InvokeAsync("ZoorceChart", new ZoorceChartOptions { Id = "chart-gauge", Title = "Service objective", Summary = "Current service objective attainment", Kind = ZoorceChartKind.Gauge, ValueSuffix = "%", MinimumValue = 0, MaximumValue = 100, TargetValue = 99, ShowLegend = false, Series = gauge })
+        @await Component.InvokeAsync("ZoorceChart", new ZoorceChartOptions { Id = "chart-sparkline", Title = "Quiet sparkline", Summary = "Compact adoption trend", Kind = ZoorceChartKind.Sparkline, Size = ZoorceChartSize.Compact, ValueSuffix = "%", ShowLegend = false, ShowAxes = false, ShowGrid = false, Series = new[] { adoption[0] } })
+        @await Component.InvokeAsync("ZoorceChart", new ZoorceChartOptions { Id = "chart-funnel", Title = "Activation funnel", Summary = "Customer journey conversion stages", Kind = ZoorceChartKind.Funnel, ShowLegend = false, Series = funnel })
+        @await Component.InvokeAsync("ZoorceChart", new ZoorceChartOptions { Id = "chart-heatmap", Title = "Usage intensity", Summary = "Activity by weekday and hour", Kind = ZoorceChartKind.Heatmap, ValueSuffix = " events", ShowLegend = false, Series = heatmap })
+        @await Component.InvokeAsync("ZoorceChart", new ZoorceChartOptions { Id = "chart-scatter", Title = "Value correlation", Summary = "Usage and satisfaction correlation", Kind = ZoorceChartKind.Scatter, ValueSuffix = "%", Series = scatter })
+        @await Component.InvokeAsync("ZoorceChart", new ZoorceChartOptions { Id = "chart-bubble", Title = "Account opportunity", Summary = "Account value, engagement and size", Kind = ZoorceChartKind.Bubble, ValueSuffix = "%", ShowLegend = false, Series = bubbles })
+        @await Component.InvokeAsync("ZoorceChart", new ZoorceChartOptions { Id = "chart-bullet", Title = "Release confidence", Summary = "Release confidence against its target", Kind = ZoorceChartKind.Bullet, ValueSuffix = "%", MinimumValue = 0, MaximumValue = 100, TargetValue = 92, ShowLegend = false, Series = new[] { Series("Confidence", new ZoorceChartPoint("Current", 87)) } })
+        @await Component.InvokeAsync("ZoorceChart", new ZoorceChartOptions { Id = "chart-histogram", Title = "Latency distribution", Summary = "Distribution of request latency", Kind = ZoorceChartKind.Histogram, ValueSuffix = " requests", ShowLegend = false, Series = histogram })
+        @await Component.InvokeAsync("ZoorceChart", new ZoorceChartOptions { Id = "chart-waterfall", Title = "Revenue bridge", Summary = "Revenue changes that produce the period result", Kind = ZoorceChartKind.Waterfall, ValueSuffix = "k", ShowLegend = false, Series = waterfall })
+    </div>
+</section>
+
+@section Scripts {
+    <script src="/js/sample-demos.js" asp-append-version="true"></script>
+}

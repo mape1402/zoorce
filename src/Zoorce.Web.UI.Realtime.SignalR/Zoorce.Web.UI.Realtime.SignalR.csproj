@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AddRazorSupportForMvc>true</AddRazorSupportForMvc>
+    <IsPackable>true</IsPackable>
+    <PackageId>Zoorce.Web.UI.Realtime.SignalR</PackageId>
+    <Description>Optional SignalR adapter for transport-neutral Zoorce data invalidations.</Description>
+    <PackageTags>zoorce;web-ui;signalr;realtime;data</PackageTags>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <WarningsAsErrors>$(WarningsAsErrors);1591</WarningsAsErrors>
+  </PropertyGroup>
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="10.0.13" />
+    <ProjectReference Include="..\Zoorce.Web.UI.Abstractions\Zoorce.Web.UI.Abstractions.csproj" />
+    <ProjectReference Include="..\Zoorce.Web.UI.Data\Zoorce.Web.UI.Data.csproj" />
+  </ItemGroup>
+</Project>

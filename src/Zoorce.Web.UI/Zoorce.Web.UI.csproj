@@ -1,0 +1,45 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AddRazorSupportForMvc>true</AddRazorSupportForMvc>
+    <IsPackable>true</IsPackable>
+    <PackageId>Zoorce.Web.UI</PackageId>
+    <Description>Reusable Razor Pages web shell and UI components for ASP.NET Core applications.</Description>
+    <PackageTags>razor;razor-pages;web-ui;components;aspnetcore</PackageTags>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <WarningsAsErrors>$(WarningsAsErrors);1591</WarningsAsErrors>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Zoorce.Web.UI.Abstractions\Zoorce.Web.UI.Abstractions.csproj" />
+    <ProjectReference Include="..\Zoorce.Web.UI.Data\Zoorce.Web.UI.Data.csproj" />
+    <ProjectReference Include="..\Zoorce.Web.UI.Foundation\Zoorce.Web.UI.Foundation.csproj" />
+    <ProjectReference Include="..\Zoorce.Web.UI.Layout\Zoorce.Web.UI.Layout.csproj" />
+    <ProjectReference Include="..\Zoorce.Web.UI.Theming\Zoorce.Web.UI.Theming.csproj" />
+    <ProjectReference Include="..\Zoorce.Web.UI.Timelines\Zoorce.Web.UI.Timelines.csproj" />
+    <ProjectReference Include="..\Zoorce.Web.UI.Charts\Zoorce.Web.UI.Charts.csproj" />
+    <ProjectReference Include="..\Zoorce.Web.UI.DataGrid\Zoorce.Web.UI.DataGrid.csproj" />
+    <ProjectReference Include="..\Zoorce.Web.UI.Diagrams\Zoorce.Web.UI.Diagrams.csproj" />
+    <ProjectReference Include="..\Zoorce.Web.UI.Forms\Zoorce.Web.UI.Forms.csproj" />
+    <ProjectReference Include="..\Zoorce.Web.UI.Navigation\Zoorce.Web.UI.Navigation.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Markdig" Version="1.4.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\..\README.md" Pack="true" PackagePath="\" Link="README.md" />
+  </ItemGroup>
+
+
+
+</Project>

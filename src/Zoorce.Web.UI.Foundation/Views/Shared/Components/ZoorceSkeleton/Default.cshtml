@@ -1,0 +1,10 @@
+@using Zoorce.Web.UI.Foundation.Skeleton
+@model ZoorceSkeletonOptions
+<div id="@Model.Id" class="z-skeleton-group" role="status" aria-label="@Model.AriaLabel" aria-busy="true" data-z-skeleton>
+    @for (var index = 0; index < Model.Count; index++)
+    {
+        var style = $"--z-skeleton-width:{Model.Width};" + (Model.Height is null ? string.Empty : $"--z-skeleton-height:{Model.Height};");
+        <span class="z-skeleton z-skeleton-@Model.Shape.ToString().ToLowerInvariant()@(Model.Animate ? " z-skeleton-animate" : string.Empty)" style="@style" aria-hidden="true"></span>
+    }
+    <span class="z-visually-hidden">@Model.AriaLabel</span>
+</div>

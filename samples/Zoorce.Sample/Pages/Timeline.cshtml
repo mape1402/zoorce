@@ -1,0 +1,256 @@
+@page "/timeline"
+@using Zoorce.Web.UI.Timelines
+@using Zoorce.Sample.Infrastructure
+@{
+    ViewData["Title"] = "Timeline gallery";
+    ZoorceTimelineItem Event(
+        string id,
+        int hoursAgo,
+        string title,
+        string description,
+        string icon,
+        ZoorceTimelineTone tone = ZoorceTimelineTone.Auto,
+        ZoorceTimelineState state = ZoorceTimelineState.Default,
+        ZoorceTimelinePlacement placement = ZoorceTimelinePlacement.Auto,
+        string? flag = null)
+        => new(id, DateTimeOffset.UtcNow.AddHours(-hoursAgo), title, description, icon, tone, state, placement, flag, new ZoorceTimelineActor("Mario Perez", "MP", Role: "Owner"));
+
+    var railItems = new[]
+    {
+        Event("case-open", 96, "Case opened", "A workspace administrator requested a regional data residency change.", "↓", ZoorceTimelineTone.Info, ZoorceTimelineState.Completed, ZoorceTimelinePlacement.Left, "Intake"),
+        Event("case-review", 71, "Policy review", "Privacy and compliance confirmed the required controls and review window.", "⌕", ZoorceTimelineTone.Warning, ZoorceTimelineState.Highlighted, ZoorceTimelinePlacement.Right, "Current"),
+        Event("case-approved", 36, "Change approved", "The implementation plan is ready for the scheduled maintenance period.", "✓", ZoorceTimelineTone.Success, ZoorceTimelineState.Completed, ZoorceTimelinePlacement.Left),
+        Event("case-release", 2, "Release window", "The change owner will publish the regional policy after a final verification.", "↗", ZoorceTimelineTone.Primary, ZoorceTimelineState.Pending, ZoorceTimelinePlacement.Right)
+    };
+    var agendaItems = new[]
+    {
+        new ZoorceTimelineItem("agenda-sync", new DateTimeOffset(DateTime.Today).AddHours(9), "Daily delivery sync", "A short review of releases, blockers, and owners.", "◉", ZoorceTimelineTone.Info, ZoorceTimelineState.Completed, Actor: new("Delivery team", "DT"), Duration: "25 min", Location: "Studio 2", Participants: [new("Mario Perez", "MP"), new("Sofia Reyes", "SR")], Action: new("open-sync", "Open notes", "↗")),
+        new ZoorceTimelineItem("agenda-review", new DateTimeOffset(DateTime.Today).AddHours(11), "Release readiness review", "Validate customer communications and rollout signals.", "✓", ZoorceTimelineTone.Warning, ZoorceTimelineState.Highlighted, Actor: new("Nora Ellis", "NE"), Duration: "45 min", Location: "Orion room", Participants: [new("Nora Ellis", "NE"), new("Avery Cole", "AC"), new("Mario Perez", "MP")], Action: new("open-readiness", "Review brief", "↗")),
+        new ZoorceTimelineItem("agenda-retro", new DateTimeOffset(DateTime.Today).AddHours(15.5), "Reliability retro", "Capture follow-up actions from the weekly incident review.", "↻", ZoorceTimelineTone.Success, ZoorceTimelineState.Pending, Actor: new("Reliability", "RE"), Duration: "50 min", Location: "Remote", Participants: [new("Sofia Reyes", "SR")], Action: new("open-retro", "Open retro", "↗"))
+    };
+    var journalItems = new[]
+    {
+        Event("journal-brief", 240, "A clearer release brief", "The product brief now captures the customer segment, success condition, and rollback signal before delivery work begins.", "◇", ZoorceTimelineTone.Primary, ZoorceTimelineState.Completed),
+        Event("journal-design", 144, "Interaction review completed", "The workflow was simplified after observing that new operators were missing the escalation threshold in the original layout.", "⌕", ZoorceTimelineTone.Info, ZoorceTimelineState.Completed),
+        Event("journal-launch", 25, "Ready for measured rollout", "The team will begin with a controlled group and track support contact rate before expanding availability.", "↗", ZoorceTimelineTone.Success, ZoorceTimelineState.Highlighted)
+    };
+    var milestoneItems = new[]
+    {
+        Event("milestone-foundation", 730, "Foundation", "Tokens and shell", "◇", ZoorceTimelineTone.Primary, ZoorceTimelineState.Completed),
+        Event("milestone-data", 510, "Data patterns", "Grid and charts", "▤", ZoorceTimelineTone.Info, ZoorceTimelineState.Completed),
+        Event("milestone-flows", 280, "Workflow primitives", "Steppers and diagrams", "⇢", ZoorceTimelineTone.Success, ZoorceTimelineState.Completed),
+        Event("milestone-timeline", 40, "Timeline family", "Narrative and activity", "◷", ZoorceTimelineTone.Warning, ZoorceTimelineState.Highlighted),
+        Event("milestone-next", 0, "Next signal", "Your system", "↗", ZoorceTimelineTone.Neutral, ZoorceTimelineState.Pending)
+    };
+    var overflowMilestoneItems = milestoneItems.Concat(new[]
+    {
+        Event("milestone-observe", -110, "Observe", "Signals and feedback", "◌", ZoorceTimelineTone.Info, ZoorceTimelineState.Default),
+        Event("milestone-learn", -230, "Learn", "Turn evidence into action", "◈", ZoorceTimelineTone.Primary, ZoorceTimelineState.Default),
+        Event("milestone-repeat", -360, "Repeat", "Make the practice durable", "↻", ZoorceTimelineTone.Success, ZoorceTimelineState.Default)
+    }).ToArray();
+    var presentationItems = new[]
+    {
+        Event("presentation-one", 700, "The first signal", "A focused problem statement aligned the product and delivery teams.", "▱", ZoorceTimelineTone.Warning, ZoorceTimelineState.Completed, ZoorceTimelinePlacement.Above),
+        Event("presentation-two", 460, "Make the work visible", "A common operating view made ownership and progress legible.", "⌘", ZoorceTimelineTone.Info, ZoorceTimelineState.Completed, ZoorceTimelinePlacement.Below),
+        Event("presentation-three", 200, "Deliver confidence", "Shared controls reduced the cost of safe change.", "✓", ZoorceTimelineTone.Success, ZoorceTimelineState.Highlighted, ZoorceTimelinePlacement.Above),
+        Event("presentation-four", 0, "Keep learning", "The next milestone starts with the evidence this release creates.", "↗", ZoorceTimelineTone.Primary, ZoorceTimelineState.Pending, ZoorceTimelinePlacement.Below)
+    };
+    var customTemplateItems = new[]
+    {
+        new ZoorceTimelineItem("template-api", DateTimeOffset.UtcNow.AddHours(-6), "Publish API gateway", "A scoped deployment is ready for its final command.", "↑", ZoorceTimelineTone.Success, ZoorceTimelineState.Completed, TemplateKey: "deployment", ClickBehavior: ZoorceTimelineItemClickBehavior.Command, CommandId: "inspect-deployment", Metadata: new Dictionary<string, string> { ["environment"] = "Production", ["service"] = "Gateway", ["version"] = "v4.12.0" }),
+        new ZoorceTimelineItem("template-approval", DateTimeOffset.UtcNow.AddHours(-4), "Regional policy approval", "The owner can inspect the decision, but cannot execute a restricted approval.", "⌕", ZoorceTimelineTone.Warning, ZoorceTimelineState.Pending, TemplateKey: "approval", ClickBehavior: ZoorceTimelineItemClickBehavior.Custom, CommandId: "restricted-approval", Metadata: new Dictionary<string, string> { ["owner"] = "Compliance", ["scope"] = "EU residency", ["rule"] = "Two reviewers" }),
+        new ZoorceTimelineItem("template-web", DateTimeOffset.UtcNow.AddHours(-1), "Release web shell", "Inspecting this event invokes a host command without leaving the page.", "↗", ZoorceTimelineTone.Primary, ZoorceTimelineState.Highlighted, TemplateKey: "deployment", ClickBehavior: ZoorceTimelineItemClickBehavior.Command, CommandId: "inspect-deployment", Metadata: new Dictionary<string, string> { ["environment"] = "Preview", ["service"] = "Web shell", ["version"] = "v8.4.0" })
+    };
+    var customTemplates = new[]
+    {
+        new ZoorceTimelineItemTemplate("deployment", "/Pages/Shared/TimelineTemplates/_DeploymentTimelineItem.cshtml", "zoorce-timeline-template-deployment"),
+        new ZoorceTimelineItemTemplate("approval", "/Pages/Shared/TimelineTemplates/_ApprovalTimelineItem.cshtml", "zoorce-timeline-template-approval")
+    };
+}
+
+<section class="z-timeline-gallery-page">
+    <div class="z-timeline-gallery-intro">
+        <div>
+            <span class="z-section-kicker">Temporal narratives and live activity</span>
+            <h1>One event model, six useful ways to tell time.</h1>
+            <p>Timelines are independently rendered, token-driven and transport-agnostic. Choose the composition that suits the story rather than forcing every event into the same rail.</p>
+        </div>
+        <button type="button" class="z-button z-button-secondary" data-z-timeline-live-demo>Send live activity</button>
+    </div>
+
+    <article class="z-timeline-example z-timeline-example--wide">
+        <header><span>Templates · host interactions</span><h2>Custom delivery events</h2><p>Each item resolves a named Razor template while the timeline remains responsible for keyboard access, click handling and command events.</p></header>
+        @await Component.InvokeAsync("ZoorceTimeline", new ZoorceTimelineOptions
+        {
+            Id = "custom-template-timeline", AriaLabel = "Custom delivery events", Items = customTemplateItems, ItemTemplates = customTemplates,
+            Variant = ZoorceTimelineVariant.Activity, Interaction = ZoorceTimelineInteraction.ReadOnly, ShowActors = false, ShowMetadata = false,
+            Presentation = new ZoorceTimelinePresentation { MarkerStyle = ZoorceTimelineMarkerStyle.Icon, ActiveMotion = ZoorceTimelineActiveMotion.HaloPulse, UseCards = true }
+        })
+        <aside class="z-timeline-selection-panel z-timeline-command-panel" data-z-timeline-command-panel aria-live="polite">
+            <span>Host command</span><strong>Choose a custom event</strong><p>Commands run locally, while the approval event demonstrates a cancelable click rule.</p>
+        </aside>
+        <button class="z-button z-button-secondary z-timeline-template-add" type="button" data-z-timeline-template-add>Add a live deployment</button>
+    </article>
+
+    <template id="zoorce-timeline-template-deployment">
+        <article class="z-timeline-card z-timeline-card--deployment" data-z-timeline-card>
+            <div class="z-timeline-template-heading"><span class="z-timeline-template-eyebrow" data-z-timeline-field="metadata.environment"></span><span class="z-timeline-template-state" data-z-timeline-field="state"></span></div>
+            <h3 data-z-timeline-title></h3><p data-z-timeline-description></p>
+            <div class="z-timeline-template-facts"><span><b>Service</b> <span data-z-timeline-field="metadata.service"></span></span><span><b>Version</b> <span data-z-timeline-field="metadata.version"></span></span></div>
+        </article>
+    </template>
+    <template id="zoorce-timeline-template-approval">
+        <article class="z-timeline-card z-timeline-card--approval" data-z-timeline-card>
+            <div class="z-timeline-template-heading"><span class="z-timeline-template-eyebrow">Approval</span><span class="z-timeline-template-state" data-z-timeline-field="metadata.owner"></span></div>
+            <h3 data-z-timeline-title></h3><p data-z-timeline-description></p>
+            <div class="z-timeline-template-facts"><span><b>Scope</b> <span data-z-timeline-field="metadata.scope"></span></span><span><b>Rule</b> <span data-z-timeline-field="metadata.rule"></span></span></div>
+        </article>
+    </template>
+
+    <article class="z-timeline-example z-timeline-example--wide">
+        <header><span>Activity · REST + SignalR</span><h2>Operations stream</h2><p>Source refreshes and live messages update only this timeline. Follow latest is intentionally off, so incoming activity never moves the reader.</p></header>
+        @await Component.InvokeAsync("ZoorceTimeline", new ZoorceTimelineOptions
+        {
+            Id = "operations-timeline",
+            AriaLabel = "Live operations activity",
+            Items = SampleTimelineData.Operations(),
+            Variant = ZoorceTimelineVariant.Activity,
+            Interaction = ZoorceTimelineInteraction.Select,
+            SelectedItemId = "ops-triage",
+            Density = ZoorceTimelineDensity.Compact,
+            GroupBy = ZoorceTimelineGroupBy.Day,
+            Binding = new() { Source = "/api/timelines/operations", InvalidationScope = "timeline-operations" },
+            ShowRelativeTime = true,
+            Presentation = new ZoorceTimelinePresentation { MarkerStyle = ZoorceTimelineMarkerStyle.Dot, ActiveMotion = ZoorceTimelineActiveMotion.HaloPulse, UseCards = true }
+        })
+        <aside class="z-timeline-selection-panel" data-z-timeline-selection-panel aria-live="polite"><span>Selected event</span><strong>Risk review started</strong><p>Select an event to inspect its local context. No page section is rerendered.</p></aside>
+    </article>
+
+    <div class="z-timeline-example-grid">
+        <article class="z-timeline-example z-timeline-example--wide">
+            <header><span>Rail · case history</span><h2>Regional residency request</h2><p>Flags, alternating callouts, status tones and clear date anchors support longer cases.</p></header>
+            @await Component.InvokeAsync("ZoorceTimeline", new ZoorceTimelineOptions
+            {
+                Id = "rail-timeline", AriaLabel = "Regional residency request history", Items = railItems, Variant = ZoorceTimelineVariant.Rail, Interaction = ZoorceTimelineInteraction.Select,
+                SelectedItemId = "case-review", GroupBy = ZoorceTimelineGroupBy.None, ShowRelativeTime = true,
+                Presentation = new ZoorceTimelinePresentation { MarkerStyle = ZoorceTimelineMarkerStyle.Icon, ConnectorStyle = ZoorceTimelineConnectorStyle.Solid, ActiveMotion = ZoorceTimelineActiveMotion.Reveal }
+            })
+        </article>
+
+        <article class="z-timeline-example">
+            <header><span>Agenda · day view</span><h2>Delivery calendar</h2><p>Time, duration, venue and attendees remain readable in a narrow workspace.</p></header>
+            @await Component.InvokeAsync("ZoorceTimeline", new ZoorceTimelineOptions
+            {
+                Id = "agenda-timeline", AriaLabel = "Today delivery calendar", Items = agendaItems, Variant = ZoorceTimelineVariant.Agenda, Interaction = ZoorceTimelineInteraction.Command,
+                GroupBy = ZoorceTimelineGroupBy.Day, ShowActors = true, ShowMetadata = true, Presentation = new ZoorceTimelinePresentation { MarkerStyle = ZoorceTimelineMarkerStyle.Dot }
+            })
+        </article>
+
+        <article class="z-timeline-example">
+            <header><span>Journal · narrative record</span><h2>Release notes</h2><p>A longer-form account keeps timestamps visible while giving the story room to breathe.</p></header>
+            @await Component.InvokeAsync("ZoorceTimeline", new ZoorceTimelineOptions
+            {
+                Id = "journal-timeline", AriaLabel = "Release notes", Items = journalItems, Variant = ZoorceTimelineVariant.Journal, Interaction = ZoorceTimelineInteraction.ReadOnly,
+                Density = ZoorceTimelineDensity.Comfortable, ShowRelativeTime = true, Presentation = new ZoorceTimelinePresentation { MarkerStyle = ZoorceTimelineMarkerStyle.Icon, ConnectorStyle = ZoorceTimelineConnectorStyle.Dashed }
+            })
+        </article>
+    </div>
+
+    <article class="z-timeline-example z-timeline-example--wide">
+        <header><span>Milestones · horizontal chronology</span><h2>System evolution</h2><p>Small, clickable milestones stay calm while the selected point receives a deliberate emphasis.</p></header>
+        @await Component.InvokeAsync("ZoorceTimeline", new ZoorceTimelineOptions
+        {
+            Id = "milestone-timeline", AriaLabel = "System evolution milestones", Items = milestoneItems, Variant = ZoorceTimelineVariant.Milestones, Interaction = ZoorceTimelineInteraction.Select,
+            SelectedItemId = "milestone-timeline", Presentation = new ZoorceTimelinePresentation { MarkerStyle = ZoorceTimelineMarkerStyle.Dot, ConnectorStyle = ZoorceTimelineConnectorStyle.Solid, UseCards = false }
+        })
+    </article>
+
+    <article class="z-timeline-example z-timeline-example--wide">
+        <header><span>Overflow · horizontal chronology</span><h2>Long timelines remain inside their own viewport.</h2><p>This extended milestone sequence keeps its horizontal narrative and exposes local controls only when the available space runs out.</p></header>
+        @await Component.InvokeAsync("ZoorceTimeline", new ZoorceTimelineOptions
+        {
+            Id = "milestone-overflow-timeline", AriaLabel = "Scrollable milestone stress timeline", Items = overflowMilestoneItems, Variant = ZoorceTimelineVariant.Milestones, Interaction = ZoorceTimelineInteraction.Select,
+            SelectedItemId = "milestone-timeline", OverflowMode = ZoorceTimelineOverflowMode.Scroll, ShowActors = false, ShowMetadata = false,
+            Presentation = new ZoorceTimelinePresentation { MarkerStyle = ZoorceTimelineMarkerStyle.Dot, ConnectorStyle = ZoorceTimelineConnectorStyle.Solid, UseCards = false }
+        })
+    </article>
+
+    <article class="z-timeline-example z-timeline-example--wide">
+        <header><span>Presentation · visual narrative</span><h2>The delivery story</h2><p>Large icon anchors, alternating context and an expressive connector are intended for concise milestone storytelling.</p></header>
+        @await Component.InvokeAsync("ZoorceTimeline", new ZoorceTimelineOptions
+        {
+            Id = "presentation-timeline", AriaLabel = "The delivery story", Items = presentationItems, Variant = ZoorceTimelineVariant.Presentation, Interaction = ZoorceTimelineInteraction.Select,
+            SelectedItemId = "presentation-three", ShowActors = false, ShowMetadata = false, Presentation = new ZoorceTimelinePresentation { MarkerStyle = ZoorceTimelineMarkerStyle.Icon, ConnectorStyle = ZoorceTimelineConnectorStyle.Curved, ActiveMotion = ZoorceTimelineActiveMotion.HaloPulse, UseCards = false }
+        })
+    </article>
+</section>
+
+@section Scripts {
+    <script src="/vendor/signalr/signalr.min.js"></script>
+    <script src="~/_content/Zoorce.Web.UI.Realtime.SignalR/js/zoorce-realtime-signalr.js" asp-append-version="true"></script>
+    <script src="~/_content/Zoorce.Web.UI.Timelines/js/zoorce-timeline.js" asp-append-version="true"></script>
+    <script>
+        (() => {
+            const timeline = document.querySelector("#operations-timeline");
+            const panel = document.querySelector("[data-z-timeline-selection-panel]");
+            timeline?.addEventListener("zoorce:timeline:select", event => {
+                const item = timeline.querySelector(`[data-z-timeline-item-id="${event.detail.itemId}"]`);
+                const title = item?.querySelector("[data-z-timeline-title]")?.textContent ?? "Event";
+                const description = item?.querySelector("[data-z-timeline-description]")?.textContent ?? "Select another event to inspect it.";
+                panel?.querySelector("strong")?.replaceChildren(title);
+                panel?.querySelector("p")?.replaceChildren(description);
+            });
+            document.querySelector("[data-z-timeline-live-demo]")?.addEventListener("click", async event => {
+                const button = event.currentTarget;
+                button.disabled = true;
+                try { await fetch("/api/demo/timeline", { method: "POST" }); }
+                finally { button.disabled = false; }
+            });
+            document.querySelector("#agenda-timeline")?.addEventListener("zoorce:timeline:action", event => {
+                const action = event.detail.actionId?.replace(/-/g, " ") ?? "agenda action";
+                panel?.querySelector("strong")?.replaceChildren("Agenda action triggered");
+                panel?.querySelector("p")?.replaceChildren(`${action} was handled by the timeline instance without a page reload.`);
+            });
+            const customTimeline = document.querySelector("#custom-template-timeline");
+            const commandPanel = document.querySelector("[data-z-timeline-command-panel]");
+            const showCommandResult = (title, description) => {
+                commandPanel?.querySelector("strong")?.replaceChildren(title);
+                commandPanel?.querySelector("p")?.replaceChildren(description);
+            };
+            customTimeline?.addEventListener("zoorce:timeline:request-item-click", event => {
+                if (event.detail.itemId !== "template-approval") return;
+                event.preventDefault();
+                showCommandResult("Approval remains protected", "The host canceled this item click before a command could run because the approval still requires two reviewers.");
+            });
+            customTimeline?.addEventListener("zoorce:timeline:item-click", event => {
+                const item = customTimeline.querySelector(`[data-z-timeline-item-id="${event.detail.itemId}"]`);
+                const title = item?.querySelector("[data-z-timeline-title]")?.textContent ?? "Custom event";
+                showCommandResult("Item clicked", `${title} emitted its custom item-click event to the host.`);
+            });
+            customTimeline?.addEventListener("zoorce:timeline:action", event => {
+                if (event.detail.actionId !== "inspect-deployment") return;
+                const item = customTimeline.querySelector(`[data-z-timeline-item-id="${event.detail.itemId}"]`);
+                const title = item?.querySelector("[data-z-timeline-title]")?.textContent ?? "Deployment";
+                showCommandResult("Deployment inspected", `${title} invoked the inspect-deployment command without navigating away from the timeline.`);
+            });
+            document.querySelector("[data-z-timeline-template-add]")?.addEventListener("click", event => {
+                const button = event.currentTarget;
+                button.disabled = true;
+                window.ZoorceTimeline?.applySnapshot(customTimeline, {
+                    id: "template-live-deployment",
+                    timestamp: new Date().toISOString(),
+                    title: "Publish live delivery",
+                    description: "This item was created in the browser from the deployment template.",
+                    icon: "↑",
+                    tone: "Success",
+                    state: "Highlighted",
+                    templateKey: "deployment",
+                    clickBehavior: "Command",
+                    commandId: "inspect-deployment",
+                    metadata: { environment: "Live", service: "Activity feed", version: "v1.0.0" }
+                });
+                showCommandResult("Live template inserted", "The client cloned the deployment template, hydrated its fields and preserved the same command behavior.");
+            });
+        })();
+    </script>
+}

@@ -1,0 +1,26 @@
+@using System.Globalization
+@using Zoorce.Web.UI.Foundation.Progress
+@model ZoorceProgressOptions
+@{
+    var isDeterminate = Model.Value is not null;
+    var percentage = isDeterminate ? (int)Math.Round(Model.Value!.Value * 100, MidpointRounding.AwayFromZero) : 0;
+    var classes = $"z-progress z-progress-{Model.Kind.ToString().ToLowerInvariant()} z-progress-{Model.Tone}";
+    var style = Model.Kind == ZoorceProgressKind.Circular ? $"--z-progress-size:{Model.Size}px;--z-progress-value:{percentage};" : $"--z-progress-value:{percentage};";
+}
+<div id="@Model.Id" class="@classes" style="@style" role="progressbar" aria-label="@Model.Label" aria-valuemin="0" aria-valuemax="100" aria-valuenow="@(isDeterminate ? percentage : null)" aria-valuetext="@(isDeterminate ? $"{percentage}%" : Model.Label)" data-z-progress data-z-progress-kind="@Model.Kind.ToString().ToLowerInvariant()">
+    @if (Model.Kind == ZoorceProgressKind.Circular)
+    {
+        <svg class="z-progress-ring" viewBox="0 0 36 36" aria-hidden="true">
+            <circle class="z-progress-track" cx="18" cy="18" r="15.9155" />
+            <circle class="z-progress-value" cx="18" cy="18" r="15.9155" pathLength="100" />
+        </svg>
+    }
+    else
+    {
+        <span class="z-progress-track" aria-hidden="true"><span class="z-progress-value"></span></span>
+    }
+    @if (Model.ShowValue && isDeterminate)
+    {
+        <span class="z-progress-label">@percentage.ToString(CultureInfo.InvariantCulture)%</span>
+    }
+</div>

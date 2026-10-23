@@ -1,0 +1,231 @@
+@using System.Globalization
+@using System.Text.Json
+@using Zoorce.Web.UI.Forms
+@model ZoorceFormControlOptions
+@{
+    var name = Model.Name ?? Model.Id;
+    var selected = Model.GetSelectedValues();
+    var messageId = $"{Model.Id}-message";
+    var describedBy = !string.IsNullOrWhiteSpace(Model.Description) || !string.IsNullOrWhiteSpace(Model.ValidationMessage) ? messageId : null;
+    var inputType = Model.Metadata.TryGetValue("inputType", out var configuredInputType) && !string.IsNullOrWhiteSpace(configuredInputType) ? configuredInputType : "text";
+    var min = Model.Minimum?.ToString(CultureInfo.InvariantCulture);
+    var max = Model.Maximum?.ToString(CultureInfo.InvariantCulture);
+    var step = Model.Step?.ToString(CultureInfo.InvariantCulture) ?? "1";
+    var durationMinutes = Model.Metadata.TryGetValue("minutes", out var configuredMinutes) && !string.IsNullOrWhiteSpace(configuredMinutes) ? configuredMinutes : "0";
+    var configuredCountry = Model.Metadata.TryGetValue("country", out var country) ? country : null;
+    var hasError = Model.State == ZoorceFormControlState.Error;
+    var hasNumberPrefix = !string.IsNullOrWhiteSpace(Model.Prefix) || Model.Kind == ZoorceFormControlKind.Currency;
+    var hasNumberSuffix = !string.IsNullOrWhiteSpace(Model.Suffix) || Model.Kind == ZoorceFormControlKind.Percentage;
+    var isGroup = Model.Kind is ZoorceFormControlKind.CheckboxGroup or ZoorceFormControlKind.RadioGroup or ZoorceFormControlKind.ChipGroup;
+    var labelFor = Model.Kind == ZoorceFormControlKind.Otp ? $"{Model.Id}-0" : Model.Id;
+    var otpLength = Model.GetOtpLength();
+    var otpInputMode = Model.OtpCharacterSet == ZoorceOtpCharacterSet.Numeric ? "numeric" : "text";
+    var otpAutocomplete = Model.Autocomplete ?? (Model.OtpCharacterSet == ZoorceOtpCharacterSet.Numeric ? "one-time-code" : "off");
+    var otpCellName = Model.OtpCharacterSet == ZoorceOtpCharacterSet.Numeric ? "Digit" : "Character";
+    var isAvatarPicker = Model.Kind == ZoorceFormControlKind.AvatarPicker;
+    var fileAccept = Model.Kind is ZoorceFormControlKind.ImageUpload or ZoorceFormControlKind.AvatarPicker ? (Model.Accept ?? "image/*") : Model.Accept;
+    var fileAllowsMultiple = !isAvatarPicker && Model.Multiple;
+    var existingFilesJson = JsonSerializer.Serialize(Model.ExistingFiles);
+    string StateClass() => Model.State == ZoorceFormControlState.Default ? string.Empty : $"is-{Model.State.ToString().ToLowerInvariant()}";
+    string ChoiceId(ZoorceFormChoice choice, int index) => $"{Model.Id}-{index}";
+}
+<div class="z-form-field z-form-field--@Model.Kind.ToString().ToLowerInvariant() @StateClass() @(Model.Disabled ? "is-disabled" : string.Empty)" data-z-form-control data-z-form-kind="@Model.Kind" data-z-form-id="@Model.Id" data-z-form-mask="@Model.Mask" data-z-form-min="@min" data-z-form-max="@max" data-z-form-step="@step" data-z-form-locale="@Model.Locale" data-z-form-currency="@Model.CurrencyCode" data-z-form-required="@Model.Required.ToString().ToLowerInvariant()">
+    @if (Model.Kind != ZoorceFormControlKind.Hidden && !isGroup && !string.IsNullOrWhiteSpace(Model.Label))
+    {
+        <label class="z-form-label" for="@labelFor">@Model.Label @if (Model.Required) { <span class="z-form-required" aria-hidden="true">*</span> }</label>
+    }
+    @if (isGroup)
+    {
+        <fieldset class="z-form-fieldset">
+            @if (!string.IsNullOrWhiteSpace(Model.Label))
+            {
+                <legend class="z-form-label">@Model.Label @if (Model.Required) { <span class="z-form-required" aria-hidden="true">*</span> }</legend>
+            }
+            <div class="z-form-control-surface">
+                @if (Model.Kind == ZoorceFormControlKind.CheckboxGroup)
+                {
+                    <div class="z-choice-stack">
+                        @for (var index = 0; index < Model.Choices.Count; index++)
+                        {
+                            var choice = Model.Choices[index];
+                            var choiceId = ChoiceId(choice, index);
+                            <label class="z-check-choice" for="@choiceId"><input id="@choiceId" type="checkbox" name="@name" value="@choice.Value" checked="@selected.Contains(choice.Value)" disabled="@(Model.Disabled || choice.Disabled)" data-z-form-choice /><span class="z-choice-mark" aria-hidden="true"></span><span><strong>@choice.Label</strong>@if (!string.IsNullOrWhiteSpace(choice.Description)) { <small>@choice.Description</small> }</span></label>
+                        }
+                    </div>
+                }
+                else if (Model.Kind == ZoorceFormControlKind.RadioGroup)
+                {
+                    <div class="z-choice-stack z-choice-stack--inline">
+                        @for (var index = 0; index < Model.Choices.Count; index++)
+                        {
+                            var choice = Model.Choices[index];
+                            var choiceId = ChoiceId(choice, index);
+                            <label class="z-radio-choice" for="@choiceId"><input id="@choiceId" type="radio" name="@name" value="@choice.Value" checked="@selected.Contains(choice.Value)" disabled="@(Model.Disabled || choice.Disabled)" data-z-form-choice /><span class="z-choice-mark" aria-hidden="true"></span><span><strong>@choice.Label</strong>@if (!string.IsNullOrWhiteSpace(choice.Description)) { <small>@choice.Description</small> }</span></label>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <input type="hidden" id="@Model.Id" name="@name" value="@Model.Value" data-z-form-value />
+                    <div class="z-chip-group" role="group" data-z-chip-group>
+                        @foreach (var choice in Model.Choices)
+                        {
+                            var isSelected = selected.Contains(choice.Value);
+                            <button type="button" class="z-chip-choice @(isSelected ? "is-selected" : string.Empty)" data-z-choice-value="@choice.Value" aria-pressed="@isSelected.ToString().ToLowerInvariant()" disabled="@(Model.Disabled || choice.Disabled)">@if (!string.IsNullOrWhiteSpace(choice.Icon)) { <span aria-hidden="true">@choice.Icon</span> }@choice.Label</button>
+                        }
+                    </div>
+                }
+            </div>
+        </fieldset>
+    }
+    else
+    {
+        <div class="z-form-control-surface">
+            @switch (Model.Kind)
+            {
+                case ZoorceFormControlKind.Hidden:
+                    <input id="@Model.Id" type="hidden" name="@name" value="@Model.Value" data-z-form-value />
+                    break;
+                case ZoorceFormControlKind.TextArea:
+                    <textarea id="@Model.Id" class="z-form-input z-form-textarea" name="@name" placeholder="@Model.Placeholder" rows="@Model.Rows" maxlength="@Model.MaximumLength" required="@Model.Required" disabled="@Model.Disabled" readonly="@Model.ReadOnly" aria-describedby="@describedBy" aria-invalid="@hasError" data-z-form-input>@Model.Value</textarea>
+                    break;
+                case ZoorceFormControlKind.Password:
+                    <div class="z-form-affix"><input id="@Model.Id" class="z-form-input" type="password" name="@name" value="@Model.Value" placeholder="@Model.Placeholder" autocomplete="@Model.Autocomplete" maxlength="@Model.MaximumLength" required="@Model.Required" disabled="@Model.Disabled" readonly="@Model.ReadOnly" aria-describedby="@describedBy" aria-invalid="@hasError" data-z-form-input /><button class="z-form-inline-action" type="button" data-z-password-toggle aria-label="Show password" @(Model.Disabled ? "disabled" : null)>◉</button></div>
+                    <div class="z-password-meter" data-z-password-meter aria-hidden="true"><span></span><span></span><span></span><span></span></div>
+                    break;
+                case ZoorceFormControlKind.NumericUpDown:
+                case ZoorceFormControlKind.Currency:
+                case ZoorceFormControlKind.Percentage:
+                    <div class="z-number-field" data-z-number-field>
+                        <button class="z-number-button" type="button" data-z-number-decrease aria-label="Decrease value" @(Model.Disabled || Model.ReadOnly ? "disabled" : null)>−</button>
+                        <div class="z-number-value">
+                            @if (hasNumberPrefix) { <span class="z-form-prefix">@(Model.Prefix ?? "$")</span> }
+                            <input id="@Model.Id" class="z-form-input z-number-input" type="text" inputmode="decimal" name="@name" value="@Model.Value" placeholder="@Model.Placeholder" required="@Model.Required" disabled="@Model.Disabled" readonly="@Model.ReadOnly" aria-describedby="@describedBy" aria-invalid="@hasError" data-z-form-input data-z-number-input />
+                            @if (hasNumberSuffix) { <span class="z-form-suffix">@(Model.Suffix ?? "%")</span> }
+                        </div>
+                        <button class="z-number-button" type="button" data-z-number-increase aria-label="Increase value" @(Model.Disabled || Model.ReadOnly ? "disabled" : null)>+</button>
+                    </div>
+                    break;
+                case ZoorceFormControlKind.QuantityStepper:
+                    <div class="z-quantity-stepper" data-z-number-field>
+                        <button class="z-quantity-button" type="button" data-z-number-decrease aria-label="Decrease @Model.Label" @(Model.Disabled || Model.ReadOnly ? "disabled" : null)>−</button>
+                        <input id="@Model.Id" class="z-quantity-value" type="text" inputmode="numeric" name="@name" value="@Model.Value" required="@Model.Required" disabled="@Model.Disabled" readonly="@Model.ReadOnly" aria-describedby="@describedBy" data-z-form-input data-z-number-input />
+                        <button class="z-quantity-button" type="button" data-z-number-increase aria-label="Increase @Model.Label" @(Model.Disabled || Model.ReadOnly ? "disabled" : null)>+</button>
+                    </div>
+                    break;
+                case ZoorceFormControlKind.Slider:
+                    <div class="z-range-field"><input id="@Model.Id" class="z-range-input" type="range" name="@name" value="@Model.Value" min="@min" max="@max" step="@step" disabled="@Model.Disabled" aria-describedby="@describedBy" data-z-range-input /><output for="@Model.Id" data-z-range-output>@Model.Value</output></div>
+                    break;
+                case ZoorceFormControlKind.RangeSlider:
+                    <div class="z-range-field z-range-field--dual" data-z-dual-range><input id="@Model.Id" class="z-range-input" type="range" name="@name-start" value="@Model.Value" min="@min" max="@max" step="@step" disabled="@Model.Disabled" data-z-range-start /><input id="@Model.Id-end" class="z-range-input" type="range" name="@name-end" value="@Model.SecondaryValue" min="@min" max="@max" step="@step" disabled="@Model.Disabled" data-z-range-end /><output data-z-range-output>@Model.Value – @Model.SecondaryValue</output></div>
+                    break;
+                case ZoorceFormControlKind.Date:
+                    <input id="@Model.Id" class="z-form-input" type="date" name="@name" value="@Model.Value" required="@Model.Required" disabled="@Model.Disabled" readonly="@Model.ReadOnly" aria-describedby="@describedBy" data-z-form-input />
+                    break;
+                case ZoorceFormControlKind.Time:
+                    <input id="@Model.Id" class="z-form-input" type="time" name="@name" value="@Model.Value" required="@Model.Required" disabled="@Model.Disabled" readonly="@Model.ReadOnly" aria-describedby="@describedBy" data-z-form-input />
+                    break;
+                case ZoorceFormControlKind.DateTime:
+                    <input id="@Model.Id" class="z-form-input" type="datetime-local" name="@name" value="@Model.Value" required="@Model.Required" disabled="@Model.Disabled" readonly="@Model.ReadOnly" aria-describedby="@describedBy" data-z-form-input />
+                    break;
+                case ZoorceFormControlKind.DateRange:
+                    <div class="z-date-range"><input id="@Model.Id" class="z-form-input" type="date" name="@name-start" value="@Model.Value" disabled="@Model.Disabled" data-z-date-start /><span aria-hidden="true">→</span><input id="@Model.Id-end" class="z-form-input" type="date" name="@name-end" value="@Model.SecondaryValue" disabled="@Model.Disabled" data-z-date-end /></div>
+                    break;
+                case ZoorceFormControlKind.Duration:
+                    <div class="z-duration-input" data-z-duration-input><label><input id="@Model.Id" class="z-form-input" type="number" name="@name-days" value="@Model.Value" min="0" disabled="@Model.Disabled" data-z-duration-days /><span>days</span></label><label><input class="z-form-input" type="number" name="@name-hours" value="@Model.SecondaryValue" min="0" max="23" disabled="@Model.Disabled" data-z-duration-hours /><span>hours</span></label><label><input class="z-form-input" type="number" name="@name-minutes" value="@durationMinutes" min="0" max="59" disabled="@Model.Disabled" data-z-duration-minutes /><span>min</span></label></div>
+                    break;
+                case ZoorceFormControlKind.Checkbox:
+                    <label class="z-toggle-choice" for="@Model.Id"><input id="@Model.Id" type="checkbox" name="@name" value="true" checked="@(string.Equals(Model.Value, "true", StringComparison.OrdinalIgnoreCase))" required="@Model.Required" disabled="@Model.Disabled" data-z-form-input /><span class="z-choice-mark" aria-hidden="true"></span><span>@(Model.Placeholder ?? Model.Label)</span></label>
+                    break;
+                case ZoorceFormControlKind.ToggleSwitch:
+                    <label class="z-toggle-switch" for="@Model.Id"><input id="@Model.Id" type="checkbox" name="@name" value="true" checked="@(string.Equals(Model.Value, "true", StringComparison.OrdinalIgnoreCase))" disabled="@Model.Disabled" data-z-form-input /><span class="z-toggle-track" aria-hidden="true"><span></span></span><span>@(Model.Placeholder ?? "Enabled")</span></label>
+                    break;
+                case ZoorceFormControlKind.MultiSelect:
+                    <input id="@Model.Id" type="hidden" name="@name" value="@Model.Value" data-z-form-value /><div class="z-multi-select" data-z-multi-select><span class="z-multi-summary" data-z-multi-summary></span><div class="z-multi-options" role="group" aria-label="@Model.Label">@foreach (var choice in Model.Choices) { var isCurrent = selected.Contains(choice.Value); <button type="button" class="@(isCurrent ? "is-selected" : string.Empty)" data-z-multi-choice="@choice.Value" aria-pressed="@isCurrent.ToString().ToLowerInvariant()" disabled="@(Model.Disabled || choice.Disabled)"><span class="z-multi-check" aria-hidden="true"></span><span><strong>@choice.Label</strong>@if (!string.IsNullOrWhiteSpace(choice.Description)) { <small>@choice.Description</small> }</span></button> }</div></div>
+                    break;
+                case ZoorceFormControlKind.SegmentedControl:
+                    <input id="@Model.Id" type="hidden" name="@name" value="@Model.Value" data-z-form-value /><div class="z-segmented-control" role="group" data-z-segmented-control>@foreach (var choice in Model.Choices) { var isCurrent = selected.Contains(choice.Value); <button type="button" class="@(isCurrent ? "is-selected" : string.Empty)" data-z-choice-value="@choice.Value" aria-pressed="@isCurrent.ToString().ToLowerInvariant()" disabled="@(Model.Disabled || choice.Disabled)">@if (!string.IsNullOrWhiteSpace(choice.Icon)) { <span aria-hidden="true">@choice.Icon</span> }@choice.Label</button> }</div>
+                    break;
+                case ZoorceFormControlKind.TransferList:
+                    <input id="@Model.Id" type="hidden" name="@name" value="@Model.Value" data-z-form-value /><div class="z-transfer-list" data-z-transfer-list><div><span>Available</span><select multiple data-z-transfer-source>@foreach (var choice in Model.Choices.Where(choice => !selected.Contains(choice.Value))) { <option value="@choice.Value">@choice.Label</option> }</select></div><div class="z-transfer-actions"><button type="button" data-z-transfer-add aria-label="Add selected" @(Model.Disabled ? "disabled" : null)>→</button><button type="button" data-z-transfer-remove aria-label="Remove selected" @(Model.Disabled ? "disabled" : null)>←</button></div><div><span>Included</span><select multiple data-z-transfer-target>@foreach (var choice in Model.Choices.Where(choice => selected.Contains(choice.Value))) { <option value="@choice.Value">@choice.Label</option> }</select></div></div>
+                    break;
+                case ZoorceFormControlKind.TagInput:
+                    <input id="@Model.Id" type="hidden" name="@name" value="@Model.Value" data-z-form-value /><div class="z-tag-input" data-z-tag-input><div class="z-tag-list" data-z-tag-list></div><input class="z-tag-entry" type="text" placeholder="@Model.Placeholder" disabled="@Model.Disabled" data-z-tag-entry /></div>
+                    break;
+                case ZoorceFormControlKind.ColorPicker:
+                    <div class="z-color-picker" data-z-color-picker><input id="@Model.Id" class="z-color-well" type="color" value="@(string.IsNullOrWhiteSpace(Model.Value) ? "#7c5cff" : Model.Value![..Math.Min(7, Model.Value.Length)])" disabled="@Model.Disabled" data-z-color-input /><input class="z-form-input" name="@name" value="@Model.Value" placeholder="#7c5cff" maxlength="9" disabled="@Model.Disabled" data-z-color-text data-z-form-input />@if (Model.AllowAlpha) { <label class="z-color-alpha"><span>Opacity</span><input type="range" min="0" max="100" value="100" disabled="@Model.Disabled" data-z-color-alpha /></label> }<div class="z-color-swatches" aria-label="Suggested colors">@foreach (var choice in Model.Choices) { <button type="button" style="--z-swatch:@choice.Value" data-z-color-swatch="@choice.Value" aria-label="@choice.Label" title="@choice.Label" disabled="@Model.Disabled"></button> }</div></div>
+                    break;
+                case ZoorceFormControlKind.IconPicker:
+                case ZoorceFormControlKind.EmojiPicker:
+                    <input id="@Model.Id" type="hidden" name="@name" value="@Model.Value" data-z-form-value /><div class="z-icon-picker" data-z-icon-picker>@foreach (var choice in Model.Choices) { var isCurrent = selected.Contains(choice.Value); <button type="button" class="@(isCurrent ? "is-selected" : string.Empty)" data-z-choice-value="@choice.Value" title="@choice.Label" aria-label="@choice.Label" aria-pressed="@isCurrent.ToString().ToLowerInvariant()" disabled="@(Model.Disabled || choice.Disabled)">@(choice.Icon ?? choice.Label)</button> }</div>
+                    break;
+                case ZoorceFormControlKind.FileUpload:
+                case ZoorceFormControlKind.ImageUpload:
+                case ZoorceFormControlKind.AvatarPicker:
+                    <div class="z-file-upload @(isAvatarPicker ? "z-file-upload--avatar" : string.Empty) @(Model.Kind == ZoorceFormControlKind.ImageUpload ? "z-file-upload--images" : string.Empty)" data-z-file-upload data-z-file-kind="@Model.Kind" data-z-file-max-files="@Model.MaximumFiles" data-z-file-max-size="@Model.MaximumFileSizeBytes" data-z-file-max-total="@Model.MaximumTotalFileSizeBytes" data-z-file-upload-url="@Model.UploadUrl" data-z-file-upload-behavior="@Model.FileUploadBehavior" data-z-file-initial="@existingFilesJson">
+                        <input id="@Model.Id" class="z-file-input" type="file" name="@name" accept="@fileAccept" multiple="@fileAllowsMultiple" required="@Model.Required" disabled="@Model.Disabled" data-z-file-input />
+                        @if (isAvatarPicker)
+                        {
+                            <div class="z-avatar-picker" data-z-avatar-picker>
+                                <button class="z-avatar-picker-preview" type="button" data-z-avatar-preview data-z-file-picker aria-live="polite" aria-label="Add avatar image" disabled="@Model.Disabled">
+                                    <span class="z-avatar-picker-empty-icon" aria-hidden="true">↑</span>
+                                    <span class="z-avatar-picker-empty-copy">Add image</span>
+                                    <span class="z-visually-hidden" data-z-avatar-status>No avatar selected.</span>
+                                </button>
+                                <div class="z-avatar-picker-actions">
+                                    <button class="z-button z-button-ghost z-button-sm" type="button" data-z-avatar-edit data-z-file-picker hidden @(Model.Disabled ? "disabled" : null)>Edit</button>
+                                    <button class="z-button z-button-ghost z-button-sm" type="button" data-z-file-remove-all hidden @(Model.Disabled ? "disabled" : null)>Remove</button>
+                                </div>
+                            </div>
+                        }
+                        else
+                        {
+                            <label class="z-file-dropzone" for="@Model.Id" data-z-file-picker>
+                                <span class="z-file-upload-icon" aria-hidden="true">↑</span>
+                                <strong>@(Model.Placeholder ?? "Choose a file or drop it here")</strong>
+                                <small>@(fileAccept ?? "Files are kept in this browser until the form is submitted.")</small>
+                            </label>
+                        }
+                        <div class="z-file-upload-feedback" role="status" aria-live="polite" data-z-file-feedback></div>
+                        <div class="z-file-preview" data-z-file-preview aria-live="polite"></div>
+                        @if (Model.FileUploadBehavior == ZoorceFileUploadBehavior.Manual)
+                        {
+                            <button class="z-button z-button-secondary z-button-sm z-file-upload-trigger" type="button" data-z-file-upload-trigger disabled="@Model.Disabled">@(Model.UploadButtonText ?? "Upload selected")</button>
+                        }
+                    </div>
+                    break;
+                case ZoorceFormControlKind.Phone:
+                    <div class="z-phone-input"><select name="@name-country" aria-label="Country code" disabled="@Model.Disabled" data-z-phone-country>@foreach (var choice in Model.Choices) { <option value="@choice.Value" selected="@string.Equals(configuredCountry, choice.Value, StringComparison.OrdinalIgnoreCase)">@choice.Label</option> }</select><input id="@Model.Id" class="z-form-input" type="tel" name="@name" value="@Model.Value" placeholder="@Model.Placeholder" autocomplete="tel" required="@Model.Required" disabled="@Model.Disabled" readonly="@Model.ReadOnly" data-z-form-input /></div>
+                    break;
+                case ZoorceFormControlKind.Address:
+                    <div class="z-address-grid" data-z-address><input id="@Model.Id" class="z-form-input z-address-street" name="@name-street" value="@Model.Value" placeholder="Street and number" disabled="@Model.Disabled" data-z-form-input /><input class="z-form-input" name="@name-unit" placeholder="Unit / suite" disabled="@Model.Disabled" data-z-form-input /><input class="z-form-input" name="@name-city" placeholder="City" disabled="@Model.Disabled" data-z-form-input /><input class="z-form-input" name="@name-region" placeholder="State / region" disabled="@Model.Disabled" data-z-form-input /><input class="z-form-input" name="@name-postal" placeholder="Postal code" disabled="@Model.Disabled" data-z-form-input /><select class="z-form-input z-form-select" name="@name-country" disabled="@Model.Disabled" data-z-form-input><option value="">Country</option>@foreach (var choice in Model.Choices) { <option value="@choice.Value" selected="@string.Equals(configuredCountry, choice.Value, StringComparison.OrdinalIgnoreCase)">@choice.Label</option> }</select></div>
+                    break;
+                case ZoorceFormControlKind.Otp:
+                    <input id="@Model.Id" type="hidden" name="@name" value="@Model.Value" disabled="@Model.Disabled" data-z-form-value />
+                    <div class="z-otp-input" role="group" aria-label="@(Model.Label ?? "Verification code")" aria-describedby="@describedBy" aria-required="@Model.Required.ToString().ToLowerInvariant()" aria-invalid="@hasError.ToString().ToLowerInvariant()" data-z-otp-input data-z-otp-character-set="@Model.OtpCharacterSet" data-z-otp-text-transform="@Model.OtpTextTransform">
+                        @for (var index = 0; index < otpLength; index++)
+                        {
+                            var cellId = $"{Model.Id}-{index}";
+                            var cellValue = index < (Model.Value?.Length ?? 0) ? Model.Value![index].ToString() : string.Empty;
+                            <input id="@cellId" type="text" inputmode="@otpInputMode" maxlength="1" autocomplete="@(index == 0 ? otpAutocomplete : "off")" aria-label="@otpCellName @(index + 1) of @otpLength" aria-describedby="@describedBy" aria-invalid="@hasError.ToString().ToLowerInvariant()" value="@cellValue" required="@Model.Required" disabled="@Model.Disabled" readonly="@Model.ReadOnly" data-z-form-input data-z-otp-cell />
+                        }
+                        <span class="z-visually-hidden" aria-live="polite" data-z-otp-status></span>
+                    </div>
+                    break;
+                case ZoorceFormControlKind.KeyValue:
+                    <input id="@Model.Id" type="hidden" name="@name" value="@Model.Value" data-z-form-value /><div class="z-key-value" data-z-key-value><div data-z-key-value-rows></div><button type="button" class="z-form-secondary-button" data-z-key-value-add disabled="@Model.Disabled">+ Add property</button></div>
+                    break;
+                default:
+                    <input id="@Model.Id" class="z-form-input" type="@inputType" name="@name" value="@Model.Value" placeholder="@Model.Placeholder" autocomplete="@Model.Autocomplete" maxlength="@Model.MaximumLength" required="@Model.Required" disabled="@Model.Disabled" readonly="@Model.ReadOnly" aria-describedby="@describedBy" aria-invalid="@hasError" data-z-form-input />
+                    break;
+            }
+        </div>
+    }
+    @if (Model.Kind != ZoorceFormControlKind.Hidden && (!string.IsNullOrWhiteSpace(Model.Description) || !string.IsNullOrWhiteSpace(Model.ValidationMessage)))
+    {
+        <div id="@messageId" class="z-form-message" data-z-form-message aria-live="polite">
+            @if (!string.IsNullOrWhiteSpace(Model.ValidationMessage)) { <span>@Model.ValidationMessage</span> }
+            else { <span>@Model.Description</span> }
+        </div>
+    }
+</div>

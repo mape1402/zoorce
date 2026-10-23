@@ -1,0 +1,214 @@
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
+using Zoorce.Web.UI;
+using Zoorce.Web.UI.Abstractions.Navigation;
+using Zoorce.Web.UI.Abstractions.Notifications;
+using Zoorce.Web.UI.Abstractions.UserContext;
+using Zoorce.Web.UI.Layout;
+using Zoorce.Web.UI.Theming;
+
+namespace Zoorce.Web.UI.Tests;
+
+public sealed class ThemeAndServiceTests
+{
+    [Fact]
+    public void Palette_defaults_emit_all_semantic_variables()
+    {
+        var options = new ZoorceShellOptions();
+
+        var rules = options.ToCssThemeRules();
+
+        Assert.Contains("data-zoorce-theme=\"light\"", rules);
+        Assert.Contains("data-zoorce-theme=\"dark\"", rules);
+        Assert.Contains("--z-canvas:#f6f8f7;", rules);
+        Assert.Contains("--z-primary:#20e7a0;", rules);
+        Assert.Contains("--z-primary-foreground:#ffffff;", rules);
+        Assert.Contains("--z-warning:#8a5a00;", rules);
+        Assert.Contains("--z-danger:#ff7586;", rules);
+        Assert.Contains("--z-data-primary:#78b7ff;", rules);
+        Assert.Contains("--z-data-secondary:#aa91ff;", rules);
+        Assert.Contains("--z-data-tertiary:#ef8fd4;", rules);
+        Assert.Contains("--z-data-quaternary:#ffd06d;", rules);
+        Assert.Contains("--z-data-quinary:#61d7c7;", rules);
+        Assert.Contains("--z-sidebar:#07120f;", rules);
+    }
+
+    [Fact]
+    public void Palette_configuration_is_retained_by_options()
+    {
+        var palette = ZoorceThemePalette.CreateDark();
+        palette.Primary = "#a855f7";
+        palette.DataPrimary = "#36a8ff";
+        palette.Glow = "rgba(168, 85, 247, 0.30)";
+
+        var variables = palette.ToCssVariables();
+
+        Assert.Contains("--z-primary:#a855f7;", variables);
+        Assert.Contains("--z-data-primary:#36a8ff;", variables);
+        Assert.Contains("--z-glow:rgba(168, 85, 247, 0.30);", variables);
+        Assert.Contains("--z-text:#edfff7;", variables);
+    }
+
+    [Fact]
+    public void AddZoorceWebUi_registers_defaults_and_honors_configuration()
+    {
+        var services = new ServiceCollection();
+
+        var result = services.AddZoorceWebUI(options =>
+        {
+            options.ApplicationName = "Atlas";
+            options.BrandMark = "A";
+            options.DefaultTheme = ZoorceThemeMode.Light;
+            options.SidebarMode = ZoorceSidebarMode.Fixed;
+            options.SidebarCollapsedByDefault = true;
+            options.PersistSidebarState = false;
+            options.NavigationDensity = ZoorceNavigationDensity.Dense;
+            options.Light.Primary = "#7c3aed";
+            options.Light.DataPrimary = "#2485df";
+            options.Dark.DataQuinary = "#5de0c6";
+        });
+
+        Assert.Same(services, result);
+        using var provider = services.BuildServiceProvider();
+        using var scope = provider.CreateScope();
+        var configured = scope.ServiceProvider.GetRequiredService<IOptions<ZoorceShellOptions>>().Value;
+
+        Assert.Equal("Atlas", configured.ApplicationName);
+        Assert.Equal("A", configured.BrandMark);
+        Assert.Equal(ZoorceThemeMode.Light, configured.DefaultTheme);
+        Assert.Equal("#7c3aed", configured.Light.Primary);
+        Assert.Equal("#2485df", configured.Light.DataPrimary);
+        Assert.Equal("#5de0c6", configured.Dark.DataQuinary);
+        Assert.Equal(ZoorceSidebarMode.Fixed, configured.SidebarMode);
+        Assert.True(configured.SidebarCollapsedByDefault);
+        Assert.False(configured.PersistSidebarState);
+        Assert.Equal(ZoorceNavigationDensity.Dense, configured.NavigationDensity);
+        Assert.Empty(scope.ServiceProvider.GetRequiredService<INavigationProvider>().GetItems());
+        Assert.Null(scope.ServiceProvider.GetRequiredService<IUserMenuProvider>().GetCurrentUser());
+    }
+
+    [Fact]
+    public void AddZoorceWebUi_preserves_host_navigation_and_user_providers()
+    {
+        var services = new ServiceCollection();
+        services.AddScoped<INavigationProvider, TestNavigationProvider>();
+        services.AddScoped<IUserMenuProvider, TestUserMenuProvider>();
+
+        services.AddZoorceWebUI();
+
+        using var provider = services.BuildServiceProvider();
+        using var scope = provider.CreateScope();
+
+        Assert.Equal("Host", scope.ServiceProvider.GetRequiredService<INavigationProvider>().GetItems().Single().Text);
+        Assert.Equal("Ada Lovelace", scope.ServiceProvider.GetRequiredService<IUserMenuProvider>().GetCurrentUser()!.DisplayName);
+    }
+
+    [Fact]
+    public void Sidebar_options_default_to_a_persistent_collapsible_shell()
+    {
+        var options = new ZoorceShellOptions();
+
+        Assert.Equal(ZoorceSidebarMode.Collapsible, options.SidebarMode);
+        Assert.False(options.SidebarCollapsedByDefault);
+        Assert.True(options.PersistSidebarState);
+        Assert.Equal(ZoorceNavigationDensity.Compact, options.NavigationDensity);
+    }
+
+    [Fact]
+    public void AddZoorceWebUi_rejects_a_null_service_collection()
+    {
+        Assert.Throws<ArgumentNullException>(() => ServiceCollectionExtensions.AddZoorceWebUI((IServiceCollection)null!));
+    }
+
+    [Fact]
+    public void AddZoorceWebUi_chained_from_razor_pages_registers_the_package_views()
+    {
+        var services = new ServiceCollection();
+        var mvcBuilder = services.AddRazorPages();
+
+        var result = mvcBuilder.AddZoorceWebUI();
+
+        Assert.Same(mvcBuilder, result);
+        using var provider = services.BuildServiceProvider();
+        var parts = provider.GetRequiredService<Microsoft.AspNetCore.Mvc.ApplicationParts.ApplicationPartManager>();
+        Assert.Contains(parts.ApplicationParts, part => part.Name == typeof(ZoorceShellOptions).Assembly.GetName().Name);
+    }
+
+    [Fact]
+    public void AddZoorceWebUi_rejects_a_null_mvc_builder()
+    {
+        Assert.Throws<ArgumentNullException>(() => ServiceCollectionExtensions.AddZoorceWebUI((IMvcBuilder)null!));
+    }
+
+    [Fact]
+    public void Toast_service_drains_messages_in_order()
+    {
+        var services = new ServiceCollection();
+        services.AddZoorceWebUI();
+        using var provider = services.BuildServiceProvider();
+        using var scope = provider.CreateScope();
+        var toasts = scope.ServiceProvider.GetRequiredService<IToastService>();
+
+        toasts.Show(new ZoorceToastMessage("Saved", "The draft is safe.", ZoorceToastKind.Success));
+        toasts.Show(new ZoorceToastMessage("Review", "One item needs attention.", ZoorceToastKind.Warning));
+
+        var pending = toasts.Drain();
+
+        Assert.Collection(
+            pending,
+            toast => Assert.Equal("Saved", toast.Title),
+            toast => Assert.Equal("Review", toast.Title));
+        Assert.Empty(toasts.Drain());
+    }
+
+    [Fact]
+    public void Toast_service_rejects_a_null_message()
+    {
+        var services = new ServiceCollection();
+        services.AddZoorceWebUI();
+        using var provider = services.BuildServiceProvider();
+        using var scope = provider.CreateScope();
+
+        Assert.Throws<ArgumentNullException>(() => scope.ServiceProvider.GetRequiredService<IToastService>().Show(null!));
+    }
+
+    [Fact]
+    public void Contract_records_expose_every_configured_value()
+    {
+        var child = new NavigationItem("Child", "/child", "C", MatchMode: NavigationMatchMode.Prefix);
+        var parent = new NavigationItem("Parent", "/parent", "P", [child], NavigationMatchMode.Exact, ["/parent", "/parent/overview"]);
+        var root = new NavigationItem("Root", "/");
+        var empty = new NavigationItem("Empty");
+        var action = new UserMenuAction("Profile", "/profile", "◌");
+        var profile = new UserMenuProfile("Ada Lovelace", "ada@example.test", "https://example.test/ada.png", [action]);
+        var toast = new ZoorceToastMessage("Ready", "The sample is ready.", ZoorceToastKind.Danger, 1200);
+
+        Assert.Equal("/parent", parent.Url);
+        Assert.Equal("P", parent.Icon);
+        Assert.Same(child, parent.Children!.Single());
+        Assert.Equal(NavigationMatchMode.Exact, parent.MatchMode);
+        Assert.Equal(["/parent", "/parent/overview"], parent.GetActiveUrls());
+        Assert.Equal(NavigationMatchMode.Prefix, child.MatchMode);
+        Assert.Equal(["/"], root.GetActiveUrls());
+        Assert.Empty(empty.GetActiveUrls());
+        Assert.Equal("Profile", action.Text);
+        Assert.Equal("/profile", action.Url);
+        Assert.Equal("◌", action.Icon);
+        Assert.Equal("ada@example.test", profile.Email);
+        Assert.Equal("https://example.test/ada.png", profile.AvatarUrl);
+        Assert.Same(action, profile.Actions!.Single());
+        Assert.Equal("The sample is ready.", toast.Message);
+        Assert.Equal(ZoorceToastKind.Danger, toast.Kind);
+        Assert.Equal(1200, toast.DurationMilliseconds);
+    }
+
+    private sealed class TestNavigationProvider : INavigationProvider
+    {
+        public IReadOnlyList<NavigationItem> GetItems() => [new("Host", "/host")];
+    }
+
+    private sealed class TestUserMenuProvider : IUserMenuProvider
+    {
+        public UserMenuProfile GetCurrentUser() => new("Ada Lovelace");
+    }
+}
