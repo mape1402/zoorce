@@ -18,7 +18,7 @@
         </button>
         @if (Model.Profile is not null)
         {
-            <details class="z-user-menu">
+            <details class="z-user-menu" data-z-user-menu>
                 <summary class="z-user-trigger" aria-label="Open user menu">
                     @if (!string.IsNullOrWhiteSpace(Model.Profile.AvatarUrl))
                     {
@@ -29,7 +29,9 @@
                         <span class="z-avatar">@Model.Initials</span>
                     }
                     <span class="z-user-copy"><strong>@Model.Profile.DisplayName</strong><small>@Model.Profile.Email</small></span>
-                    <span aria-hidden="true">⌄</span>
+                    <svg class="z-user-menu-chevron" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <path d="m7 10 5 5 5-5" />
+                    </svg>
                 </summary>
                 <div class="z-user-popover">
                     @foreach (var action in Model.Profile.Actions ?? [])

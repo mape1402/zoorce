@@ -91,6 +91,16 @@
         button.addEventListener("click", () => setTheme(mode() === "dark" ? "light" : "dark"));
     });
 
+    const userMenus = [...document.querySelectorAll("[data-z-user-menu]")];
+    const closeUserMenu = menu => {
+        menu.open = false;
+    };
+    document.addEventListener("click", event => {
+        userMenus.forEach(menu => {
+            if (menu.open && !menu.contains(event.target)) closeUserMenu(menu);
+        });
+    });
+
     document.querySelectorAll("[data-z-sidebar-toggle]").forEach(button => {
         button.addEventListener("click", toggleSidebar);
     });
@@ -394,6 +404,7 @@
             openCommand();
         }
         if (event.key === "Escape") {
+            userMenus.forEach(closeUserMenu);
             if (!desktopSidebarQuery.matches && mobileSidebarOpen) {
                 setMobileSidebar(false);
                 return;
