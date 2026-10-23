@@ -1,0 +1,44 @@
+@using Zoorce.Web.UI.Forms
+@model ZoorceMultiColumnComboboxOptions
+@{
+    var name = Model.Name ?? Model.Id;
+    var menuId = $"{Model.Id}-menu";
+    var messageId = $"{Model.Id}-message";
+    var selected = Model.Items.FirstOrDefault(item => string.Equals(item.Value, Model.Value, StringComparison.OrdinalIgnoreCase));
+    var display = selected?.Values.GetValueOrDefault(Model.DisplayKey!) ?? Model.Value ?? string.Empty;
+    var hasMessage = Model.Description is not null || Model.ValidationMessage is not null;
+}
+<div class="z-form-field z-advanced-choice @(Model.State == ZoorceFormControlState.Default ? string.Empty : $"is-{Model.State.ToString().ToLowerInvariant()}")" data-z-form-control data-z-form-id="@Model.Id" data-z-form-kind="MultiColumnCombobox" data-z-multi-column-combobox data-z-source="@Model.Source">
+    @if (Model.Label is not null)
+    {
+        <label class="z-form-label" for="@Model.Id">@Model.Label</label>
+    }
+    <input id="@($"{Model.Id}-value")" type="hidden" name="@name" value="@Model.Value" data-z-choice-value />
+    <div class="z-advanced-choice-surface">
+        <input id="@Model.Id" class="z-form-input" type="text" value="@display" placeholder="@Model.Placeholder" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="@menuId" aria-describedby="@(hasMessage ? messageId : null)" aria-invalid="@(Model.State == ZoorceFormControlState.Error ? "true" : null)" required="@Model.Required" readonly="@Model.ReadOnly" data-z-choice-input disabled="@Model.Disabled" />
+        <button class="z-combobox-toggle" type="button" aria-label="Show options" aria-haspopup="listbox" aria-expanded="false" aria-controls="@menuId" data-z-choice-toggle disabled="@(Model.Disabled || Model.ReadOnly)">
+            <svg class="z-choice-trigger-chevron" viewBox="0 0 16 16" aria-hidden="true"><path d="m3.25 5.75 4.75 4.5 4.75-4.5" /></svg>
+        </button>
+        <div id="@menuId" class="z-advanced-choice-menu z-multi-column-menu" role="listbox" hidden data-z-choice-menu>
+            <div class="z-multi-column-row z-multi-column-header" aria-hidden="true" style="--z-column-count:@Model.Columns.Count">
+                @foreach (var column in Model.Columns)
+                {
+                    <span class="@(column.Numeric ? "is-numeric" : string.Empty)">@column.Header</span>
+                }
+            </div>
+            @foreach (var item in Model.Items)
+            {
+                <button type="button" class="z-multi-column-row @(string.Equals(item.Value, Model.Value, StringComparison.OrdinalIgnoreCase) ? "is-selected" : string.Empty)" role="option" aria-selected="@string.Equals(item.Value, Model.Value, StringComparison.OrdinalIgnoreCase).ToString().ToLowerInvariant()" data-z-choice-option data-z-choice-value="@item.Value" data-z-choice-label="@(item.Values.GetValueOrDefault(Model.DisplayKey!) ?? item.Value)" style="--z-column-count:@Model.Columns.Count" disabled="@(Model.Disabled || Model.ReadOnly || item.Disabled)">
+                    @foreach (var column in Model.Columns)
+                    {
+                        <span class="@(column.Numeric ? "is-numeric" : string.Empty)">@item.Values.GetValueOrDefault(column.Key)</span>
+                    }
+                </button>
+            }
+        </div>
+    </div>
+    @if (hasMessage)
+    {
+        <p id="@messageId" class="z-form-message">@(Model.ValidationMessage ?? Model.Description)</p>
+    }
+</div>

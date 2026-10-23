@@ -1,0 +1,2 @@
+@model Zoorce.Web.UI.Navigation.Components.ZoorceToolbarOptions
+<div id="@Model.Id" class="z-toolbar" role="toolbar" aria-label="@Model.Label" data-z-toolbar>@foreach (var item in Model.Items) { <button type="button" class="z-toolbar-action" data-z-toolbar-value="@item.Value" disabled="@item.Disabled" title="@item.Text">@if (item.Icon is not null) { <i aria-hidden="true">@item.Icon</i> }<span>@item.Text</span></button> }</div>

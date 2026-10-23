@@ -1,0 +1,5 @@
+@model Zoorce.Web.UI.Foundation.Components.ZoorceSpeedDialOptions
+<div id="@Model.Id" class="z-speed-dial" data-z-speed-dial data-z-speed-direction="@(Model.Horizontal ? "horizontal" : "vertical")">
+    <div class="z-speed-dial-actions" role="menu" hidden data-z-speed-actions>@foreach (var item in Model.Items) { <button type="button" class="z-speed-action" role="menuitem" data-z-speed-value="@item.Value" disabled="@item.Disabled" title="@item.Text"><span aria-hidden="true">@(item.Icon ?? "•")</span><small>@item.Text</small></button> }</div>
+    <button type="button" class="z-fab z-fab-primary" aria-label="@Model.Label" aria-expanded="false" aria-haspopup="menu" data-z-speed-trigger><span aria-hidden="true">@Model.Icon</span></button>
+</div>

@@ -95,8 +95,20 @@
             </div>
         </section>
 
+        <section class="z-form-catalog-section" aria-labelledby="advanced-selection-title">
+            <div class="z-form-catalog-heading"><div><span class="z-section-kicker">04 · Advanced selection</span><h2 id="advanced-selection-title">Search, hierarchy and richer records</h2></div><p>These fields keep an ordinary submitted value while owning lookup, selection and keyboard behavior inside their own boundary.</p></div>
+            <div class="z-form-demo-grid">
+                @await Component.InvokeAsync("ZoorceAutoComplete", new ZoorceAutoCompleteOptions { Id = "reviewer-lookup", Name = "reviewer", Label = "Find a reviewer", Value = "design", Placeholder = "Search teams", Choices = teams, MinimumCharacters = 1 })
+                @await Component.InvokeAsync("ZoorceListBox", new ZoorceListBoxOptions { Id = "approval-list", Name = "approvalList", Label = "Approval lane", Value = "security", Choices = teams })
+                @await Component.InvokeAsync("ZoorceMultiSelectDropdown", new ZoorceMultiSelectDropdownOptions { Id = "deployment-teams", Name = "deploymentTeams", Label = "Deployment teams", Value = "platform,growth", Choices = teams })
+                @await Component.InvokeAsync("ZoorceDropdownTree", new ZoorceDropdownTreeOptions { Id = "delivery-area", Name = "deliveryArea", Label = "Delivery area", Value = "observability", ExpandAll = true, Items = [new ZoorceTreeChoice { Value = "platform", Label = "Platform", Icon = "▦", Children = [new ZoorceTreeChoice { Value = "observability", Label = "Observability", Icon = "◌" }, new ZoorceTreeChoice { Value = "runtime", Label = "Runtime", Icon = "◇" }] }, new ZoorceTreeChoice { Value = "experience", Label = "Experience", Icon = "✦", Children = [new ZoorceTreeChoice { Value = "design-systems", Label = "Design systems", Icon = "◈" }] }] })
+                @await Component.InvokeAsync("ZoorceMention", new ZoorceMentionOptions { Id = "release-note", Name = "releaseNote", Label = "Release handoff note", Value = "Please confirm with @Design before the rollout.", Choices = teams, PlaceholderText = "Type @ to mention a team" })
+                @await Component.InvokeAsync("ZoorceMultiColumnCombobox", new ZoorceMultiColumnComboboxOptions { Id = "service-owner", Name = "serviceOwner", Label = "Service owner", Value = "gateway", Placeholder = "Search services", Columns = [new ZoorceComboBoxColumn { Key = "service", Header = "Service" }, new ZoorceComboBoxColumn { Key = "owner", Header = "Owner" }, new ZoorceComboBoxColumn { Key = "tier", Header = "Tier", Numeric = true }], Items = [new ZoorceMultiColumnChoice { Value = "gateway", Values = new Dictionary<string, string?> { ["service"] = "Gateway", ["owner"] = "Platform", ["tier"] = "1" } }, new ZoorceMultiColumnChoice { Value = "catalog", Values = new Dictionary<string, string?> { ["service"] = "Catalog", ["owner"] = "Growth", ["tier"] = "2" } }, new ZoorceMultiColumnChoice { Value = "studio", Values = new Dictionary<string, string?> { ["service"] = "Studio", ["owner"] = "Design", ["tier"] = "2" } }] })
+            </div>
+        </section>
+
         <section class="z-form-catalog-section" aria-labelledby="structured-title">
-            <div class="z-form-catalog-heading"><div><span class="z-section-kicker">04 · Structured inputs</span><h2 id="structured-title">Richer data without leaving the form</h2></div><p>Composite controls still retain values that a conventional host form can validate and persist.</p></div>
+            <div class="z-form-catalog-heading"><div><span class="z-section-kicker">05 · Structured inputs</span><h2 id="structured-title">Richer data without leaving the form</h2></div><p>Composite controls still retain values that a conventional host form can validate and persist.</p></div>
             <div class="z-form-demo-grid">
                 @await Component.InvokeAsync("ZoorceTagInput", new ZoorceTagInputOptions { Id = "release-tags", Name = "tags", Label = "Release tags", Value = "workflow,priority", Placeholder = "Type and press Enter" })
                 @await Component.InvokeAsync("ZoorceChipGroup", new ZoorceChipGroupOptions { Id = "feature-chips", Name = "featureChips", Label = "Feature areas", Value = "timeline,forms", Choices = [new("timeline", "Timeline", Icon: "◌"), new("diagram", "Diagram", Icon: "◇"), new("forms", "Forms", Icon: "▦")] })
@@ -111,7 +123,7 @@
         </section>
 
         <section class="z-form-catalog-section" aria-labelledby="files-title">
-            <div class="z-form-catalog-heading"><div><span class="z-section-kicker">05 · Assets and verification</span><h2 id="files-title">Files, images and identity</h2></div><p>File controls keep native multipart behavior; image controls add local thumbnails and managed-upload progress where configured.</p></div>
+            <div class="z-form-catalog-heading"><div><span class="z-section-kicker">06 · Assets and verification</span><h2 id="files-title">Files, images and identity</h2></div><p>File controls keep native multipart behavior; image controls add local thumbnails and managed-upload progress where configured.</p></div>
             <div class="z-form-demo-grid z-form-demo-grid--thirds">
                 @await Component.InvokeAsync("ZoorceFileUpload", new ZoorceFileUploadOptions { Id = "release-files", Name = "files", Label = "Release attachments", Placeholder = "Add release notes or evidence", Accept = ".pdf,.docx,.png", Multiple = true, MaximumFiles = 3, MaximumFileSizeBytes = 2 * 1024 * 1024, MaximumTotalFileSizeBytes = 5 * 1024 * 1024 })
                 @await Component.InvokeAsync("ZoorceImageUpload", new ZoorceImageUploadOptions { Id = "release-cover", Name = "cover", Label = "Release cover", Placeholder = "Add a cover image", Accept = "image/png,image/jpeg,image/webp,image/svg+xml", Multiple = true, MaximumFiles = 5, MaximumFileSizeBytes = 4 * 1024 * 1024, MaximumTotalFileSizeBytes = 12 * 1024 * 1024, UploadUrl = "/api/demo/uploads", UploadBehavior = ZoorceFileUploadBehavior.Manual, UploadButtonText = "Upload images" })

@@ -1,0 +1,10 @@
+@using Zoorce.Web.UI.Forms
+@model ZoorceMentionOptions
+@{ var name = Model.Name ?? Model.Id; var menuId = $"{Model.Id}-menu"; var messageId = $"{Model.Id}-message"; var hasMessage = Model.Description is not null || Model.ValidationMessage is not null; }
+<div class="z-form-field z-mention-field @(Model.State == ZoorceFormControlState.Default ? string.Empty : $"is-{Model.State.ToString().ToLowerInvariant()}")" data-z-form-control data-z-form-id="@Model.Id" data-z-form-kind="Mention" data-z-mention data-z-triggers="@Model.Triggers" data-z-source="@Model.Source">
+    @if (Model.Label is not null) { <label class="z-form-label" for="@Model.Id">@Model.Label</label> }
+    <input id="@($"{Model.Id}-value")" type="hidden" name="@name" value="@Model.Value" data-z-mention-value />
+    <div id="@Model.Id" class="z-mention-editor" contenteditable="@(!Model.Disabled && !Model.ReadOnly).ToString().ToLowerInvariant()" role="textbox" aria-multiline="true" aria-controls="@menuId" aria-describedby="@(hasMessage ? messageId : null)" aria-invalid="@(Model.State == ZoorceFormControlState.Error ? "true" : null)" aria-readonly="@Model.ReadOnly.ToString().ToLowerInvariant()" data-z-mention-editor data-z-placeholder="@Model.PlaceholderText">@Model.Value</div>
+    <div id="@menuId" class="z-mention-menu" role="listbox" hidden data-z-mention-menu>@foreach (var choice in Model.Choices) { <button type="button" role="option" data-z-mention-option data-z-choice-option data-z-choice-value="@choice.Value" data-z-choice-label="@choice.Label" disabled="@(Model.Disabled || Model.ReadOnly || choice.Disabled)">@if (choice.Icon is not null) { <i aria-hidden="true">@choice.Icon</i> }<span><strong>@choice.Label</strong>@if (choice.Description is not null) { <small>@choice.Description</small> }</span></button> }</div>
+    @if (hasMessage) { <p id="@messageId" class="z-form-message">@(Model.ValidationMessage ?? Model.Description)</p> }
+</div>

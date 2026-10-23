@@ -1,4 +1,7 @@
 @page
+@using Microsoft.AspNetCore.Html
+@using Zoorce.Web.UI.Foundation.Components
+@using Zoorce.Web.UI.Navigation.Components
 @{
     ViewData["Title"] = "Navigation scale lab";
     var destinations = new[]
@@ -49,6 +52,21 @@
         <div style="display:grid;justify-items:end;gap:8px"><span class="z-badge z-badge-primary">3 levels</span><div class="z-button-group" data-z-selection-group aria-label="Navigation density preview"><button type="button" data-z-density-preview="comfortable" aria-pressed="false">Comfortable</button><button class="is-active" type="button" data-z-density-preview="compact" aria-pressed="true">Compact</button><button type="button" data-z-density-preview="dense" aria-pressed="false">Dense</button></div></div>
     </div>
 </article>
+
+<section class="z-section" aria-labelledby="navigation-controls-title">
+    <div class="z-form-catalog-heading"><div><span class="z-section-kicker">Reusable navigation controls</span><h2 id="navigation-controls-title">Local state, without a page coordinator.</h2></div><p>Each pattern handles its own focus, arrow keys and emitted selection event. The host only listens when it needs to react.</p></div>
+    <div class="z-form-demo-grid">
+        @await Component.InvokeAsync("ZoorceAccordion", new ZoorceAccordionOptions { Id = "navigation-accordion", Items = [new ZoorceAccordionItem { Id = "overview", Title = "Overview", Description = "Summary and ownership", Content = new HtmlString("<p>Keep introductory context close to the task it describes.</p>"), Expanded = true }, new ZoorceAccordionItem { Id = "signals", Title = "Signals", Description = "Readiness and risk", Content = new HtmlString("<p>Local expansion preserves the reader’s place in the page.</p>") }] })
+        @await Component.InvokeAsync("ZoorceTabs", new ZoorceTabsOptions { Id = "navigation-tabs", Items = [new ZoorceTabItem { Id = "brief", Text = "Brief", Selected = true, Content = new HtmlString("<p class=\"z-card-caption\">A selected tab exposes only its own panel.</p>") }, new ZoorceTabItem { Id = "activity", Text = "Activity", Badge = "3", Content = new HtmlString("<p class=\"z-card-caption\">Arrow keys move between available tabs.</p>") }, new ZoorceTabItem { Id = "settings", Text = "Settings", Content = new HtmlString("<p class=\"z-card-caption\">The host supplies panel markup, not interaction code.</p>") }] })
+        @await Component.InvokeAsync("ZoorceTreeView", new ZoorceTreeViewOptions { Id = "navigation-tree", Label = "Component areas", Items = [new ZoorceTreeNode { Value = "foundation", Text = "Foundation", Icon = "✦", Expanded = true, Children = [new ZoorceTreeNode { Value = "feedback", Text = "Feedback" }, new ZoorceTreeNode { Value = "surfaces", Text = "Surfaces" }] }, new ZoorceTreeNode { Value = "forms", Text = "Forms", Icon = "▦", Children = [new ZoorceTreeNode { Value = "selection", Text = "Selection" }, new ZoorceTreeNode { Value = "assets", Text = "Assets" }] }] })
+    </div>
+    <div class="z-filter-row" style="margin-top:14px">
+        @await Component.InvokeAsync("ZoorceMenuBar", new ZoorceMenuBarOptions { Id = "navigation-menu-bar", Items = [new ZoorceMenuItem { Value = "file", Text = "File", Children = [new ZoorceMenuItem { Value = "new", Text = "New release", Shortcut = "⌘ N" }, new ZoorceMenuItem { Value = "duplicate", Text = "Duplicate" }] }, new ZoorceMenuItem { Value = "view", Text = "View", Children = [new ZoorceMenuItem { Value = "details", Text = "Show details" }, new ZoorceMenuItem { Value = "focus", Text = "Focus mode" }] }] })
+        @await Component.InvokeAsync("ZoorceToolbar", new ZoorceToolbarOptions { Id = "navigation-toolbar", Label = "Release actions", Items = [new ZoorceMenuItem { Value = "save", Text = "Save", Icon = "✓" }, new ZoorceMenuItem { Value = "share", Text = "Share", Icon = "↗" }, new ZoorceMenuItem { Value = "archive", Text = "Archive", Icon = "⌫" }] })
+        <button class="z-button z-button-ghost z-navigation-context-target" type="button">Right-click for actions</button>
+        @await Component.InvokeAsync("ZoorceContextMenu", new ZoorceContextMenuOptions { Id = "navigation-context", TargetSelector = ".z-navigation-context-target", Items = [new ZoorceMenuItem { Value = "inspect", Text = "Inspect", Icon = "⌕" }, new ZoorceMenuItem { Value = "copy", Text = "Copy link", Icon = "⧉" }] })
+    </div>
+</section>
 
 @foreach (var destination in destinations)
 {

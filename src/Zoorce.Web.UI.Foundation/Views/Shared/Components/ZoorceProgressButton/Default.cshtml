@@ -1,0 +1,6 @@
+@using System.Globalization
+@model Zoorce.Web.UI.Foundation.Components.ZoorceProgressButtonOptions
+@{ var active = Model.IsIndeterminate || Model.Progress is > 0 and < 100; var progress = Model.Progress ?? 0; }
+<button id="@Model.Id" class="z-progress-button z-progress-button-@Model.Tone" type="button" style="--z-button-progress:@progress.ToString(CultureInfo.InvariantCulture)%" disabled="@(Model.Disabled || (active && Model.DisableWhileActive))" aria-busy="@active.ToString().ToLowerInvariant()" data-z-progress-button data-z-progress-indeterminate="@Model.IsIndeterminate.ToString().ToLowerInvariant()">
+    <span class="z-progress-button-fill" aria-hidden="true"></span><span class="z-progress-button-content">@if (Model.Icon is not null) { <i aria-hidden="true">@Model.Icon</i> }<span>@Model.Text</span></span><span class="z-visually-hidden" role="progressbar" aria-label="@Model.Text progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="@(Model.Progress is null ? null : (int)Math.Round(progress))"></span>
+</button>

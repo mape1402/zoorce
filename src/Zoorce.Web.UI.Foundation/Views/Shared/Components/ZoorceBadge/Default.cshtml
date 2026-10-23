@@ -1,0 +1,2 @@
+@model Zoorce.Web.UI.Foundation.Components.ZoorceBadgeOptions
+<span class="z-badge z-badge-@Model.Tone @(Model.Dot ? "z-badge-dot" : string.Empty)" aria-label="@Model.AriaLabel">@if (!Model.Dot) { @Model.GetDisplayValue() }</span>

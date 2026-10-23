@@ -1,0 +1,19 @@
+@model Zoorce.Web.UI.Navigation.Components.ZoorceAccordionOptions
+<div id="@Model.Id" class="z-accordion" data-z-accordion data-z-accordion-multiple="@Model.AllowMultiple.ToString().ToLowerInvariant()">
+    @foreach (var item in Model.Items)
+    {
+        var panelId = $"{Model.Id}-{item.Id}-panel";
+        <section class="z-accordion-item">
+            <h3>
+                <button id="@($"{Model.Id}-{item.Id}")" type="button" aria-expanded="@item.Expanded.ToString().ToLowerInvariant()" aria-controls="@panelId" data-z-accordion-trigger disabled="@item.Disabled">
+                    <span>
+                        <strong>@item.Title</strong>
+                        @if (item.Description is not null) { <small>@item.Description</small> }
+                    </span>
+                    <svg class="z-accordion-chevron" viewBox="0 0 16 16" aria-hidden="true"><path d="m3.25 5.75 4.75 4.5 4.75-4.5" /></svg>
+                </button>
+            </h3>
+            <div id="@panelId" role="region" aria-labelledby="@($"{Model.Id}-{item.Id}")" hidden="@(!item.Expanded)" data-z-accordion-panel>@item.Content</div>
+        </section>
+    }
+</div>

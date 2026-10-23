@@ -1,0 +1,56 @@
+@using Zoorce.Web.UI.Forms
+@model ZoorceMultiSelectDropdownOptions
+@{
+    var name = Model.Name ?? Model.Id;
+    var menuId = $"{Model.Id}-menu";
+    var messageId = $"{Model.Id}-message";
+    var values = (Model.Value ?? string.Empty).Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+    var labels = Model.Choices.Where(choice => values.Contains(choice.Value, StringComparer.OrdinalIgnoreCase)).Select(choice => choice.Label).ToArray();
+    var hasMessage = Model.Description is not null || Model.ValidationMessage is not null;
+}
+<div class="z-form-field z-advanced-choice @(Model.State == ZoorceFormControlState.Default ? string.Empty : $"is-{Model.State.ToString().ToLowerInvariant()}")" data-z-form-control data-z-form-id="@Model.Id" data-z-form-kind="MultiSelectDropdown" data-z-multi-dropdown>
+    @if (Model.Label is not null)
+    {
+        <label class="z-form-label" for="@Model.Id">@Model.Label</label>
+    }
+    <input id="@($"{Model.Id}-value")" type="hidden" name="@name" value="@Model.Value" data-z-choice-value />
+    <div class="z-advanced-choice-surface">
+        <button id="@Model.Id" class="z-multi-dropdown-trigger" type="button" aria-haspopup="listbox" aria-expanded="false" aria-controls="@menuId" aria-describedby="@(hasMessage ? messageId : null)" data-z-choice-toggle disabled="@(Model.Disabled || Model.ReadOnly)">
+            <span data-z-multi-summary data-z-placeholder="@Model.PlaceholderText">@(labels.Length == 0 ? Model.PlaceholderText : string.Join(", ", labels))</span>
+            <svg class="z-choice-trigger-chevron" viewBox="0 0 16 16" aria-hidden="true"><path d="m3.25 5.75 4.75 4.5 4.75-4.5" /></svg>
+        </button>
+        <div id="@menuId" class="z-advanced-choice-menu z-multi-dropdown-menu" role="listbox" aria-multiselectable="true" hidden data-z-choice-menu>
+            @if (Model.Searchable)
+            {
+                <input class="z-advanced-choice-search" type="search" placeholder="Search options" data-z-choice-input disabled="@(Model.Disabled || Model.ReadOnly)" />
+            }
+            @if (Model.ShowSelectAll)
+            {
+                <button type="button" class="z-multi-dropdown-all" data-z-multi-all disabled="@(Model.Disabled || Model.ReadOnly)">Select all</button>
+            }
+            @foreach (var choice in Model.Choices)
+            {
+                var selected = values.Contains(choice.Value, StringComparer.OrdinalIgnoreCase);
+                <button type="button" class="z-choice-option @(selected ? "is-selected" : string.Empty)" role="option" aria-selected="@selected.ToString().ToLowerInvariant()" data-z-choice-option data-z-choice-value="@choice.Value" data-z-choice-label="@choice.Label" disabled="@(Model.Disabled || Model.ReadOnly || choice.Disabled)">
+                    <span class="z-multi-option-check" aria-hidden="true"></span>
+                    @if (Model.ChoiceTemplate is not null)
+                    {
+                        @Model.ChoiceTemplate(choice)
+                    }
+                    else
+                    {
+                        <span class="z-choice-option-copy">
+                            @if (choice.Icon is not null) { <i aria-hidden="true">@choice.Icon</i> }
+                            <strong>@choice.Label</strong>
+                            @if (choice.Description is not null) { <small>@choice.Description</small> }
+                        </span>
+                    }
+                </button>
+            }
+        </div>
+    </div>
+    @if (hasMessage)
+    {
+        <p id="@messageId" class="z-form-message">@(Model.ValidationMessage ?? Model.Description)</p>
+    }
+</div>

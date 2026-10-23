@@ -17,7 +17,7 @@
     }
     <div class="z-form-control-surface">
         <input id="@Model.Id" type="hidden" name="@name" value="@Model.Value" data-z-form-value />
-        <div class="z-select" data-z-select>
+        <div class="z-choice-select" data-z-select>
             <button id="@Model.Id-trigger" class="z-choice-trigger" type="button" aria-haspopup="listbox" aria-expanded="false" aria-controls="@listboxId" aria-describedby="@describedBy" data-z-select-trigger disabled="@(Model.Disabled || Model.ReadOnly)">
                 <span class="z-choice-trigger-value @(selected is null ? "is-placeholder" : string.Empty)" data-z-select-value>@displayValue</span>
                 <svg class="z-choice-trigger-chevron" viewBox="0 0 16 16" aria-hidden="true"><path d="m3.25 5.75 4.75 4.5 4.75-4.5" /></svg>

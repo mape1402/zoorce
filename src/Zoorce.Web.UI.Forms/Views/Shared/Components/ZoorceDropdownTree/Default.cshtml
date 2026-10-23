@@ -1,0 +1,47 @@
+@using Zoorce.Web.UI.Forms
+@model ZoorceDropdownTreeOptions
+@{
+    var name = Model.Name ?? Model.Id;
+    var menuId = $"{Model.Id}-menu";
+    var messageId = $"{Model.Id}-message";
+    var hasMessage = Model.Description is not null || Model.ValidationMessage is not null;
+    var selectedValues = (Model.Value ?? string.Empty).Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+    string? FindLabel(IEnumerable<ZoorceTreeChoice> nodes, string value)
+    {
+        foreach (var node in nodes)
+        {
+            if (string.Equals(node.Value, value, StringComparison.OrdinalIgnoreCase)) return node.Label;
+
+            var nested = FindLabel(node.Children, value);
+            if (nested is not null) return nested;
+        }
+
+        return null;
+    }
+
+    var selectedLabels = selectedValues.Select(value => FindLabel(Model.Items, value)).Where(label => label is not null).Cast<string>().ToArray();
+}
+<div class="z-form-field z-advanced-choice @(Model.State == ZoorceFormControlState.Default ? string.Empty : $"is-{Model.State.ToString().ToLowerInvariant()}")" data-z-form-control data-z-form-id="@Model.Id" data-z-form-kind="DropdownTree" data-z-dropdown-tree data-z-multiple="@Model.Multiple.ToString().ToLowerInvariant()">
+    @if (Model.Label is not null)
+    {
+        <label class="z-form-label" for="@Model.Id">@Model.Label</label>
+    }
+    <input id="@($"{Model.Id}-value")" type="hidden" name="@name" value="@Model.Value" data-z-choice-value />
+    <div class="z-advanced-choice-surface">
+        <button id="@Model.Id" class="z-multi-dropdown-trigger" type="button" aria-haspopup="tree" aria-expanded="false" aria-controls="@menuId" aria-describedby="@(hasMessage ? messageId : null)" data-z-choice-toggle disabled="@(Model.Disabled || Model.ReadOnly)">
+            <span data-z-tree-summary data-z-placeholder="@Model.PlaceholderText">@(selectedLabels.Length == 0 ? Model.PlaceholderText : string.Join(", ", selectedLabels))</span>
+            <svg class="z-choice-trigger-chevron" viewBox="0 0 16 16" aria-hidden="true"><path d="m3.25 5.75 4.75 4.5 4.75-4.5" /></svg>
+        </button>
+        <div id="@menuId" class="z-advanced-choice-menu z-dropdown-tree-menu" role="tree" aria-multiselectable="@Model.Multiple.ToString().ToLowerInvariant()" hidden data-z-choice-menu>
+            @foreach (var item in Model.Items)
+            {
+                @await Html.PartialAsync("/Views/Shared/Components/ZoorceDropdownTree/_ZoorceDropdownTreeNode.cshtml", new ZoorceDropdownTreeNodeModel(item, Model.Value, Model.Multiple, Model.ExpandAll, Model.Disabled || Model.ReadOnly, 1))
+            }
+        </div>
+    </div>
+    @if (hasMessage)
+    {
+        <p id="@messageId" class="z-form-message">@(Model.ValidationMessage ?? Model.Description)</p>
+    }
+</div>

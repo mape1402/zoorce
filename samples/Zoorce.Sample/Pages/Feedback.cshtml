@@ -1,4 +1,6 @@
 @page "/feedback"
+@using Microsoft.AspNetCore.Html
+@using Zoorce.Web.UI.Foundation.Components
 @{
     ViewData["Title"] = "Feedback and overlays";
 }
@@ -6,6 +8,24 @@
 <section>
     <div class="z-page-heading"><div><span class="z-section-kicker">Feedback and overlays</span><h1>Responsive feedback, without visual noise.</h1><p>Use the smallest surface that clearly acknowledges an action or asks for a focused decision.</p></div></div>
     <div class="z-card"><div class="z-filter-row"><button class="z-button z-button-primary" type="button" data-z-toast="Your changes were synchronized across the current workspace." data-z-toast-title="Changes saved">Success toast</button><button class="z-button z-button-secondary" type="button" data-z-toast="A new visual audit is waiting for review." data-z-toast-title="Heads up" data-z-toast-kind="warning">Warning toast</button><button class="z-button z-button-ghost" type="button" data-z-toast="The API preview cannot be reached right now." data-z-toast-title="Connection issue" data-z-toast-kind="danger">Error toast</button><button class="z-button z-button-ghost" type="button" data-z-confirm="Archive this preview? The item remains recoverable for thirty days." data-z-confirm-label="Archive" data-z-confirm-success-title="Preview archived" data-z-confirm-success="The sample archive action completed.">Confirm dialog</button><button class="z-button z-button-ghost" type="button" data-z-modal-open="#feedback-modal">Open modal</button><button class="z-button z-button-ghost" type="button" data-z-drawer-open="#feedback-drawer">Open drawer</button></div></div>
+</section>
+
+<section class="z-section" aria-labelledby="foundation-controls-title">
+    <div class="z-form-catalog-heading"><div><span class="z-section-kicker">Foundation controls</span><h2 id="foundation-controls-title">Small surfaces with complete behavior.</h2></div><p>These primitives keep their state local and emit a bubbling event only when the consuming page needs to react.</p></div>
+    <div class="z-form-demo-grid">
+        @await Component.InvokeAsync("ZoorceCard", new ZoorceCardOptions { Id = "release-card", Title = "Release review", Description = "A reusable content surface with named regions.", Body = new HtmlString("<p class=\"z-card-caption\">The card accepts host content without owning navigation or business rules.</p>"), Footer = new HtmlString("<button class=\"z-button z-button-ghost\" type=\"button\">Inspect</button>") })
+        <div style="display:grid;gap:12px;align-content:start">
+            @await Component.InvokeAsync("ZoorceMessage", new ZoorceMessageOptions { Id = "feedback-message", Title = "Review window is open", Description = "Two approvals remain before the release can proceed.", Tone = "warning", Dismissible = true, ActionText = "View approvals" })
+            <div class="z-filter-row">@await Component.InvokeAsync("ZoorceAvatar", new ZoorceAvatarOptions { Label = "Nora Ellis", Initials = "NE", Status = "online" }) @await Component.InvokeAsync("ZoorceBadge", new ZoorceBadgeOptions { Text = "3 approvals", Tone = "success" }) @await Component.InvokeAsync("ZoorceBadge", new ZoorceBadgeOptions { Dot = true, Tone = "warning", AriaLabel = "Attention required" })</div>
+            <div class="z-filter-row">@await Component.InvokeAsync("ZoorceProgressButton", new ZoorceProgressButtonOptions { Id = "feedback-progress", Text = "Syncing changes", Progress = 64, DisableWhileActive = false, Icon = "↻" }) @await Component.InvokeAsync("ZoorceDropdownMenu", new ZoorceDropdownMenuOptions { Id = "feedback-actions", Text = "More actions", Items = [new ZoorceMenuItem { Value = "duplicate", Text = "Duplicate", Icon = "⧉" }, new ZoorceMenuItem { Value = "archive", Text = "Archive", Icon = "⌫" }] })</div>
+        </div>
+    </div>
+    <div class="z-filter-row" style="margin-top:14px">
+        <button class="z-button z-button-ghost" type="button" data-z-dialog-open="#feedback-component-dialog">Open component dialog</button>
+        @await Component.InvokeAsync("ZoorceFloatingActionButton", new ZoorceFloatingActionButtonOptions { Id = "feedback-fab", Label = "Create feedback item", Icon = "+" })
+        @await Component.InvokeAsync("ZoorceSpeedDial", new ZoorceSpeedDialOptions { Id = "feedback-speed-dial", Label = "Quick actions", Items = [new ZoorceMenuItem { Value = "note", Text = "Add note", Icon = "✎" }, new ZoorceMenuItem { Value = "assign", Text = "Assign", Icon = "@" }] })
+    </div>
+    @await Component.InvokeAsync("ZoorceDialog", new ZoorceDialogOptions { Id = "feedback-component-dialog", Title = "Component dialog", Description = "Focus stays within the dialog until it closes.", Body = new HtmlString("<p class=\"z-card-caption\">Use this for a small, self-contained decision or workflow.</p>"), Footer = new HtmlString("<button class=\"z-button z-button-primary\" type=\"button\" data-z-dialog-close>Done</button>") })
 </section>
 
 <div class="z-dialog-layer" data-z-modal-layer id="feedback-modal" hidden><section class="z-dialog" role="dialog" aria-modal="true" aria-labelledby="feedback-modal-title" data-z-modal-focus tabindex="-1"><div class="z-dialog-icon" aria-hidden="true">✦</div><div class="z-dialog-copy"><h2 id="feedback-modal-title">Modal component</h2><p>Use this surface for focused decisions or small, self-contained workflows.</p></div><div class="z-dialog-actions"><button class="z-button z-button-ghost" type="button" data-z-modal-close>Close</button><button class="z-button z-button-primary" type="button" data-z-modal-close data-z-toast="The modal action completed." data-z-toast-title="Modal confirmed">Confirm</button></div></section></div>

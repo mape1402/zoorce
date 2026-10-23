@@ -78,5 +78,17 @@ internal enum ZoorceFormControlKind
     /// <summary>Represents the <c>AvatarPicker</c> option.</summary>
     AvatarPicker,
     /// <summary>Represents the <c>EmojiPicker</c> option.</summary>
-    EmojiPicker
+    EmojiPicker,
+    /// <summary>Represents the <c>AutoComplete</c> option.</summary>
+    AutoComplete,
+    /// <summary>Represents the <c>ListBox</c> option.</summary>
+    ListBox,
+    /// <summary>Represents the <c>MultiSelectDropdown</c> option.</summary>
+    MultiSelectDropdown,
+    /// <summary>Represents the <c>DropdownTree</c> option.</summary>
+    DropdownTree,
+    /// <summary>Represents the <c>Mention</c> option.</summary>
+    Mention,
+    /// <summary>Represents the <c>MultiColumnCombobox</c> option.</summary>
+    MultiColumnCombobox
 }

@@ -1,0 +1,3 @@
+@using Zoorce.Web.UI.Navigation.Components
+@model ZoorceTreeViewOptions
+<div id="@Model.Id" class="z-tree-view" role="tree" aria-label="@Model.Label" data-z-tree-view data-z-tree-multiple="@Model.Multiple.ToString().ToLowerInvariant()">@foreach (var item in Model.Items) { @await Html.PartialAsync("/Views/Shared/Components/ZoorceTreeView/_ZoorceTreeViewNode.cshtml", new ZoorceTreeViewNodeModel(item, Model.Multiple, 1)) }</div>

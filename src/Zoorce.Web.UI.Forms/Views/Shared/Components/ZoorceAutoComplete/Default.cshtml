@@ -1,0 +1,47 @@
+@using Zoorce.Web.UI.Forms
+@model ZoorceAutoCompleteOptions
+@{
+    var name = Model.Name ?? Model.Id;
+    var menuId = $"{Model.Id}-menu";
+    var messageId = $"{Model.Id}-message";
+    var selected = Model.Choices.FirstOrDefault(choice => string.Equals(choice.Value, Model.Value, StringComparison.OrdinalIgnoreCase));
+    var display = selected?.Label ?? Model.Value ?? string.Empty;
+    var hasMessage = Model.Description is not null || Model.ValidationMessage is not null;
+}
+<div class="z-form-field z-advanced-choice @(Model.State == ZoorceFormControlState.Default ? string.Empty : $"is-{Model.State.ToString().ToLowerInvariant()}")" data-z-form-control data-z-form-id="@Model.Id" data-z-form-kind="AutoComplete" data-z-autocomplete data-z-source="@Model.Source" data-z-minimum="@Model.MinimumCharacters" data-z-debounce="@Model.DebounceMilliseconds" data-z-allow-custom="@Model.AllowCustomValues.ToString().ToLowerInvariant()">
+    @if (Model.Label is not null)
+    {
+        <label class="z-form-label" for="@Model.Id">@Model.Label</label>
+    }
+    <input id="@($"{Model.Id}-value")" type="hidden" name="@name" value="@Model.Value" data-z-choice-value />
+    <div class="z-advanced-choice-surface">
+        <input id="@Model.Id" class="z-form-input" type="text" value="@display" placeholder="@Model.Placeholder" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="@menuId" aria-describedby="@(hasMessage ? messageId : null)" aria-invalid="@(Model.State == ZoorceFormControlState.Error ? "true" : null)" required="@Model.Required" readonly="@Model.ReadOnly" data-z-choice-input disabled="@Model.Disabled" />
+        <button class="z-combobox-toggle" type="button" aria-label="Show suggestions" aria-haspopup="listbox" aria-expanded="false" aria-controls="@menuId" data-z-choice-toggle disabled="@(Model.Disabled || Model.ReadOnly)">
+            <svg class="z-choice-trigger-chevron" viewBox="0 0 16 16" aria-hidden="true"><path d="m3.25 5.75 4.75 4.5 4.75-4.5" /></svg>
+        </button>
+        <div id="@menuId" class="z-advanced-choice-menu" role="listbox" hidden data-z-choice-menu>
+            @foreach (var choice in Model.Choices)
+            {
+                <button type="button" class="z-choice-option" role="option" aria-selected="@(string.Equals(choice.Value, Model.Value, StringComparison.OrdinalIgnoreCase).ToString().ToLowerInvariant())" data-z-choice-option data-z-choice-value="@choice.Value" data-z-choice-label="@choice.Label" disabled="@(Model.Disabled || Model.ReadOnly || choice.Disabled)">
+                    @if (Model.ChoiceTemplate is not null)
+                    {
+                        @Model.ChoiceTemplate(choice)
+                    }
+                    else
+                    {
+                        <span class="z-choice-option-copy">
+                            @if (choice.Icon is not null) { <i aria-hidden="true">@choice.Icon</i> }
+                            <strong>@choice.Label</strong>
+                            @if (choice.Description is not null) { <small>@choice.Description</small> }
+                        </span>
+                    }
+                </button>
+            }
+            <p class="z-choice-empty" data-z-choice-empty hidden>@Model.EmptyResultsText</p>
+        </div>
+    </div>
+    @if (hasMessage)
+    {
+        <p id="@messageId" class="z-form-message">@(Model.ValidationMessage ?? Model.Description)</p>
+    }
+</div>

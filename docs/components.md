@@ -2,7 +2,7 @@
 
 ## Foundation and layout
 
-`Zoorce.Web.UI.Foundation` contains reusable progress bars (linear and circular), skeletons, wait dialog/spinner, confirmation dialog, toast region, buttons, message surfaces, and chips. `Zoorce.Web.UI.Layout` composes those primitives into a semantic application shell; sidebar navigation, top bar, user menu, command palette, and layout regions remain separately reusable components.
+`Zoorce.Web.UI.Foundation` contains reusable progress bars (linear and circular), skeletons, wait dialog/spinner, confirmation dialog, generic dialog, toast region, buttons, progress buttons, floating actions, speed dial, dropdown menus, avatars, badges, cards, message surfaces, and chips. `Zoorce.Web.UI.Layout` composes those primitives into a semantic application shell; sidebar navigation, top bar, user menu, command palette, and layout regions remain separately reusable components.
 
 The shell receives `ZoorceShellOptions` from the host. `ZoorceThemeCatalogOptions` supplies the initial palette while `IZoorceThemeService` supports a runtime replacement. Do not copy layout markup into a sample or host page—use `ZoorceLayout` and customize providers/options instead.
 
@@ -74,7 +74,7 @@ Each form field has a dedicated View Component and typed options contract. Examp
 })
 ```
 
-The current catalog includes text, textarea, password, hidden, masked, numeric up/down, quantity stepper, currency, percentage, date/time/range/duration, sliders, checkbox, toggle, single/multi-select, combobox, radio/checkbox/chip groups, segmented control, transfer list, rating, tags, color, icon, emoji, phone, address, OTP, key/value, file upload, image gallery, and single-image avatar picker.
+The current catalog includes text, textarea, password, hidden, masked, numeric up/down, quantity stepper, currency, percentage, date/time/range/duration, sliders, checkbox, toggle, single/multi-select, searchable multi-select dropdown, select, combobox, autocomplete, multi-column combobox, listbox, dropdown tree, mention editor, radio/checkbox/chip groups, segmented control, transfer list, rating, tags, color, icon, emoji, phone, address, OTP, key/value, file upload, image gallery, and single-image avatar picker.
 
 Named options expose the common label/value/state contract plus only relevant settings. File/image controls support accepted formats, one or many files, size/count limits, deferred/manual/automatic same-origin upload, persisted assets, and progress events. Avatar is intentionally a single image: its visual target opens selection, Edit replaces the image, and Remove clears it.
 
@@ -83,3 +83,7 @@ Form enhancement is progressive. Every field keeps an ordinary named HTML input 
 `ZoorceSelect` owns its trigger, chevron, listbox and submitted hidden value, so its appearance and interaction do not vary by browser. Set `AllowClear` for an optional clear action. `ZoorceCombobox` owns filtering, its disclosure button, keyboard navigation and empty-result state; `AllowCustomValues`, `OpenOnFocus`, and `EmptyResultsText` configure its behavior. Both controls can render richer option content through `ChoiceTemplate` while retaining their selection semantics.
 
 `ZoorceRating` stores one selected value but uses cumulative visual fill by default: a value of four fills icons one through four. `DisplayMode`, `AllowClear`, choice labels, and choice icons make the control suitable for other scales. Arrow keys, Home, End, Enter, and Space work without requiring a pointer.
+
+## Navigation controls
+
+`Zoorce.Web.UI.Navigation` also provides accordion, tab set, tree view, menu bar, context menu, and toolbar components. They use their own roots for roving focus, expansion and selection state, and emit bubbling `zoorce:navigation:*` events. Context menus attach to a host selector and position themselves only while open; all other controls preserve ordinary server-rendered content when JavaScript is unavailable.

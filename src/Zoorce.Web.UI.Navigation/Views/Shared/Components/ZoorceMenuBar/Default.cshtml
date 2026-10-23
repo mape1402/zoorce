@@ -1,0 +1,32 @@
+@model Zoorce.Web.UI.Navigation.Components.ZoorceMenuBarOptions
+<nav id="@Model.Id" class="z-menu-bar" aria-label="Application menu" data-z-menu-bar>
+    <ul role="menubar">
+        @foreach (var item in Model.Items)
+        {
+            <li role="none" class="z-menu-bar-entry">
+                @if (item.Children.Count > 0)
+                {
+                    <button type="button" role="menuitem" aria-haspopup="menu" aria-expanded="false" data-z-menubar-trigger>
+                        @if (item.Icon is not null) { <i aria-hidden="true">@item.Icon</i> }@item.Text <svg class="z-menu-bar-chevron" viewBox="0 0 16 16" aria-hidden="true"><path d="m3.25 5.75 4.75 4.5 4.75-4.5" /></svg>
+                    </button>
+                    <div class="z-menu-bar-panel" role="menu" hidden data-z-menubar-panel>
+                        @foreach (var child in item.Children)
+                        {
+                            <button type="button" role="menuitem" data-z-menubar-value="@child.Value" disabled="@child.Disabled">
+                                @if (child.Icon is not null) { <i aria-hidden="true">@child.Icon</i> }<span>@child.Text</span>@if (child.Shortcut is not null) { <kbd>@child.Shortcut</kbd> }
+                            </button>
+                        }
+                    </div>
+                }
+                else if (item.Href is not null)
+                {
+                    <a role="menuitem" href="@item.Href">@item.Text</a>
+                }
+                else
+                {
+                    <button type="button" role="menuitem" data-z-menubar-value="@item.Value" disabled="@item.Disabled">@item.Text</button>
+                }
+            </li>
+        }
+    </ul>
+</nav>

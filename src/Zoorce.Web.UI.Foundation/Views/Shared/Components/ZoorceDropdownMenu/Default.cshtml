@@ -1,0 +1,24 @@
+@model Zoorce.Web.UI.Foundation.Components.ZoorceDropdownMenuOptions
+<div class="z-dropdown-menu" data-z-dropdown-menu data-z-menu-align="@(Model.AlignEnd ? "end" : "start")">
+    <button id="@($"{Model.Id}-trigger")" class="z-button z-button-@Model.Tone z-dropdown-menu-trigger" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="@($"{Model.Id}-menu")" data-z-menu-trigger>@if (Model.Icon is not null) { <span aria-hidden="true">@Model.Icon</span> }<span>@Model.Text</span><svg class="z-menu-chevron" viewBox="0 0 16 16" aria-hidden="true"><path d="m3.25 5.75 4.75 4.5 4.75-4.5" /></svg></button>
+    <div id="@($"{Model.Id}-menu")" class="z-menu-popover" role="menu" aria-labelledby="@($"{Model.Id}-trigger")" hidden data-z-menu-popover>
+        @foreach (var item in Model.Items)
+        {
+            if (item.Children.Count > 0)
+            {
+                <div class="z-menu-submenu" data-z-menu-submenu>
+                    <button type="button" class="z-menu-item" role="menuitem" aria-haspopup="menu" aria-expanded="false" data-z-menu-submenu-trigger disabled="@item.Disabled"><span>@if (item.Icon is not null) { <i aria-hidden="true">@item.Icon</i> }<strong>@item.Text</strong>@if (item.Description is not null) { <small>@item.Description</small> }</span><b aria-hidden="true">›</b></button>
+                    <div class="z-menu-popover z-menu-popover-submenu" role="menu" hidden data-z-menu-submenu-panel>@foreach (var child in item.Children) { <button type="button" class="z-menu-item" role="menuitem" data-z-menu-value="@child.Value" disabled="@child.Disabled"><span>@if (child.Icon is not null) { <i aria-hidden="true">@child.Icon</i> }<strong>@child.Text</strong>@if (child.Description is not null) { <small>@child.Description</small> }</span>@if (child.Shortcut is not null) { <kbd>@child.Shortcut</kbd> }</button> }</div>
+                </div>
+            }
+            else if (item.Href is not null)
+            {
+                <a class="z-menu-item" role="menuitem" href="@(item.Disabled ? null : item.Href)" aria-disabled="@item.Disabled.ToString().ToLowerInvariant()" data-z-menu-value="@item.Value"><span>@if (item.Icon is not null) { <i aria-hidden="true">@item.Icon</i> }<strong>@item.Text</strong>@if (item.Description is not null) { <small>@item.Description</small> }</span>@if (item.Shortcut is not null) { <kbd>@item.Shortcut</kbd> }</a>
+            }
+            else
+            {
+                <button type="button" class="z-menu-item" role="menuitem" data-z-menu-value="@item.Value" disabled="@item.Disabled"><span>@if (item.Icon is not null) { <i aria-hidden="true">@item.Icon</i> }<strong>@item.Text</strong>@if (item.Description is not null) { <small>@item.Description</small> }</span>@if (item.Shortcut is not null) { <kbd>@item.Shortcut</kbd> }</button>
+            }
+        }
+    </div>
+</div>

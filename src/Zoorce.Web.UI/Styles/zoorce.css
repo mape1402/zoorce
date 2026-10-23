@@ -507,7 +507,7 @@ html.z-diagram-focus-active, body.z-diagram-focus-active { overflow: hidden; }.z
 @media (max-width: 590px) { .z-form-submit-row { align-items: stretch; flex-direction: column; }.z-form-submit-row .z-page-actions { justify-content: stretch; }.z-form-submit-row .z-page-actions > * { flex: 1; }.z-quantity-stepper { min-height: 72px; }.z-quantity-button { width: 46px; height: 46px; } }
 
 /* Encapsulated selection controls. Their trigger and menu remain consistent across browsers. */
-.z-select, .z-combobox { position: relative; }
+.z-choice-select, .z-combobox { position: relative; min-width: 0; }
 .z-choice-trigger { display: flex; width: 100%; min-height: 42px; align-items: center; justify-content: space-between; gap: 12px; padding: 0 12px; border: 1px solid var(--z-border); border-radius: 10px; background: color-mix(in srgb, var(--z-surface) 92%, var(--z-canvas)); color: var(--z-text); cursor: pointer; font: inherit; font-size: 12px; text-align: left; transition: border-color .16s ease, box-shadow .16s ease, background .16s ease; }
 .z-choice-trigger:hover, .z-combobox-input:hover { border-color: color-mix(in srgb, var(--z-primary) 48%, var(--z-border)); }
 .z-choice-trigger:focus-visible, .z-combobox-input:focus-visible, .z-combobox-toggle:focus-visible { outline: 0; border-color: var(--z-primary); box-shadow: 0 0 0 3px color-mix(in srgb, var(--z-glow) 46%, transparent); }

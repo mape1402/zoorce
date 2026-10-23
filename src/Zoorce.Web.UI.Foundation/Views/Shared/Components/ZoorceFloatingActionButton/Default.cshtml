@@ -1,0 +1,2 @@
+@model Zoorce.Web.UI.Foundation.Components.ZoorceFloatingActionButtonOptions
+<button id="@Model.Id" class="z-fab z-fab-@Model.Tone" type="button" aria-label="@Model.Label" title="@Model.Label" disabled="@Model.Disabled" data-z-fab><span aria-hidden="true">@Model.Icon</span>@if (Model.Text is not null) { <span>@Model.Text</span> }</button>

@@ -1,0 +1,2 @@
+@model Zoorce.Web.UI.Navigation.Components.ZoorceContextMenuOptions
+<div id="@Model.Id" class="z-context-menu" role="menu" hidden data-z-context-menu data-z-context-target="@Model.TargetSelector">@foreach (var item in Model.Items) { <button type="button" role="menuitem" data-z-context-value="@item.Value" disabled="@item.Disabled">@if (item.Icon is not null) { <i aria-hidden="true">@item.Icon</i> }<span>@item.Text</span>@if (item.Shortcut is not null) { <kbd>@item.Shortcut</kbd> }</button> }</div>

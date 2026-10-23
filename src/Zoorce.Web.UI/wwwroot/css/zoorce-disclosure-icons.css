@@ -1,0 +1,28 @@
+.z-choice-trigger-chevron,
+.z-menu-chevron,
+.z-menu-bar-chevron,
+.z-accordion-chevron {
+    display: block;
+    flex: 0 0 16px;
+    width: 16px;
+    height: 16px;
+    fill: none;
+    stroke: currentColor;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-width: 1.75px;
+    color: var(--z-muted);
+    transition: transform .16s ease, color .16s ease;
+}
+
+.z-multi-dropdown-trigger > .z-choice-trigger-chevron {
+    margin-inline-start: auto;
+}
+
+[data-z-choice-toggle][aria-expanded="true"] > .z-choice-trigger-chevron,
+.z-dropdown-menu-trigger[aria-expanded="true"] > .z-menu-chevron,
+.z-menu-bar [data-z-menubar-trigger][aria-expanded="true"] > .z-menu-bar-chevron,
+.z-accordion [data-z-accordion-trigger][aria-expanded="true"] > .z-accordion-chevron {
+    color: var(--z-primary);
+    transform: rotate(180deg);
+}

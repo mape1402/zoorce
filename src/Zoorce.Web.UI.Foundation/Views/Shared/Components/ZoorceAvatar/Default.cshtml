@@ -1,0 +1,2 @@
+@model Zoorce.Web.UI.Foundation.Components.ZoorceAvatarOptions
+<span class="z-avatar z-avatar-display" style="--z-avatar-size:@(Model.Size)px" aria-label="@Model.Label">@if (Model.ImageUrl is not null) { <img src="@Model.ImageUrl" alt="" /> } else { <span>@Model.Initials</span> }@if (Model.Status is not null) { <i class="z-avatar-status z-avatar-status-@Model.Status" aria-hidden="true"></i> }</span>
