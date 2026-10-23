@@ -373,7 +373,16 @@
             button.className = "z-file-remove";
             button.setAttribute("aria-label", `Remove ${item.name}`);
             button.title = `Remove ${item.name}`;
-            button.textContent = "×";
+            const icon = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+            icon.setAttribute("viewBox", "0 0 24 24");
+            icon.setAttribute("aria-hidden", "true");
+            icon.setAttribute("focusable", "false");
+            const firstStroke = document.createElementNS("http://www.w3.org/2000/svg", "path");
+            firstStroke.setAttribute("d", "M7 7 17 17");
+            const secondStroke = document.createElementNS("http://www.w3.org/2000/svg", "path");
+            secondStroke.setAttribute("d", "M17 7 7 17");
+            icon.append(firstStroke, secondStroke);
+            button.append(icon);
             button.disabled = input.disabled;
             button.addEventListener("click", () => remove(item));
             return button;
