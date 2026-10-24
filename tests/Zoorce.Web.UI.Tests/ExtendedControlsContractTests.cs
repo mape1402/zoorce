@@ -77,6 +77,33 @@ public sealed class ExtendedControlsContractTests
     }
 
     [Fact]
+    public void Time_picker_normalizes_the_clock_contract_and_rejects_invalid_bounds()
+    {
+        var result = new ZoorceTimePickerViewComponent().Invoke(new ZoorceTimePickerOptions
+        {
+            Id = " delivery-time ",
+            Name = " deliveryTime ",
+            Value = new TimeOnly(17, 30),
+            Minimum = new TimeOnly(8, 0),
+            Maximum = new TimeOnly(20, 0),
+            MinuteStep = 15,
+            Format = ZoorceTimePickerFormat.TwelveHour,
+            Locale = " en-US "
+        });
+        var model = Assert.IsType<ZoorceTimePickerOptions>(Assert.IsType<ViewViewComponentResult>(result).ViewData!.Model);
+        Assert.Equal("delivery-time", model.Id);
+        Assert.Equal("deliveryTime", model.Name);
+        Assert.Equal(15, model.MinuteStep);
+        Assert.Equal("en-US", model.Locale);
+        Assert.Throws<ArgumentOutOfRangeException>(() => new ZoorceTimePickerOptions
+        {
+            Id = "delivery-time",
+            Name = "deliveryTime",
+            MinuteStep = 7
+        }.Normalize());
+    }
+
+    [Fact]
     public void Breadcrumb_and_pagination_normalize_bounded_navigation()
     {
         var breadcrumb = new ZoorceBreadcrumbViewComponent().Invoke(new ZoorceBreadcrumbOptions

@@ -78,9 +78,11 @@ Each form field has a dedicated View Component and typed options contract. Examp
 })
 ```
 
-The current catalog includes text, textarea, password, hidden, masked, numeric up/down, quantity stepper, currency, percentage, native date/time/range/duration, calendar date picker, sliders, checkbox, toggle, single/multi-select, searchable multi-select dropdown, select, combobox, autocomplete, multi-column combobox, listbox, dropdown tree, mention editor, radio/checkbox/chip groups, segmented control, transfer list, rating, tags, color, icon, emoji, phone, address, OTP, key/value, file upload, image gallery, and single-image avatar picker.
+The current catalog includes text, textarea, password, hidden, masked, numeric up/down, quantity stepper, currency, percentage, native date/time/range/duration, calendar date picker, themeable time picker, sliders, checkbox, toggle, single/multi-select, searchable multi-select dropdown, select, combobox, autocomplete, multi-column combobox, listbox, dropdown tree, mention editor, radio/checkbox/chip groups, segmented control, transfer list, rating, tags, color, icon, emoji, phone, address, OTP, key/value, file upload, image gallery, and single-image avatar picker.
 
 `ZoorceDatePicker` is the calendar alternative to native date input. It supports one date or a range, locale-aware visible formatting, min/max constraints, excluded dates, a configurable first weekday, pointer and keyboard grid navigation, and ordinary hidden ISO form fields. Its calendar trigger uses the same token-based field and icon treatment in both themes. In range mode it submits `Name-start` and `Name-end`.
+
+`ZoorceTimePicker` replaces browser-owned time spinners with a token-based hour and minute chooser. It supports locale, twelve- or twenty-four-hour notation, minute intervals, inclusive minimum/maximum bounds, keyboard activation and a standard hidden `HH:mm` submitted value.
 
 Named options expose the common label/value/state contract plus only relevant settings. File/image controls support accepted formats, one or many files, size/count limits, deferred/manual/automatic same-origin upload, persisted assets, and progress events. Avatar is intentionally a single image: its visual target opens selection, Edit replaces the image, and Remove clears it.
 

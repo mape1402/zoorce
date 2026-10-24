@@ -1,0 +1,32 @@
+@model Zoorce.Web.UI.Forms.ZoorceTimePickerOptions
+@using System.Globalization
+@{
+    var locale = Model.Locale ?? CultureInfo.CurrentCulture.Name;
+    var triggerId = Model.Id + "-trigger";
+    var panelId = Model.Id + "-panel";
+    var descriptionId = Model.Description is null ? null : Model.Id + "-description";
+    var usesTwelveHourClock = Model.Format == Zoorce.Web.UI.Forms.ZoorceTimePickerFormat.TwelveHour;
+    var displayFormat = usesTwelveHourClock ? "hh:mm tt" : "HH:mm";
+    var display = Model.Value?.ToString(displayFormat, CultureInfo.GetCultureInfo(locale)) ?? string.Empty;
+}
+<div id="@Model.Id" class="z-form-field z-time-picker @(Model.Disabled ? "is-disabled" : string.Empty)" data-z-time-picker data-z-time-picker-locale="@locale" data-z-time-picker-format="@Model.Format.ToString().ToLowerInvariant()" data-z-time-picker-minute-step="@Model.MinuteStep" data-z-time-picker-min="@Model.Minimum?.ToString("HH:mm", CultureInfo.InvariantCulture)" data-z-time-picker-max="@Model.Maximum?.ToString("HH:mm", CultureInfo.InvariantCulture)" data-z-time-picker-readonly="@Model.ReadOnly.ToString().ToLowerInvariant()">
+    @if (Model.Label is not null) { <label class="z-form-label" for="@triggerId">@Model.Label @if (Model.Required) { <span class="z-form-required" aria-hidden="true">*</span> }</label> }
+    <div class="z-time-picker-control">
+        <input id="@triggerId" class="z-form-input z-time-picker-input" type="text" readonly value="@display" placeholder="Select time" aria-haspopup="dialog" aria-expanded="false" aria-controls="@panelId" aria-describedby="@descriptionId" data-z-time-picker-trigger required="@Model.Required" disabled="@Model.Disabled" />
+        <button class="z-time-picker-toggle" type="button" aria-label="Open time picker" data-z-time-picker-trigger disabled="@Model.Disabled"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="8.5"></circle><path d="M12 7v5l3.5 2"></path></svg></button>
+    </div>
+    <input type="hidden" name="@Model.Name" value="@Model.Value?.ToString("HH:mm", CultureInfo.InvariantCulture)" data-z-time-picker-value />
+    @if (Model.Description is not null) { <div id="@descriptionId" class="z-form-message"><span>@Model.Description</span></div> }
+    <section id="@panelId" class="z-time-picker-panel" role="dialog" aria-label="Time picker" hidden data-z-time-picker-panel>
+        <header>
+            <div><span class="z-time-picker-kicker">Select time</span><output aria-live="polite" data-z-time-picker-preview></output></div>
+            <button type="button" class="z-time-picker-close" aria-label="Close time picker" data-z-time-picker-close><svg viewBox="0 0 16 16" aria-hidden="true"><path d="m3.25 3.25 9.5 9.5m0-9.5-9.5 9.5" /></svg></button>
+        </header>
+        <div class="z-time-picker-columns">
+            <section aria-label="Hour"><span>Hour</span><div class="z-time-picker-options" role="group" aria-label="Choose hour" data-z-time-picker-hours></div></section>
+            <section aria-label="Minute"><span>Minute</span><div class="z-time-picker-options" role="group" aria-label="Choose minute" data-z-time-picker-minutes></div></section>
+        </div>
+        @if (usesTwelveHourClock) { <div class="z-time-picker-period" role="group" aria-label="Choose time period"><button type="button" data-z-time-picker-period="am">AM</button><button type="button" data-z-time-picker-period="pm">PM</button></div> }
+        <footer><button type="button" data-z-time-picker-clear>Clear</button><button type="button" class="z-time-picker-done" data-z-time-picker-done>Done</button></footer>
+    </section>
+</div>
