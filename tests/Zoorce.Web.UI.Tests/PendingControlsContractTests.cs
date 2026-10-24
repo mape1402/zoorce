@@ -64,7 +64,16 @@ public sealed class PendingControlsContractTests
         var avatar = new ZoorceAvatarViewComponent().Invoke(new ZoorceAvatarOptions { Label = "  Nora Ellis ", Size = 4, Status = " AWAY " });
         var badge = new ZoorceBadgeViewComponent().Invoke(new ZoorceBadgeOptions { Count = 101, MaximumCount = 99, Tone = " SUCCESS " });
         var card = new ZoorceCardViewComponent().Invoke(new ZoorceCardOptions { Id = " card ", Body = new HtmlString("content") });
-        var dialog = new ZoorceDialogViewComponent().Invoke(new ZoorceDialogOptions { Id = " dialog ", Title = " Dialog ", Size = " unsupported " });
+        var dialog = new ZoorceDialogViewComponent().Invoke(new ZoorceDialogOptions
+        {
+            Id = " dialog ",
+            Title = " Dialog ",
+            Eyebrow = " ",
+            HeaderMode = ZoorceDialogHeaderMode.None,
+            BodyPadding = ZoorceDialogBodyPadding.Compact,
+            CssClass = " dialog  contained ",
+            Size = " unsupported "
+        });
         var dropdown = new ZoorceDropdownMenuViewComponent().Invoke(new ZoorceDropdownMenuOptions { Id = " menu ", Text = " More " });
         var fab = new ZoorceFloatingActionButtonViewComponent().Invoke(new ZoorceFloatingActionButtonOptions { Id = " add ", Label = " Add ", Icon = " + " });
         var message = new ZoorceMessageViewComponent().Invoke(new ZoorceMessageOptions { Id = " message ", Title = " Saved ", Tone = " SUCCESS " });
@@ -74,13 +83,25 @@ public sealed class PendingControlsContractTests
         Assert.Equal("NE", Assert.IsType<ZoorceAvatarOptions>(Assert.IsType<ViewViewComponentResult>(avatar).ViewData!.Model).Initials);
         Assert.Equal("99+", Assert.IsType<ZoorceBadgeOptions>(Assert.IsType<ViewViewComponentResult>(badge).ViewData!.Model).GetDisplayValue());
         Assert.Equal("card", Assert.IsType<ZoorceCardOptions>(Assert.IsType<ViewViewComponentResult>(card).ViewData!.Model).Id);
-        Assert.Equal("default", Assert.IsType<ZoorceDialogOptions>(Assert.IsType<ViewViewComponentResult>(dialog).ViewData!.Model).Size);
+        var dialogModel = Assert.IsType<ZoorceDialogOptions>(Assert.IsType<ViewViewComponentResult>(dialog).ViewData!.Model);
+        Assert.Equal("default", dialogModel.Size);
+        Assert.Null(dialogModel.Eyebrow);
+        Assert.Equal(ZoorceDialogHeaderMode.None, dialogModel.HeaderMode);
+        Assert.Equal(ZoorceDialogBodyPadding.Compact, dialogModel.BodyPadding);
+        Assert.Equal("dialog contained", dialogModel.CssClass);
         Assert.IsType<ViewViewComponentResult>(dropdown);
         Assert.Equal("+", Assert.IsType<ZoorceFloatingActionButtonOptions>(Assert.IsType<ViewViewComponentResult>(fab).ViewData!.Model).Icon);
         Assert.Equal("success", Assert.IsType<ZoorceMessageOptions>(Assert.IsType<ViewViewComponentResult>(message).ViewData!.Model).Tone);
         Assert.Equal(100, Assert.IsType<ZoorceProgressButtonOptions>(Assert.IsType<ViewViewComponentResult>(progress).ViewData!.Model).Progress);
         Assert.Equal("quick", Assert.IsType<ZoorceSpeedDialOptions>(Assert.IsType<ViewViewComponentResult>(speedDial).ViewData!.Model).Id);
         Assert.Throws<ArgumentException>(() => new ZoorceBadgeViewComponent().Invoke(new ZoorceBadgeOptions { Dot = true }));
+        Assert.Throws<ArgumentException>(() => new ZoorceDialogViewComponent().Invoke(new ZoorceDialogOptions
+        {
+            Id = "dialog",
+            Title = "Dialog",
+            HeaderMode = ZoorceDialogHeaderMode.None,
+            Header = new HtmlString("<span>Hidden</span>")
+        }));
     }
 
     [Fact]

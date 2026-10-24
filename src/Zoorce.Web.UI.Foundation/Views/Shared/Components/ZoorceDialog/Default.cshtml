@@ -1,2 +1,46 @@
+@using Zoorce.Web.UI.Foundation.Components
 @model Zoorce.Web.UI.Foundation.Components.ZoorceDialogOptions
-<div id="@Model.Id" class="z-dialog-layer z-component-dialog-layer" data-z-component-dialog data-z-dialog-backdrop="@Model.CloseOnBackdrop.ToString().ToLowerInvariant()" hidden><section class="z-component-dialog z-component-dialog-@Model.Size" role="dialog" aria-modal="true" aria-labelledby="@($"{Model.Id}-title")" tabindex="-1" data-z-dialog-focus><header><div><span class="z-section-kicker">Dialog</span><h2 id="@($"{Model.Id}-title")">@Model.Title</h2>@if (Model.Description is not null) { <p>@Model.Description</p> }</div><button type="button" class="z-icon-button" aria-label="Close dialog" data-z-dialog-close>×</button></header>@if (Model.Body is not null) { <div class="z-component-dialog-body">@Model.Body</div> }@if (Model.Footer is not null) { <footer>@Model.Footer</footer> }</section></div>
+@{
+    var titleId = $"{Model.Id}-title";
+    var hasVisualHeader = Model.HeaderMode != ZoorceDialogHeaderMode.None;
+    var usesCustomHeader = Model.Header is not null;
+    var dialogClasses = $"z-component-dialog z-component-dialog-{Model.Size} z-component-dialog--header-{Model.HeaderMode.ToString().ToLowerInvariant()} {Model.CssClass}".Trim();
+    var bodyClasses = $"z-component-dialog-body z-component-dialog-body--{Model.BodyPadding.ToString().ToLowerInvariant()} {Model.BodyCssClass}".Trim();
+    var footerClasses = $"z-component-dialog-footer {Model.FooterCssClass}".Trim();
+}
+<div id="@Model.Id" class="z-dialog-layer z-component-dialog-layer" data-z-component-dialog data-z-dialog-backdrop="@Model.CloseOnBackdrop.ToString().ToLowerInvariant()" hidden>
+    <section class="@dialogClasses" role="dialog" aria-modal="true" aria-labelledby="@titleId" tabindex="-1" data-z-dialog-focus>
+        @if (!hasVisualHeader || usesCustomHeader)
+        {
+            <h2 id="@titleId" class="z-visually-hidden">@Model.Title</h2>
+        }
+        @if (hasVisualHeader)
+        {
+            <header class="z-component-dialog-header z-component-dialog-header--@Model.HeaderMode.ToString().ToLowerInvariant()@(usesCustomHeader ? " z-component-dialog-header--custom" : string.Empty)">
+                @if (usesCustomHeader)
+                {
+                    @Model.Header
+                }
+                else if (Model.HeaderMode == ZoorceDialogHeaderMode.Standard)
+                {
+                    <div>
+                        @if (Model.Eyebrow is not null) { <span class="z-section-kicker">@Model.Eyebrow</span> }
+                        <h2 id="@titleId">@Model.Title</h2>
+                        @if (Model.Description is not null) { <p>@Model.Description</p> }
+                    </div>
+                }
+                else
+                {
+                    <h2 id="@titleId">@Model.Title</h2>
+                }
+                @if (Model.ShowCloseButton) { <button type="button" class="z-icon-button" aria-label="Close dialog" data-z-dialog-close>×</button> }
+            </header>
+        }
+        else if (Model.ShowCloseButton)
+        {
+            <button type="button" class="z-icon-button z-component-dialog-close-floating" aria-label="Close dialog" data-z-dialog-close>×</button>
+        }
+        @if (Model.Body is not null) { <div class="@bodyClasses">@Model.Body</div> }
+        @if (Model.Footer is not null) { <footer class="@footerClasses">@Model.Footer</footer> }
+    </section>
+</div>

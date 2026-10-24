@@ -54,7 +54,7 @@ public sealed class ZoorceWizardTagHelper : TagHelper
         output.Attributes.RemoveAll("options");
         output.Attributes.RemoveAll("css-class");
         output.Attributes.SetAttribute("id", options.Id);
-        output.Attributes.SetAttribute("class", $"z-component z-wizard z-wizard--{options.Layout.ToString().ToLowerInvariant()} {CssClass}".Trim());
+        output.Attributes.SetAttribute("class", $"z-component z-wizard z-wizard--{options.Layout.ToString().ToLowerInvariant()} z-wizard--panel-header-{options.PanelHeaderMode.ToString().ToLowerInvariant()} z-wizard--progress-spacing-{options.ProgressSpacing.ToString().ToLowerInvariant()} z-wizard--content-spacing-{options.ContentSpacing.ToString().ToLowerInvariant()} z-wizard--content-height-{options.ContentHeight.ToString().ToLowerInvariant()} z-wizard--footer-spacing-{options.FooterSpacing.ToString().ToLowerInvariant()} {CssClass}".Trim());
         output.Attributes.SetAttribute("data-z-wizard", string.Empty);
         output.Attributes.SetAttribute("data-z-wizard-layout", options.Layout);
         output.Attributes.SetAttribute("data-z-wizard-current", options.CurrentStepId);
@@ -131,15 +131,35 @@ public sealed class ZoorceWizardTagHelper : TagHelper
             var panelId = PanelDomId(options.Id, step.Id);
             var headingId = $"{panelId}-title";
             var hidden = index == currentIndex ? string.Empty : " hidden";
-            content.AppendHtml($"<section class=\"z-wizard-panel\" id=\"{Encode(panelId)}\" data-z-wizard-panel data-z-step-id=\"{Encode(step.Id)}\" aria-labelledby=\"{Encode(headingId)}\"{hidden}>");
-            content.AppendHtml($"<header class=\"z-wizard-panel-header\"><span>Step {index + 1} of {options.Steps.Count}</span><h2 id=\"{Encode(headingId)}\" tabindex=\"-1\" data-z-wizard-panel-focus>{Encode(step.Title)}</h2>");
-            if (!string.IsNullOrWhiteSpace(step.SupportingText)) content.AppendHtml($"<p>{Encode(step.SupportingText)}</p>");
-            content.AppendHtml("</header><div class=\"z-wizard-panel-body\">");
+            content.AppendHtml($"<section class=\"z-wizard-panel\" id=\"{Encode(panelId)}\" data-z-wizard-panel data-z-step-id=\"{Encode(step.Id)}\" aria-labelledby=\"{Encode(headingId)}\" tabindex=\"-1\"{hidden}>");
+            RenderPanelHeader(content, options, step, index, headingId);
+            content.AppendHtml("<div class=\"z-wizard-panel-body\">");
             content.AppendHtml(panels.Panels[step.Id]);
             content.AppendHtml("</div><div class=\"z-wizard-field-errors\" data-z-wizard-field-errors aria-live=\"polite\"></div></section>");
         }
 
         content.AppendHtml("</div>");
+    }
+
+    private static void RenderPanelHeader(HtmlContentBuilder content, ZoorceWizardOptions options, ZoorceWizardStep step, int index, string headingId)
+    {
+        if (options.PanelHeaderMode == ZoorceWizardPanelHeaderMode.Hidden)
+        {
+            content.AppendHtml($"<h2 id=\"{Encode(headingId)}\" class=\"z-visually-hidden\">{Encode(step.Title)}</h2>");
+            return;
+        }
+
+        content.AppendHtml("<header class=\"z-wizard-panel-header\">");
+        if (options.PanelHeaderMode == ZoorceWizardPanelHeaderMode.Full)
+        {
+            content.AppendHtml($"<span>Step {index + 1} of {options.Steps.Count}</span>");
+        }
+        content.AppendHtml($"<h2 id=\"{Encode(headingId)}\" tabindex=\"-1\" data-z-wizard-panel-focus>{Encode(step.Title)}</h2>");
+        if (options.PanelHeaderMode == ZoorceWizardPanelHeaderMode.Full && !string.IsNullOrWhiteSpace(step.SupportingText))
+        {
+            content.AppendHtml($"<p>{Encode(step.SupportingText)}</p>");
+        }
+        content.AppendHtml("</header>");
     }
 
     private static void RenderFooter(HtmlContentBuilder content, ZoorceWizardOptions options, int currentIndex)

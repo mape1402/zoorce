@@ -83,23 +83,27 @@
 
         async requestChange(targetIndex, reason) {
             if (this.pending) return false;
-            const permission = this.canChange(targetIndex, reason);
+            const previousIndex = this.currentIndex();
+            // A rail click is still a forward/backward transition. Normalize it to
+            // the footer action so host validation and local state updates cannot
+            // bypass the rules applied by Continue and Back.
+            const action = targetIndex > previousIndex ? "next" : targetIndex < previousIndex ? "previous" : reason;
+            const permission = this.canChange(targetIndex, action);
             if (!permission.allowed) {
                 this.announce(permission.message);
                 return false;
             }
 
-            const previousIndex = this.currentIndex();
             const targetId = this.items()[targetIndex].dataset.zStepId;
-            const detail = this.createDetail(reason, targetId, targetIndex < previousIndex, permission.requiresAuthorization);
+            const detail = this.createDetail(action, targetId, targetIndex < previousIndex, permission.requiresAuthorization);
             if (!this.dispatchRequest(detail, "change")) return false;
 
             if (this.configuration.executionMode === "Manual") return true;
-            if (!this.validateCurrentForm()) return false;
+            if (!detail.isBackward && !this.validateCurrentForm()) return false;
             const decision = await this.authorize(detail);
             if (!decision.allowed) return false;
             if (decision.snapshot) this.applySnapshot(decision.snapshot);
-            else this.applyLocalTransition(targetIndex, previousIndex, reason);
+            else this.applyLocalTransition(targetIndex, previousIndex, action);
             this.emitChange(detail, true);
             return true;
         }
@@ -245,7 +249,13 @@
             this.sync();
             const title = item.querySelector("[data-z-wizard-step-title]")?.textContent ?? "Step";
             this.announce(`${title} is current. Step ${index + 1} of ${this.items().length}.`);
-            if (focus) this.panelFor(item.dataset.zStepId)?.querySelector("[data-z-wizard-panel-focus]")?.focus({ preventScroll: true });
+            if (focus) {
+                const panel = this.panelFor(item.dataset.zStepId);
+                const focusTarget = panel?.querySelector("[data-z-wizard-panel-focus]")
+                    ?? panel?.querySelector("input:not([type='hidden']):not(:disabled), select:not(:disabled), textarea:not(:disabled), button:not(:disabled)")
+                    ?? panel;
+                focusTarget?.focus({ preventScroll: true });
+            }
         }
 
         sync() {

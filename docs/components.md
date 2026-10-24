@@ -122,4 +122,10 @@ In `Manual` mode the component emits `zoorce:wizard:request-change`, `zoorce:wiz
 
 The wizard and stepper use the same navigation rules (`ZoorceStepperTransitionRules`) and semantic step states/tones. This keeps forward/backward, warning, error, and authorization behavior aligned while the wizard provides the form panels and footer actions that a standalone stepper intentionally does not own.
 
+Backward transitions never run form validation. Activating a step in either rail is normalized to the same semantic `next` or `previous` transition as the footer, so a forward click cannot bypass host validation. Validate forward transitions and finishing in the host, then call `commit`; this lets someone safely return to correct an earlier panel.
+
+For a contained workflow, independently set `PanelHeaderMode` (`Full`, `Title`, or `Hidden`), `ProgressSpacing`, `ContentSpacing`, and `FooterSpacing` (`Standard`, `Compact`, or `None`), and `ContentHeight` (`Fill` or `Auto`). `Hidden` retains the active panel name for assistive technology and sends focus to the first enabled control instead of rendering duplicate step copy. `Auto` prevents a short dialog form from reserving the full-page workspace height.
+
+`ZoorceDialog` is composable rather than prescriptive: `HeaderMode` supports `Standard`, `Compact`, and `None`; `Header` replaces the generated visual header; `ShowCloseButton` controls the dismiss action; and `BodyPadding` supports `Default`, `Compact`, and `None`. Keep a `Title` even with `HeaderMode.None`, because it remains the dialog's accessible name. A dense wizard dialog normally uses a headerless, padding-free Dialog together with a wizard using hidden panel headers and compact spacing.
+
 Native `input`, `select`, and `textarea` elements placed directly inside a `z-form-field` in a wizard panel receive the wizard's token-driven control surface, including hover, focus, validation, and light/dark-theme contrast. Existing Zoorce form components retain their own styles.

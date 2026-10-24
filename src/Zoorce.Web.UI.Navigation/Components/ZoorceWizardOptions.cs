@@ -20,6 +20,21 @@ public sealed record ZoorceWizardOptions
     /// <summary>Gets the layout used for progress and content.</summary>
     public ZoorceWizardLayout Layout { get; init; } = ZoorceWizardLayout.Sidebar;
 
+    /// <summary>Gets the active-panel context rendered below the progress rail.</summary>
+    public ZoorceWizardPanelHeaderMode PanelHeaderMode { get; init; } = ZoorceWizardPanelHeaderMode.Full;
+
+    /// <summary>Gets the spacing used around the progress rail.</summary>
+    public ZoorceWizardSpacing ProgressSpacing { get; init; } = ZoorceWizardSpacing.Standard;
+
+    /// <summary>Gets the spacing used around active panel content.</summary>
+    public ZoorceWizardSpacing ContentSpacing { get; init; } = ZoorceWizardSpacing.Standard;
+
+    /// <summary>Gets whether active content reserves a workspace height or uses its natural height.</summary>
+    public ZoorceWizardContentHeight ContentHeight { get; init; } = ZoorceWizardContentHeight.Fill;
+
+    /// <summary>Gets the spacing used around persistent footer actions.</summary>
+    public ZoorceWizardSpacing FooterSpacing { get; init; } = ZoorceWizardSpacing.Standard;
+
     /// <summary>Gets the strategy that authorizes requested actions.</summary>
     public ZoorceWizardExecutionMode ExecutionMode { get; init; } = ZoorceWizardExecutionMode.Manual;
 
@@ -122,6 +137,11 @@ public sealed record ZoorceWizardOptions
             Steps = normalizedSteps,
             CurrentStepId = current,
             Layout = Enum.IsDefined(Layout) ? Layout : ZoorceWizardLayout.Sidebar,
+            PanelHeaderMode = Enum.IsDefined(PanelHeaderMode) ? PanelHeaderMode : ZoorceWizardPanelHeaderMode.Full,
+            ProgressSpacing = Enum.IsDefined(ProgressSpacing) ? ProgressSpacing : ZoorceWizardSpacing.Standard,
+            ContentSpacing = Enum.IsDefined(ContentSpacing) ? ContentSpacing : ZoorceWizardSpacing.Standard,
+            ContentHeight = Enum.IsDefined(ContentHeight) ? ContentHeight : ZoorceWizardContentHeight.Fill,
+            FooterSpacing = Enum.IsDefined(FooterSpacing) ? FooterSpacing : ZoorceWizardSpacing.Standard,
             ExecutionMode = Enum.IsDefined(ExecutionMode) ? ExecutionMode : ZoorceWizardExecutionMode.Manual,
             TransitionRules = NormalizeRules(TransitionRules),
             PreviousLabel = NormalizeLabel(PreviousLabel, "Back"),

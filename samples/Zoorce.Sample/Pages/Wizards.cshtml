@@ -1,4 +1,5 @@
 @page "/wizards"
+@using Zoorce.Web.UI.Foundation.Components
 @using Zoorce.Web.UI.Navigation.Stepper
 @using Zoorce.Web.UI.Navigation.Wizard
 @{
@@ -46,6 +47,27 @@
             new("confirm", "Confirm", "Authorize the production handoff", "3", FormId: "release-confirm-form", FinishLabel: "Release now")
         ]
     };
+
+    var dialogWizard = new ZoorceWizardOptions
+    {
+        Id = "incident-capture-wizard",
+        AriaLabel = "Create incident",
+        Layout = ZoorceWizardLayout.Top,
+        PanelHeaderMode = ZoorceWizardPanelHeaderMode.Hidden,
+        ProgressSpacing = ZoorceWizardSpacing.Compact,
+        ContentSpacing = ZoorceWizardSpacing.Compact,
+        ContentHeight = ZoorceWizardContentHeight.Auto,
+        FooterSpacing = ZoorceWizardSpacing.Compact,
+        ExecutionMode = ZoorceWizardExecutionMode.Manual,
+        ShowCancel = true,
+        FinishLabel = "Create incident",
+        Steps =
+        [
+            new("details", "Details", "Capture the essential context", "1", ZoorceStepperState.Active, FormId: "incident-details-form"),
+            new("review", "Review", "Confirm the record before it is created", "2", FormId: "incident-review-form", FinishLabel: "Create incident")
+        ]
+    };
+    var dialogWizardBody = await Html.PartialAsync("/Pages/Shared/_IncidentCaptureWizard.cshtml", dialogWizard);
 }
 
 <section class="z-stepper-gallery-page">
@@ -111,6 +133,21 @@
             </zoorce-wizard-panel>
         </zoorce-wizard>
     </article>
+
+    <article class="z-stepper-example z-stepper-example--wide z-stepper-example--wizard">
+        <header><span>Top · dialog composition</span><h2>Focused incident capture</h2><p>The existing core Dialog owns focus, Escape and backdrop behavior; the Wizard remains responsible for its panels and actions inside that contained surface.</p></header>
+        <button class="z-button z-button-primary" type="button" data-z-dialog-open="#incident-capture-dialog">Open incident wizard</button>
+        @await Component.InvokeAsync("ZoorceDialog", new ZoorceDialogOptions
+        {
+            Id = "incident-capture-dialog",
+            Title = "Create an incident",
+            HeaderMode = ZoorceDialogHeaderMode.None,
+            BodyPadding = ZoorceDialogBodyPadding.None,
+            Size = "wide",
+            CloseOnBackdrop = false,
+            Body = dialogWizardBody
+        })
+    </article>
 </section>
 
 @section Scripts {
@@ -119,6 +156,10 @@
             const wizard = document.getElementById("workspace-onboarding-wizard");
             wizard?.addEventListener("zoorce:wizard:request-change", event => {
                 const controller = window.ZoorceWizards?.get(event.detail.wizardId);
+                if (event.detail.isBackward) {
+                    controller?.commit(event.detail.targetStepId, event.detail.action);
+                    return;
+                }
                 const form = document.getElementById(wizard.querySelector(".z-wizard-step.is-current")?.dataset.zStepFormId ?? "");
                 if (form?.reportValidity && !form.reportValidity()) return;
                 controller?.commit(event.detail.targetStepId, event.detail.action);
@@ -134,6 +175,27 @@
 
             document.getElementById("release-gate-wizard")?.addEventListener("zoorce:wizard:finish", () => {
                 window.Zoorce?.success("Release authorized", "The host-managed wizard completed its final transition.");
+            });
+
+            const dialogWizard = document.getElementById("incident-capture-wizard");
+            const dialog = document.getElementById("incident-capture-dialog");
+            dialogWizard?.addEventListener("zoorce:wizard:request-change", event => {
+                const controller = window.ZoorceWizards?.get(event.detail.wizardId);
+                if (event.detail.isBackward) {
+                    controller?.commit(event.detail.targetStepId, event.detail.action);
+                    return;
+                }
+                const form = document.getElementById(dialogWizard.querySelector(".z-wizard-step.is-current")?.dataset.zStepFormId ?? "");
+                if (form?.reportValidity && !form.reportValidity()) return;
+                controller?.commit(event.detail.targetStepId, event.detail.action);
+            });
+            dialogWizard?.addEventListener("zoorce:wizard:request-cancel", () => dialog?.close?.());
+            dialogWizard?.addEventListener("zoorce:wizard:request-finish", () => {
+                const form = document.getElementById("incident-review-form");
+                if (form?.reportValidity && !form.reportValidity()) return;
+                window.ZoorceWizards?.get("incident-capture-wizard")?.complete("Incident created.");
+                dialog?.close?.();
+                window.Zoorce?.success("Incident created", "The dialog workflow completed after local validation.");
             });
         })();
     </script>

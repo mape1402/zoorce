@@ -1,0 +1,17 @@
+@model Zoorce.Web.UI.Navigation.Wizard.ZoorceWizardOptions
+
+<zoorce-wizard options="Model" css-class="z-wizard--dialog">
+    <zoorce-wizard-panel step-id="details">
+        <form id="incident-details-form" class="z-form-grid" novalidate>
+            <label class="z-form-field z-field-span-2"><span>Incident title</span><input name="incidentTitle" required placeholder="Checkout confirmation is delayed" /><small>Use a concise description that can be recognized in the incident list.</small></label>
+            <label class="z-form-field"><span>Severity</span><select name="severity" required><option value="">Choose severity</option><option>SEV-1 · Critical</option><option>SEV-2 · High</option><option>SEV-3 · Moderate</option></select></label>
+            <label class="z-form-field"><span>Owner</span><input name="incidentOwner" required placeholder="Incident commander" /></label>
+        </form>
+    </zoorce-wizard-panel>
+    <zoorce-wizard-panel step-id="review">
+        <form id="incident-review-form" class="z-form-grid" novalidate>
+            <label class="z-form-field z-field-span-2"><span>Initial update</span><textarea name="initialUpdate" required rows="4" placeholder="What is affected and what is the immediate response?"></textarea><small>This update is added to the new incident timeline.</small></label>
+            <label class="z-form-field z-field-span-2"><span>Ready to create?</span><span class="z-form-check"><input type="checkbox" name="incidentConfirmed" required /> The title, severity and owner have been reviewed.</span></label>
+        </form>
+    </zoorce-wizard-panel>
+</zoorce-wizard>

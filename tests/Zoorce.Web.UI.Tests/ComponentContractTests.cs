@@ -627,6 +627,21 @@ public sealed class ComponentContractTests
         Assert.Equal(ZoorceWizardLayout.Top, hostManaged.Layout);
         Assert.Equal(ZoorceWizardExecutionMode.HostManaged, hostManaged.ExecutionMode);
         Assert.Equal("/api/wizards/authorize", hostManaged.TransitionUrl);
+
+        var contained = (CreateWizard() with
+        {
+            PanelHeaderMode = ZoorceWizardPanelHeaderMode.Hidden,
+            ProgressSpacing = ZoorceWizardSpacing.Compact,
+            ContentSpacing = ZoorceWizardSpacing.Compact,
+            ContentHeight = ZoorceWizardContentHeight.Auto,
+            FooterSpacing = ZoorceWizardSpacing.None
+        }).Normalize();
+
+        Assert.Equal(ZoorceWizardPanelHeaderMode.Hidden, contained.PanelHeaderMode);
+        Assert.Equal(ZoorceWizardSpacing.Compact, contained.ProgressSpacing);
+        Assert.Equal(ZoorceWizardSpacing.Compact, contained.ContentSpacing);
+        Assert.Equal(ZoorceWizardContentHeight.Auto, contained.ContentHeight);
+        Assert.Equal(ZoorceWizardSpacing.None, contained.FooterSpacing);
     }
 
     [Fact]
@@ -644,6 +659,19 @@ public sealed class ComponentContractTests
             Steps = [new ZoorceWizardStep("scope", "Scope", State: ZoorceStepperState.Disabled), new ZoorceWizardStep("approve", "Approve")]
         }).Normalize());
         Assert.Throws<ArgumentException>(() => (CreateWizard() with { ExecutionMode = ZoorceWizardExecutionMode.HostManaged, TransitionUrl = " " }).Normalize());
+        var normalized = (CreateWizard() with
+        {
+            PanelHeaderMode = (ZoorceWizardPanelHeaderMode)999,
+            ProgressSpacing = (ZoorceWizardSpacing)999,
+            ContentSpacing = (ZoorceWizardSpacing)999,
+            ContentHeight = (ZoorceWizardContentHeight)999,
+            FooterSpacing = (ZoorceWizardSpacing)999
+        }).Normalize();
+        Assert.Equal(ZoorceWizardPanelHeaderMode.Full, normalized.PanelHeaderMode);
+        Assert.Equal(ZoorceWizardSpacing.Standard, normalized.ProgressSpacing);
+        Assert.Equal(ZoorceWizardSpacing.Standard, normalized.ContentSpacing);
+        Assert.Equal(ZoorceWizardContentHeight.Fill, normalized.ContentHeight);
+        Assert.Equal(ZoorceWizardSpacing.Standard, normalized.FooterSpacing);
     }
 
     [Fact]

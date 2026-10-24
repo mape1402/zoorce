@@ -85,11 +85,12 @@ app.MapPost("/api/wizards/release-transition", (ZoorceWizardTransitionRequest re
     var errors = new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase);
     string Value(string key) => values.TryGetValue(key, out var captured) ? captured.FirstOrDefault() ?? string.Empty : string.Empty;
 
-    if (request.Action == "next" && request.CurrentStepId == "scope" && string.IsNullOrWhiteSpace(Value("releaseName")))
+    var isForwardStepChange = !request.IsBackward && request.TargetStepId is not null;
+    if (isForwardStepChange && request.CurrentStepId == "scope" && string.IsNullOrWhiteSpace(Value("releaseName")))
     {
         errors["releaseName"] = ["Name the release before continuing."];
     }
-    if (request.Action == "next" && request.CurrentStepId == "readiness" && Value("approval") != "approved")
+    if (isForwardStepChange && request.CurrentStepId == "readiness" && Value("approval") != "approved")
     {
         errors["approval"] = ["Explicit release-owner approval is required."];
     }
