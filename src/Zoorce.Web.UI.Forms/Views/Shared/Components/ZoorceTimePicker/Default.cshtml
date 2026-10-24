@@ -22,9 +22,10 @@
             <div><span class="z-time-picker-kicker">Select time</span><output aria-live="polite" data-z-time-picker-preview></output></div>
             <button type="button" class="z-time-picker-close" aria-label="Close time picker" data-z-time-picker-close><svg viewBox="0 0 16 16" aria-hidden="true"><path d="m3.25 3.25 9.5 9.5m0-9.5-9.5 9.5" /></svg></button>
         </header>
+        <p class="z-time-picker-hint">Type an exact value or choose a quick option.</p>
         <div class="z-time-picker-columns">
-            <section aria-label="Hour"><span>Hour</span><div class="z-time-picker-options" role="group" aria-label="Choose hour" data-z-time-picker-hours></div></section>
-            <section aria-label="Minute"><span>Minute</span><div class="z-time-picker-options" role="group" aria-label="Choose minute" data-z-time-picker-minutes></div></section>
+            <section aria-label="Hour"><label class="z-time-picker-section-heading"><span>Hour</span><input type="text" inputmode="numeric" maxlength="2" aria-label="Exact hour" data-z-time-picker-hour-input /></label><div class="z-time-picker-options" role="group" aria-label="Choose hour" data-z-time-picker-hours></div></section>
+            <section aria-label="Minute"><label class="z-time-picker-section-heading"><span>Minute</span><input type="text" inputmode="numeric" maxlength="2" aria-label="Exact minute" data-z-time-picker-minute-input /></label><div class="z-time-picker-options" role="group" aria-label="Choose minute" data-z-time-picker-minutes></div></section>
         </div>
         @if (usesTwelveHourClock) { <div class="z-time-picker-period" role="group" aria-label="Choose time period"><button type="button" data-z-time-picker-period="am">AM</button><button type="button" data-z-time-picker-period="pm">PM</button></div> }
         <footer><button type="button" data-z-time-picker-clear>Clear</button><button type="button" class="z-time-picker-done" data-z-time-picker-done>Done</button></footer>

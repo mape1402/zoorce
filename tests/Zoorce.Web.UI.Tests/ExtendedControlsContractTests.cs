@@ -83,7 +83,7 @@ public sealed class ExtendedControlsContractTests
         {
             Id = " delivery-time ",
             Name = " deliveryTime ",
-            Value = new TimeOnly(17, 30),
+            Value = new TimeOnly(17, 42),
             Minimum = new TimeOnly(8, 0),
             Maximum = new TimeOnly(20, 0),
             MinuteStep = 15,
@@ -94,6 +94,7 @@ public sealed class ExtendedControlsContractTests
         Assert.Equal("delivery-time", model.Id);
         Assert.Equal("deliveryTime", model.Name);
         Assert.Equal(15, model.MinuteStep);
+        Assert.Equal(new TimeOnly(17, 42), model.Value);
         Assert.Equal("en-US", model.Locale);
         Assert.Throws<ArgumentOutOfRangeException>(() => new ZoorceTimePickerOptions
         {

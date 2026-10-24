@@ -14,6 +14,8 @@
     const value = root.querySelector("[data-z-time-picker-value]");
     const hours = root.querySelector("[data-z-time-picker-hours]");
     const minutes = root.querySelector("[data-z-time-picker-minutes]");
+    const hourInput = root.querySelector("[data-z-time-picker-hour-input]");
+    const minuteInput = root.querySelector("[data-z-time-picker-minute-input]");
     const preview = root.querySelector("[data-z-time-picker-preview]");
     const locale = root.dataset.zTimePickerLocale || undefined;
     const format = root.dataset.zTimePickerFormat;
@@ -51,8 +53,27 @@
       button.disabled = !available || readOnly;
       return button;
     };
+    const setExactHour = raw => {
+      if (!/^\d{1,2}$/.test(raw)) { render(); return; }
+      const entered = Number(raw);
+      if (twelveHour && (entered < 1 || entered > 12) || !twelveHour && entered > 23) { render(); return; }
+      const currentPeriod = draft.hours >= 12 ? 12 : 0;
+      const current = twelveHour ? entered % 12 + currentPeriod : entered;
+      const alternate = twelveHour ? entered % 12 + (currentPeriod === 12 ? 0 : 12) : current;
+      const nextHour = [current, alternate].find(hour => isAvailable({ hours: hour, minutes: draft.minutes }));
+      if (nextHour !== undefined) draft.hours = nextHour;
+      render();
+    };
+    const setExactMinute = raw => {
+      if (!/^\d{1,2}$/.test(raw)) { render(); return; }
+      const entered = Number(raw);
+      if (entered <= 59 && isAvailable({ hours: draft.hours, minutes: entered })) draft.minutes = entered;
+      render();
+    };
     const render = () => {
       preview.textContent = display(draft);
+      if (hourInput) hourInput.value = String(twelveHour ? draft.hours % 12 || 12 : draft.hours).padStart(2, "0");
+      if (minuteInput) minuteInput.value = String(draft.minutes).padStart(2, "0");
       hours.replaceChildren();
       const values = twelveHour ? Array.from({ length: 12 }, (_, index) => index + 1) : Array.from({ length: 24 }, (_, index) => index);
       values.forEach(hour => {
@@ -91,6 +112,14 @@
       item.addEventListener("keydown", event => {
         if (["Enter", " ", "ArrowDown"].includes(event.key) && panel.hidden) { event.preventDefault(); open(); }
         if (event.key === "Escape" && !panel.hidden) { event.preventDefault(); close(true); }
+      });
+    });
+    [[hourInput, setExactHour], [minuteInput, setExactMinute]].forEach(([input, apply]) => {
+      if (!input) return;
+      input.addEventListener("focus", () => input.select());
+      input.addEventListener("change", () => apply(input.value.trim()));
+      input.addEventListener("keydown", event => {
+        if (event.key === "Enter") { event.preventDefault(); apply(input.value.trim()); }
       });
     });
     panel.addEventListener("click", event => {

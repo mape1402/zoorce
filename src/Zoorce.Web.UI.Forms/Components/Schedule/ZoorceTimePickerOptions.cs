@@ -26,7 +26,8 @@ public sealed record ZoorceTimePickerOptions
     /// <summary>Gets the last selectable time, inclusive.</summary>
     public TimeOnly? Maximum { get; init; }
 
-    /// <summary>Gets the minute interval exposed by the picker.</summary>
+    /// <summary>Gets the quick-pick minute interval exposed by the picker.</summary>
+    /// <remarks>Exact minute entry always remains available.</remarks>
     public int MinuteStep { get; init; } = 5;
 
     /// <summary>Gets the clock notation used for the visible value and chooser.</summary>
@@ -53,7 +54,6 @@ public sealed record ZoorceTimePickerOptions
         if (MinuteStep is < 1 or > 30 || 60 % MinuteStep != 0) throw new ArgumentOutOfRangeException(nameof(MinuteStep), "The minute step must divide evenly into an hour.");
         if (Minimum is not null && Maximum is not null && Minimum > Maximum) throw new ArgumentException("Minimum cannot be later than maximum.", nameof(Minimum));
         if (Value is not null && (Minimum is not null && Value < Minimum || Maximum is not null && Value > Maximum)) throw new ArgumentException("The selected time must be within the configured bounds.", nameof(Value));
-        if (Value is not null && Value.Value.Minute % MinuteStep != 0) throw new ArgumentException("The selected time must align with the minute step.", nameof(Value));
         return this with
         {
             Id = Id.Trim(),
