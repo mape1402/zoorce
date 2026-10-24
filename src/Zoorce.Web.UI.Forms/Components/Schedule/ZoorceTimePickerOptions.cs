@@ -26,8 +26,8 @@ public sealed record ZoorceTimePickerOptions
     /// <summary>Gets the last selectable time, inclusive.</summary>
     public TimeOnly? Maximum { get; init; }
 
-    /// <summary>Gets the quick-pick minute interval exposed by the picker.</summary>
-    /// <remarks>Exact minute entry always remains available.</remarks>
+    /// <summary>Gets the retained quick-pick interval configuration.</summary>
+    /// <remarks>The list picker always exposes every minute; this setting is retained for compatibility with existing hosts.</remarks>
     public int MinuteStep { get; init; } = 5;
 
     /// <summary>Gets the clock notation used for the visible value and chooser.</summary>

@@ -22,12 +22,13 @@
             <div><span class="z-time-picker-kicker">Select time</span><output aria-live="polite" data-z-time-picker-preview></output></div>
             <button type="button" class="z-time-picker-close" aria-label="Close time picker" data-z-time-picker-close><svg viewBox="0 0 16 16" aria-hidden="true"><path d="m3.25 3.25 9.5 9.5m0-9.5-9.5 9.5" /></svg></button>
         </header>
-        <p class="z-time-picker-hint">Type an exact value or choose a quick option.</p>
-        <div class="z-time-picker-columns">
-            <section aria-label="Hour"><label class="z-time-picker-section-heading"><span>Hour</span><input type="text" inputmode="numeric" maxlength="2" aria-label="Exact hour" data-z-time-picker-hour-input /></label><div class="z-time-picker-options" role="group" aria-label="Choose hour" data-z-time-picker-hours></div></section>
-            <section aria-label="Minute"><label class="z-time-picker-section-heading"><span>Minute</span><input type="text" inputmode="numeric" maxlength="2" aria-label="Exact minute" data-z-time-picker-minute-input /></label><div class="z-time-picker-options" role="group" aria-label="Choose minute" data-z-time-picker-minutes></div></section>
+        <p class="z-time-picker-hint">Choose an hour and minute from the lists.</p>
+        <div class="z-time-picker-lists">
+            <label class="z-time-picker-list-field"><span>Hour</span><select size="7" aria-label="Hour" data-z-time-picker-hour-list></select></label>
+            <label class="z-time-picker-list-field"><span>Minute</span><select size="7" aria-label="Minute" data-z-time-picker-minute-list></select></label>
+            @if (usesTwelveHourClock) { <div class="z-time-picker-period-switch"><span>Period</span><div class="z-time-picker-period-toggle" role="group" aria-label="AM or PM"><button type="button" data-z-time-picker-period="am">AM</button><button type="button" data-z-time-picker-period="pm">PM</button></div></div> }
         </div>
-        @if (usesTwelveHourClock) { <div class="z-time-picker-period" role="group" aria-label="Choose time period"><button type="button" data-z-time-picker-period="am">AM</button><button type="button" data-z-time-picker-period="pm">PM</button></div> }
+        <p class="z-time-picker-error" role="status" hidden data-z-time-picker-error>Choose a time within the configured range.</p>
         <footer><button type="button" data-z-time-picker-clear>Clear</button><button type="button" class="z-time-picker-done" data-z-time-picker-done>Done</button></footer>
     </section>
 </div>

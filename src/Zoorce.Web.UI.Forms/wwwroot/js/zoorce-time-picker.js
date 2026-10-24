@@ -12,20 +12,19 @@
     const trigger = root.querySelector("input[data-z-time-picker-trigger]");
     const triggers = root.querySelectorAll("[data-z-time-picker-trigger]");
     const value = root.querySelector("[data-z-time-picker-value]");
-    const hours = root.querySelector("[data-z-time-picker-hours]");
-    const minutes = root.querySelector("[data-z-time-picker-minutes]");
-    const hourInput = root.querySelector("[data-z-time-picker-hour-input]");
-    const minuteInput = root.querySelector("[data-z-time-picker-minute-input]");
+    const hourList = root.querySelector("[data-z-time-picker-hour-list]");
+    const minuteList = root.querySelector("[data-z-time-picker-minute-list]");
+    const periodButtons = root.querySelectorAll("[data-z-time-picker-period]");
     const preview = root.querySelector("[data-z-time-picker-preview]");
+    const error = root.querySelector("[data-z-time-picker-error]");
     const locale = root.dataset.zTimePickerLocale || undefined;
     const format = root.dataset.zTimePickerFormat;
     const twelveHour = format === "twelvehour" || format === "locale" && new Intl.DateTimeFormat(locale, { hour: "numeric" }).resolvedOptions().hour12;
-    const step = Number(root.dataset.zTimePickerMinuteStep || 5);
     const minimum = minutesOfDay(parse(root.dataset.zTimePickerMin));
     const maximum = minutesOfDay(parse(root.dataset.zTimePickerMax));
     const readOnly = root.dataset.zTimePickerReadonly === "true";
     let selected = parse(value.value);
-    let draft = selected || { hours: new Date().getHours(), minutes: Math.floor(new Date().getMinutes() / step) * step };
+    let draft = selected ? { ...selected } : null;
 
     const display = time => {
       if (!time) return "";
@@ -36,62 +35,52 @@
       const candidate = minutesOfDay(time);
       return (minimum === null || candidate >= minimum) && (maximum === null || candidate <= maximum);
     };
+    const firstAvailable = () => {
+      for (let hour = 0; hour < 24; hour += 1) {
+        for (let minute = 0; minute < 60; minute += 1) {
+          if (isAvailable({ hours: hour, minutes: minute })) return { hours: hour, minutes: minute };
+        }
+      }
+      return { hours: 0, minutes: 0 };
+    };
+    const createOption = (label, optionValue, selectedOption) => {
+      const option = document.createElement("option");
+      option.textContent = label;
+      option.value = String(optionValue);
+      option.selected = selectedOption;
+      option.disabled = readOnly;
+      return option;
+    };
+    const periodFor = hour => hour >= 12 ? "pm" : "am";
+    const hourFor = (displayHour, period) => twelveHour ? displayHour % 12 + (period === "pm" ? 12 : 0) : displayHour;
+    const keepPanelVisible = () => requestAnimationFrame(() => panel.scrollIntoView({ block: "nearest" }));
+    const render = () => {
+      if (!draft) draft = firstAvailable();
+      const period = periodFor(draft.hours);
+      const visibleHour = twelveHour ? draft.hours % 12 || 12 : draft.hours;
+      const hourValues = twelveHour ? Array.from({ length: 12 }, (_, index) => index + 1) : Array.from({ length: 24 }, (_, index) => index);
+      hourList.replaceChildren(...hourValues.map(hour => createOption(String(hour).padStart(2, "0"), hour, hour === visibleHour)));
+      minuteList.replaceChildren(...Array.from({ length: 60 }, (_, minute) => createOption(String(minute).padStart(2, "0"), minute, minute === draft.minutes)));
+      periodButtons.forEach(button => {
+        const selectedPeriod = button.dataset.zTimePickerPeriod === period;
+        button.classList.toggle("is-selected", selectedPeriod);
+        button.setAttribute("aria-pressed", String(selectedPeriod));
+        button.disabled = readOnly;
+      });
+      preview.textContent = display(draft);
+    };
     const commit = () => {
+      if (!isAvailable(draft)) {
+        error.hidden = false;
+        keepPanelVisible();
+        return false;
+      }
       selected = { ...draft };
       value.value = iso(selected);
       trigger.value = display(selected);
       preview.textContent = display(selected);
       root.dispatchEvent(new CustomEvent("zoorce:time-picker:change", { bubbles: true, detail: { value: value.value } }));
-    };
-    const option = (label, selectedOption, available, dataset) => {
-      const button = document.createElement("button");
-      button.type = "button";
-      button.textContent = label;
-      Object.entries(dataset).forEach(([key, current]) => button.dataset[key] = String(current));
-      button.classList.toggle("is-selected", selectedOption);
-      button.setAttribute("aria-pressed", String(selectedOption));
-      button.disabled = !available || readOnly;
-      return button;
-    };
-    const setExactHour = raw => {
-      if (!/^\d{1,2}$/.test(raw)) { render(); return; }
-      const entered = Number(raw);
-      if (twelveHour && (entered < 1 || entered > 12) || !twelveHour && entered > 23) { render(); return; }
-      const currentPeriod = draft.hours >= 12 ? 12 : 0;
-      const current = twelveHour ? entered % 12 + currentPeriod : entered;
-      const alternate = twelveHour ? entered % 12 + (currentPeriod === 12 ? 0 : 12) : current;
-      const nextHour = [current, alternate].find(hour => isAvailable({ hours: hour, minutes: draft.minutes }));
-      if (nextHour !== undefined) draft.hours = nextHour;
-      render();
-    };
-    const setExactMinute = raw => {
-      if (!/^\d{1,2}$/.test(raw)) { render(); return; }
-      const entered = Number(raw);
-      if (entered <= 59 && isAvailable({ hours: draft.hours, minutes: entered })) draft.minutes = entered;
-      render();
-    };
-    const render = () => {
-      preview.textContent = display(draft);
-      if (hourInput) hourInput.value = String(twelveHour ? draft.hours % 12 || 12 : draft.hours).padStart(2, "0");
-      if (minuteInput) minuteInput.value = String(draft.minutes).padStart(2, "0");
-      hours.replaceChildren();
-      const values = twelveHour ? Array.from({ length: 12 }, (_, index) => index + 1) : Array.from({ length: 24 }, (_, index) => index);
-      values.forEach(hour => {
-        const actualHour = twelveHour ? (draft.hours >= 12 ? hour % 12 + 12 : hour % 12) : hour;
-        const available = Array.from({ length: 60 / step }, (_, index) => index * step).some(minute => isAvailable({ hours: actualHour, minutes: minute }));
-        hours.append(option(String(hour).padStart(2, "0"), (twelveHour ? draft.hours % 12 || 12 : draft.hours) === hour, available, { zTimePickerHour: hour }));
-      });
-      minutes.replaceChildren();
-      for (let minute = 0; minute < 60; minute += step) {
-        minutes.append(option(String(minute).padStart(2, "0"), draft.minutes === minute, isAvailable({ hours: draft.hours, minutes: minute }), { zTimePickerMinute: minute }));
-      }
-      root.querySelectorAll("[data-z-time-picker-period]").forEach(button => {
-        const selectedPeriod = draft.hours >= 12 ? "pm" : "am";
-        const active = button.dataset.zTimePickerPeriod === selectedPeriod;
-        button.classList.toggle("is-selected", active);
-        button.setAttribute("aria-pressed", String(active));
-        button.disabled = readOnly;
-      });
+      return true;
     };
     const close = restore => {
       panel.hidden = true;
@@ -100,11 +89,13 @@
     };
     const open = () => {
       if (readOnly || trigger.disabled) return;
-      draft = selected ? { ...selected } : { hours: new Date().getHours(), minutes: Math.floor(new Date().getMinutes() / step) * step };
+      draft = selected ? { ...selected } : firstAvailable();
+      error.hidden = true;
       panel.hidden = false;
       triggers.forEach(item => item.setAttribute("aria-expanded", "true"));
       render();
-      panel.querySelector(".is-selected:not(:disabled)")?.focus();
+      hourList.focus();
+      keepPanelVisible();
     };
 
     triggers.forEach(item => {
@@ -114,33 +105,35 @@
         if (event.key === "Escape" && !panel.hidden) { event.preventDefault(); close(true); }
       });
     });
-    [[hourInput, setExactHour], [minuteInput, setExactMinute]].forEach(([input, apply]) => {
-      if (!input) return;
-      input.addEventListener("focus", () => input.select());
-      input.addEventListener("change", () => apply(input.value.trim()));
-      input.addEventListener("keydown", event => {
-        if (event.key === "Enter") { event.preventDefault(); apply(input.value.trim()); }
+    hourList.addEventListener("change", () => {
+      const displayHour = Number(hourList.value);
+      draft.hours = hourFor(displayHour, periodFor(draft.hours));
+      error.hidden = true;
+      render();
+    });
+    minuteList.addEventListener("change", () => {
+      const minute = Number(minuteList.value);
+      draft.minutes = minute;
+      error.hidden = true;
+      render();
+    });
+    periodButtons.forEach(button => {
+      button.addEventListener("click", () => {
+        draft.hours = hourFor(twelveHour ? draft.hours % 12 || 12 : draft.hours, button.dataset.zTimePickerPeriod);
+        error.hidden = true;
+        render();
       });
     });
     panel.addEventListener("click", event => {
-      const hour = event.target.closest("[data-z-time-picker-hour]");
-      const minute = event.target.closest("[data-z-time-picker-minute]");
-      const period = event.target.closest("[data-z-time-picker-period]");
-      if (hour && !hour.disabled) {
-        const selectedHour = Number(hour.dataset.zTimePickerHour);
-        draft.hours = twelveHour ? (draft.hours >= 12 ? selectedHour % 12 + 12 : selectedHour % 12) : selectedHour;
-        if (!isAvailable(draft)) draft.minutes = Array.from({ length: 60 / step }, (_, index) => index * step).find(current => isAvailable({ hours: draft.hours, minutes: current })) ?? draft.minutes;
-        render();
-      } else if (minute && !minute.disabled) {
-        draft.minutes = Number(minute.dataset.zTimePickerMinute);
-        render();
-      } else if (period && !period.disabled) {
-        draft.hours = draft.hours % 12 + (period.dataset.zTimePickerPeriod === "pm" ? 12 : 0);
-        if (isAvailable(draft)) render();
-      } else if (event.target.closest("[data-z-time-picker-clear]")) {
-        selected = null; value.value = ""; trigger.value = ""; root.dispatchEvent(new CustomEvent("zoorce:time-picker:change", { bubbles: true, detail: { value: "" } })); close(true);
-      } else if (event.target.closest("[data-z-time-picker-done]")) { commit(); close(true); }
-      else if (event.target.closest("[data-z-time-picker-close]")) close(true);
+      if (event.target.closest("[data-z-time-picker-clear]")) {
+        selected = null;
+        value.value = "";
+        trigger.value = "";
+        root.dispatchEvent(new CustomEvent("zoorce:time-picker:change", { bubbles: true, detail: { value: "" } }));
+        close(true);
+      } else if (event.target.closest("[data-z-time-picker-done]")) {
+        if (commit()) close(true);
+      } else if (event.target.closest("[data-z-time-picker-close]")) close(true);
     });
     panel.addEventListener("keydown", event => { if (event.key === "Escape") { event.preventDefault(); close(true); } });
     document.addEventListener("pointerdown", event => { if (!root.contains(event.target) && !panel.hidden) close(false); });

@@ -94,8 +94,18 @@ public sealed class ExtendedControlsContractTests
         Assert.Equal("delivery-time", model.Id);
         Assert.Equal("deliveryTime", model.Name);
         Assert.Equal(15, model.MinuteStep);
+        Assert.Equal(ZoorceTimePickerFormat.TwelveHour, model.Format);
         Assert.Equal(new TimeOnly(17, 42), model.Value);
         Assert.Equal("en-US", model.Locale);
+        var twentyFourHour = new ZoorceTimePickerOptions
+        {
+            Id = "operations-time",
+            Name = "operationsTime",
+            Value = new TimeOnly(14, 45),
+            Format = ZoorceTimePickerFormat.TwentyFourHour
+        }.Normalize();
+        Assert.Equal(ZoorceTimePickerFormat.TwentyFourHour, twentyFourHour.Format);
+        Assert.Equal(new TimeOnly(14, 45), twentyFourHour.Value);
         Assert.Throws<ArgumentOutOfRangeException>(() => new ZoorceTimePickerOptions
         {
             Id = "delivery-time",
