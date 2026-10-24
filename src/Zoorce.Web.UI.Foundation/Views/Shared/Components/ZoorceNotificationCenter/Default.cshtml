@@ -4,7 +4,11 @@
     var panelId = $"{Model.Id}-panel";
 }
 <section id="@Model.Id" class="z-notification-center" data-z-notification-center>
-    <button id="@($"{Model.Id}-trigger")" class="z-icon-button z-notification-trigger" type="button" data-z-notification-trigger aria-label="@Model.Label" aria-controls="@panelId" aria-expanded="false"><span aria-hidden="true">◔</span>@if (unread > 0) { <b data-z-notification-count>@unread</b> }</button>
+    <button id="@($"{Model.Id}-trigger")" class="z-icon-button z-notification-trigger" type="button" data-z-notification-trigger aria-label="@Model.Label" aria-controls="@panelId" aria-expanded="false">
+        @if (Model.TriggerIcon is not null) { @Model.TriggerIcon }
+        else { <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4" /></svg> }
+        @if (unread > 0) { <b data-z-notification-count>@unread</b> }
+    </button>
     <section id="@panelId" class="z-notification-panel" role="dialog" aria-modal="false" aria-label="@Model.Label" aria-labelledby="@($"{Model.Id}-panel-title")" hidden data-z-notification-panel>
         <header><div><span class="z-section-kicker">Inbox</span><h2 id="@($"{Model.Id}-panel-title")">@Model.Label</h2></div>@if (unread > 0) { <button class="z-button z-button-ghost" type="button" data-z-notification-read-all>Mark all read</button> }</header>
         @if (Model.ShowUnreadFilter) { <div class="z-notification-filters" role="group" aria-label="Notification filter"><button class="is-active" type="button" data-z-notification-filter="all" aria-pressed="true">All</button><button type="button" data-z-notification-filter="unread" aria-pressed="false">Unread</button></div> }
@@ -12,11 +16,18 @@
             @foreach (var item in Model.Items)
             {
                 <article class="z-notification-item tone-@item.Tone.ToString().ToLowerInvariant() @(item.IsRead ? "is-read" : "is-unread")" data-z-notification-item data-z-notification-id="@item.Id" data-z-notification-read="@item.IsRead.ToString().ToLowerInvariant()">
-                    <span class="z-notification-icon" aria-hidden="true">@(item.Icon ?? "•")</span><div><strong>@item.Title</strong>@if (item.Description is not null) { <p>@item.Description</p> }<time datetime="@item.Timestamp.ToString("O")">@item.Timestamp.LocalDateTime.ToString("MMM d · HH:mm")</time></div>
-                    @if (item.ActionText is not null)
+                    @if (Model.ItemTemplate is not null)
                     {
-                        if (item.ActionHref is not null) { <a href="@item.ActionHref" data-z-notification-action>@item.ActionText</a> }
-                        else { <button type="button" data-z-notification-action>@item.ActionText</button> }
+                        @Model.ItemTemplate(item)
+                    }
+                    else
+                    {
+                        <span class="z-notification-icon" aria-hidden="true">@(item.Icon ?? "•")</span><div><strong>@item.Title</strong>@if (item.Description is not null) { <p>@item.Description</p> }<time datetime="@item.Timestamp.ToString("O")">@item.Timestamp.LocalDateTime.ToString("MMM d · HH:mm")</time></div>
+                        @if (item.ActionText is not null)
+                        {
+                            if (item.ActionHref is not null) { <a href="@item.ActionHref" data-z-notification-action>@item.ActionText</a> }
+                            else { <button type="button" data-z-notification-action>@item.ActionText</button> }
+                        }
                     }
                 </article>
             }

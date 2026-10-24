@@ -2,22 +2,26 @@
 @using System.Globalization
 @{
     var locale = Model.Locale ?? CultureInfo.CurrentCulture.Name;
+    var triggerId = Model.Id + "-trigger";
+    var descriptionId = Model.Description is null ? null : Model.Id + "-description";
+    var startName = Model.Name + "-start";
+    var endName = Model.Name + "-end";
     var display = Model.Mode == Zoorce.Web.UI.Forms.ZoorceDatePickerMode.Single
         ? Model.Value?.ToString("d", CultureInfo.GetCultureInfo(locale)) ?? string.Empty
         : string.Join(" – ", new[] { Model.RangeStart?.ToString("d", CultureInfo.GetCultureInfo(locale)), Model.RangeEnd?.ToString("d", CultureInfo.GetCultureInfo(locale)) }.Where(value => value is not null));
     var disabledDates = string.Join(',', Model.DisabledDates.Select(value => value.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)));
 }
-<div id="@Model.Id" class="z-date-picker" data-z-date-picker data-z-date-picker-mode="@Model.Mode.ToString().ToLowerInvariant()" data-z-date-picker-locale="@locale" data-z-date-picker-first-day="@((int)Model.FirstDayOfWeek)" data-z-date-picker-min="@Model.Minimum?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)" data-z-date-picker-max="@Model.Maximum?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)" data-z-date-picker-disabled="@disabledDates" data-z-date-picker-readonly="@Model.ReadOnly.ToString().ToLowerInvariant()">
-    @if (Model.Label is not null) { <label for="@($"{Model.Id}-trigger")">@Model.Label</label> }
-    <div class="z-date-picker-field">
-        <input id="@($"{Model.Id}-trigger")" type="text" readonly value="@display" placeholder="Select date@(Model.Mode == Zoorce.Web.UI.Forms.ZoorceDatePickerMode.Range ? " range" : string.Empty)" aria-haspopup="dialog" aria-expanded="false" data-z-date-picker-trigger required="@Model.Required" disabled="@Model.Disabled" />
-        <button type="button" aria-label="Open calendar" data-z-date-picker-trigger disabled="@Model.Disabled">⌄</button>
+<div id="@Model.Id" class="z-form-field z-date-picker @(Model.Disabled ? "is-disabled" : string.Empty)" data-z-date-picker data-z-date-picker-mode="@Model.Mode.ToString().ToLowerInvariant()" data-z-date-picker-locale="@locale" data-z-date-picker-first-day="@((int)Model.FirstDayOfWeek)" data-z-date-picker-min="@Model.Minimum?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)" data-z-date-picker-max="@Model.Maximum?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)" data-z-date-picker-disabled="@disabledDates" data-z-date-picker-readonly="@Model.ReadOnly.ToString().ToLowerInvariant()">
+    @if (Model.Label is not null) { <label class="z-form-label" for="@triggerId">@Model.Label @if (Model.Required) { <span class="z-form-required" aria-hidden="true">*</span> }</label> }
+    <div class="z-date-picker-control">
+        <input id="@triggerId" class="z-form-input z-date-picker-input" type="text" readonly value="@display" placeholder="Select date@(Model.Mode == Zoorce.Web.UI.Forms.ZoorceDatePickerMode.Range ? " range" : string.Empty)" aria-haspopup="dialog" aria-expanded="false" aria-describedby="@descriptionId" data-z-date-picker-trigger required="@Model.Required" disabled="@Model.Disabled" />
+        <button class="z-date-picker-toggle" type="button" aria-label="Open calendar" data-z-date-picker-trigger disabled="@Model.Disabled"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="3.5" y="5.5" width="17" height="15" rx="2"></rect><path d="M7.5 3.5v4M16.5 3.5v4M3.5 10h17M8 14h.01M12 14h.01M16 14h.01M8 17h.01M12 17h.01"></path></svg></button>
     </div>
     @if (Model.Mode == Zoorce.Web.UI.Forms.ZoorceDatePickerMode.Single) { <input type="hidden" name="@Model.Name" value="@Model.Value?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)" data-z-date-picker-value /> }
-    else { <input type="hidden" name="@($"{Model.Name}-start")" value="@Model.RangeStart?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)" data-z-date-picker-start /><input type="hidden" name="@($"{Model.Name}-end")" value="@Model.RangeEnd?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)" data-z-date-picker-end /> }
-    @if (Model.Description is not null) { <p class="z-date-picker-description">@Model.Description</p> }
+    else { <input type="hidden" name="@startName" value="@Model.RangeStart?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)" data-z-date-picker-start /><input type="hidden" name="@endName" value="@Model.RangeEnd?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)" data-z-date-picker-end /> }
+    @if (Model.Description is not null) { <div id="@descriptionId" class="z-form-message"><span>@Model.Description</span></div> }
     <section class="z-date-picker-panel" role="dialog" aria-label="Calendar" hidden data-z-date-picker-panel>
-        <header><button type="button" aria-label="Previous month" data-z-date-picker-previous>‹</button><strong data-z-date-picker-month></strong><button type="button" aria-label="Next month" data-z-date-picker-next>›</button></header>
+        <header><button type="button" aria-label="Previous month" data-z-date-picker-previous><svg viewBox="0 0 16 16" aria-hidden="true"><path d="m9.5 3.25-4.5 4.75 4.5 4.75" /></svg></button><strong data-z-date-picker-month></strong><button type="button" aria-label="Next month" data-z-date-picker-next><svg viewBox="0 0 16 16" aria-hidden="true"><path d="m6.5 3.25 4.5 4.75-4.5 4.75" /></svg></button></header>
         <div class="z-date-picker-weekdays" data-z-date-picker-weekdays></div><div class="z-date-picker-days" role="grid" data-z-date-picker-days></div>
         <footer><button type="button" data-z-date-picker-today>Today</button><button type="button" data-z-date-picker-clear>Clear</button></footer>
     </section>

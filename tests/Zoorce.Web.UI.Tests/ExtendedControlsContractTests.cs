@@ -13,6 +13,8 @@ public sealed class ExtendedControlsContractTests
     [Fact]
     public void Drawer_and_notification_center_normalize_component_owned_state()
     {
+        var triggerIcon = new HtmlString("<svg aria-hidden=\"true\"></svg>");
+        Func<ZoorceNotificationItem, IHtmlContent> itemTemplate = item => new HtmlString($"<strong>{item.Title}</strong>");
         var drawer = new ZoorceDrawerViewComponent().Invoke(new ZoorceDrawerOptions
         {
             Id = " inspector ",
@@ -25,6 +27,8 @@ public sealed class ExtendedControlsContractTests
         var notification = new ZoorceNotificationCenterViewComponent().Invoke(new ZoorceNotificationCenterOptions
         {
             Id = " alerts ",
+            TriggerIcon = triggerIcon,
+            ItemTemplate = itemTemplate,
             Items = [new ZoorceNotificationItem { Id = " release ", Title = " Release ready ", Tone = ZoorceNotificationTone.Success }]
         });
 
@@ -36,6 +40,8 @@ public sealed class ExtendedControlsContractTests
         Assert.Equal("surface elevated", drawerModel.CssClass);
         Assert.Equal("alerts", notificationModel.Id);
         Assert.Equal("release", notificationModel.Items.Single().Id);
+        Assert.Same(triggerIcon, notificationModel.TriggerIcon);
+        Assert.Same(itemTemplate, notificationModel.ItemTemplate);
         Assert.Throws<ArgumentException>(() => new ZoorceNotificationCenterOptions
         {
             Id = "alerts",

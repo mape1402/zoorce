@@ -28,6 +28,7 @@ public sealed class SampleNavigationProvider : INavigationProvider
                 new("Timelines", "/timeline", "◷", MatchMode: NavigationMatchMode.Exact),
                 new("Infinite grid", "/data-grid", "∞", MatchMode: NavigationMatchMode.Exact),
                 new("Forms", "/forms", "⌘", MatchMode: NavigationMatchMode.Exact),
+                new("Navigation", "/navigation", "↔", MatchMode: NavigationMatchMode.Exact),
                 LabItem("Patterns", "patterns", "PT"),
                 LabItem("Tokens", "tokens", "TK"),
                 LabItem("Accessibility", "accessibility", "AA")
