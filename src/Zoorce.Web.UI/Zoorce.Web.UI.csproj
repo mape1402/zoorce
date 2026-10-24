@@ -9,7 +9,6 @@
     <PackageId>Zoorce.Web.UI</PackageId>
     <Description>Reusable Razor Pages web shell and UI components for ASP.NET Core applications.</Description>
     <PackageTags>razor;razor-pages;web-ui;components;aspnetcore</PackageTags>
-    <PackageReadmeFile>README.md</PackageReadmeFile>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <WarningsAsErrors>$(WarningsAsErrors);1591</WarningsAsErrors>
   </PropertyGroup>
@@ -35,11 +34,5 @@
   <ItemGroup>
     <PackageReference Include="Markdig" Version="1.4.0" />
   </ItemGroup>
-
-  <ItemGroup>
-    <None Include="..\..\README.md" Pack="true" PackagePath="\" Link="README.md" />
-  </ItemGroup>
-
-
 
 </Project>

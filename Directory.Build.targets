@@ -1,0 +1,9 @@
+<Project>
+  <PropertyGroup Condition="'$(IsPackable)' == 'true'">
+    <PackageReadmeFile Condition="'$(PackageReadmeFile)' == ''">README.md</PackageReadmeFile>
+  </PropertyGroup>
+
+  <ItemGroup Condition="'$(IsPackable)' == 'true'">
+    <None Include="$(MSBuildThisFileDirectory)README.md" Pack="true" PackagePath="\" Link="README.md" />
+  </ItemGroup>
+</Project>

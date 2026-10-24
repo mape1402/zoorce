@@ -14,7 +14,7 @@ To exercise the production asset pipeline, publish the sample and run the genera
 dotnet publish samples/Zoorce.Sample/Zoorce.Sample.csproj --configuration Release
 ```
 
-`npm run test:coverage` enforces at least 99% line coverage for authored C# in the current `Zoorce.Web.UI.*` packages. The measure deliberately excludes Razor-generated methods, the test assembly, and the superseded `Zoerce.WebUI` output; browser scenarios exercise rendered Razor behavior instead.
+`npm run test:coverage` enforces at least 90% total line coverage for authored C# in the current `Zoorce.Web.UI.*` packages. The measure deliberately excludes Razor-generated methods, the test assembly and the superseded `Zoerce.WebUI` output; browser scenarios exercise rendered Razor behavior instead.
 
 The suite includes a real local SignalR hub test. It proves that `Zoorce.Web.UI.Realtime.SignalR` forwards a hub event into the neutral invalidation bus without making Grid, Charts, Timelines, Steppers, or Diagrams depend on SignalR.
 

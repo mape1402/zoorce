@@ -23,8 +23,10 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run css:build
-      - run: dotnet restore Zoerce.slnx
-      - run: dotnet build Zoerce.slnx --configuration Release --no-restore
+      - run: dotnet restore Zoorce.slnx
+      - run: dotnet build Zoorce.slnx --configuration Release --no-restore
       - run: npm run test:coverage
-      - run: dotnet pack src/Zoorce.Web.UI.Abstractions/Zoorce.Web.UI.Abstractions.csproj --configuration Release --no-build --output artifacts/packages
-      - run: dotnet pack src/Zoorce.Web.UI/Zoorce.Web.UI.csproj --configuration Release --no-build --output artifacts/packages
+      - run: |
+          for project in src/*/*.csproj; do
+            dotnet pack "$project" --configuration Release --no-build --output artifacts/packages
+          done

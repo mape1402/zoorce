@@ -1,25 +1,47 @@
-# Zoorce Web UI
+# ZoorceCode
 
-Zoorce is a family of reusable, server-rendered and progressively enhanced ASP.NET Core UI packages. Each control owns its markup, configuration, lifecycle, and optional data binding; the sample application only composes those packages and exercises their behavior.
+[![Build](https://img.shields.io/badge/build-local%20%2B%20CI-2ea44f?logo=githubactions&logoColor=white)](.github/workflows/ci.yml)
+[![NuGet](https://img.shields.io/nuget/v/Zoorce.Web.UI?logo=nuget&label=NuGet)](https://www.nuget.org/packages/Zoorce.Web.UI)
+[![Downloads](https://img.shields.io/nuget/dt/Zoorce.Web.UI?logo=nuget&label=downloads)](https://www.nuget.org/packages/Zoorce.Web.UI)
+[![Coverage](https://img.shields.io/badge/coverage-%E2%89%A590%25-2ea44f)](docs/testing.md)
+[![License](https://img.shields.io/badge/license-pending%20designation-lightgrey)](#license)
 
-## Package topology
+<p align="center">
+  <img src="assets/zoorce-code-logo.png" alt="ZoorceCode — Powered by Elysium" width="900" />
+</p>
 
-| Package | Responsibility |
+ZoorceCode is a modular, server-rendered and progressively enhanced UI library for ASP.NET Core Razor Pages. Every component owns its markup, lifecycle and optional data binding; the host keeps ownership of domain state, navigation and transport.
+
+## Highlights
+
+- Typed, isolated components for layout, navigation, forms, feedback, data and workflow surfaces.
+- Complete light and dark semantic palettes, customizable at runtime without a full-page rerender.
+- Accessible interaction contracts: keyboard navigation, focus management, live feedback and ARIA labels.
+- Host-controlled templates and transitions where content or validation belongs to the application.
+- A runnable sample that exercises components as an integrated product UI.
+
+## Packages
+
+| Package | Use it for |
 | --- | --- |
-| `Zoorce.Web.UI.Abstractions` | Cross-package contracts: data, invalidation, loading, navigation, and user context. |
-| `Zoorce.Web.UI.Data` | Transport-neutral data lifecycle, scoped invalidation bus, and browser data runtime. |
-| `Zoorce.Web.UI.Theming` | Runtime theme definitions and semantic token application. |
-| `Zoorce.Web.UI.Foundation` | Buttons, overlays, progress, skeletons, toasts, and wait dialog. |
-| `Zoorce.Web.UI.Layout` | Application shell, sidebar, top bar, command palette, and reusable layout regions. |
-| `Zoorce.Web.UI.Navigation` | Navigation patterns and steppers. |
-| `Zoorce.Web.UI.Forms` | Individually named form controls and their typed options. |
-| `Zoorce.Web.UI.DataGrid`, `.Charts`, `.Timelines`, `.Diagrams` | Independently refreshing data-rich components. |
-| `Zoorce.Web.UI.Realtime.SignalR` | Optional SignalR-to-invalidation adapter; no visual component depends on it. |
-| `Zoorce.Web.UI` | Convenience aggregate package for hosts that want the complete catalog. |
+| `Zoorce.Web.UI` | The aggregate package: the complete component catalog. |
+| `Zoorce.Web.UI.Abstractions` | Cross-package contracts for data, invalidation, navigation and user context. |
+| `Zoorce.Web.UI.Foundation` | Buttons, feedback, dialogs, drawers, notifications, progress and skeletons. |
+| `Zoorce.Web.UI.Layout` | Application shell, sidebar, top bar, command palette and resizable layout regions. |
+| `Zoorce.Web.UI.Navigation` | Breadcrumbs, pagination, menus, tabs, trees, steppers and wizards. |
+| `Zoorce.Web.UI.Forms` | Typed input controls, date/time pickers and selection patterns. |
+| `Zoorce.Web.UI.DataGrid`, `.Charts`, `.Timelines`, `.Diagrams` | Independent data-rich visual components. |
+| `Zoorce.Web.UI.Realtime.SignalR` | Optional SignalR-to-invalidation adapter. |
 
-`samples/Zoorce.Sample` deliberately does not belong to the package family. It is a live host used for browser-level functional verification.
+## Getting started
 
-## Host setup
+### 1. Install the aggregate package
+
+```bash
+dotnet add package Zoorce.Web.UI
+```
+
+### 2. Register Zoorce in `Program.cs`
 
 ```csharp
 builder.Services
@@ -28,36 +50,63 @@ builder.Services
     {
         shell.ApplicationName = "My product";
         shell.Themes.UsePreset(ZoorceThemePreset.Amethyst);
-        shell.Themes.Dark.Primary = "#c4b5fd";
+        shell.Themes.Light.Primary = "#087a57";
+        shell.Themes.Dark.Primary = "#20e7a0";
     });
 
-// Optional: only a host that actually receives SignalR pushes adds this adapter.
-builder.Services.AddZoorceSignalRRealtime();
+var app = builder.Build();
+
+app.MapStaticAssets();
+app.MapRazorPages().WithStaticAssets();
+app.Run();
 ```
 
-Every data-capable component accepts a `ZoorceDataBindingOptions`. `Source` is resolved by the host/browser data runtime and `InvalidationScope` causes only the owning root to refresh. REST, GraphQL, local cache, polling, server-sent events, and SignalR can all publish the same `ZoorceDataInvalidation`; components do not know which transport produced it.
+### 3. Render a component
 
-```csharp
-Binding = new ZoorceDataBindingOptions
+```cshtml
+@using Zoorce.Web.UI.Foundation.Components
+
+@await Component.InvokeAsync("ZoorceProgressButton", new ZoorceProgressButtonOptions
 {
-    Source = "/api/orders",
-    InvalidationScope = "orders",
-    Loading = new ZoorceLoadingOptions { Enabled = true }
+    Id = "publish-release",
+    Text = "Publish release",
+    Progress = 0,
+    Tone = ZoorceProgressButtonTone.Primary
+})
+```
+
+Use the component option type to own labels, variants, templates, state and behavior. For visual changes, set the semantic palette tokens once on the shell or scope CSS variables to an individual component root.
+
+```css
+#publish-release {
+  --z-progress-button-active: #0e7490;
+  --z-progress-button-complete: #059669;
 }
 ```
 
-Loading feedback is enabled by default. A data-bound control may render a skeleton on first load, retain previous content with a refresh progress treatment, or let the host disable either behavior per instance.
+## Run the sample
 
-## Theming at runtime
-
-The `IZoorceThemeService` applies a normalized `ZoorceThemeDefinition`; the browser theme module updates semantic CSS variables without re-rendering the whole page. All packages consume these variables rather than hard-coded palette values.
-
-```csharp
-themeService.Apply(currentTheme with
-{
-    Primary = "#0ea5e9",
-    Canvas = "#07111f"
-});
+```bash
+dotnet run --project samples/Zoorce.Sample --urls http://127.0.0.1:5135
 ```
 
-Read [architecture](docs/architecture.md), [components](docs/components.md), [migration](docs/migration.md), and [testing](docs/testing.md) for the complete host contract, package-level customization examples, and quality gates.
+Open `http://127.0.0.1:5135` to explore the component gallery, test light/dark themes and exercise interactive controls.
+
+## Quality and release
+
+```bash
+npm ci
+npm run css:build
+dotnet test tests/Zoorce.Web.UI.Tests/Zoorce.Web.UI.Tests.csproj --configuration Release
+for project in src/*/*.csproj; do
+  dotnet pack "$project" --configuration Release --output artifacts/packages
+done
+```
+
+The CI workflow builds the CSS, compiles the solution, enforces the coverage threshold and verifies that the aggregate packages can be packed. Tagging `v1.0.0` runs the release workflow and attaches the generated NuGet packages to the GitHub release.
+
+See [component customization](docs/components.md), [architecture](docs/architecture.md), [testing](docs/testing.md), and [the changelog](CHANGELOG.md).
+
+## License
+
+The first release requires an explicit license designation before publication. The badge intentionally remains pending until the repository owner selects and adds the license text.

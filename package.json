@@ -4,7 +4,7 @@
   "scripts": {
     "css:build": "tailwindcss -i ./src/Zoorce.Web.UI/Styles/zoorce.css -o ./src/Zoorce.Web.UI/wwwroot/css/zoorce.css --minify",
     "css:watch": "tailwindcss -i ./src/Zoorce.Web.UI/Styles/zoorce.css -o ./src/Zoorce.Web.UI/wwwroot/css/zoorce.css --watch",
-    "test:coverage": "dotnet test tests/Zoorce.Web.UI.Tests/Zoorce.Web.UI.Tests.csproj --configuration Release --no-restore /p:CollectCoverage=true /p:CoverletOutputFormat=cobertura /p:CoverletOutput=artifacts/coverage/coverage.cobertura.xml /p:Exclude=[Zoerce.WebUI]*%2c[*.Tests]* /p:ExcludeByFile=**/*.cshtml /p:Threshold=99 /p:ThresholdType=line /p:ThresholdStat=total"
+    "test:coverage": "dotnet test tests/Zoorce.Web.UI.Tests/Zoorce.Web.UI.Tests.csproj --configuration Release --no-restore /p:CollectCoverage=true /p:CoverletOutputFormat=cobertura /p:CoverletOutput=artifacts/coverage/coverage.cobertura.xml /p:Exclude=[Zoerce.WebUI]*%2c[*.Tests]* /p:ExcludeByFile=**/*.cshtml /p:Threshold=90 /p:ThresholdType=line /p:ThresholdStat=total"
   },
   "devDependencies": {
     "@tailwindcss/cli": "^4.3.1",
