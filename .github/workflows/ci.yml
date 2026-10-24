@@ -26,5 +26,5 @@ jobs:
       - run: dotnet restore Zoerce.slnx
       - run: dotnet build Zoerce.slnx --configuration Release --no-restore
       - run: npm run test:coverage
-      - run: dotnet pack src/Zoerce.WebUI.Abstractions/Zoerce.WebUI.Abstractions.csproj --configuration Release --no-build --output artifacts/packages
-      - run: dotnet pack src/Zoerce.WebUI/Zoerce.WebUI.csproj --configuration Release --no-build --output artifacts/packages
+      - run: dotnet pack src/Zoorce.Web.UI.Abstractions/Zoorce.Web.UI.Abstractions.csproj --configuration Release --no-build --output artifacts/packages
+      - run: dotnet pack src/Zoorce.Web.UI/Zoorce.Web.UI.csproj --configuration Release --no-build --output artifacts/packages

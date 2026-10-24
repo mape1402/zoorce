@@ -152,10 +152,12 @@ public sealed class ExtendedControlsContractTests
             InitialPrimaryPercent = 5,
             MinimumPrimaryPercent = 25,
             MinimumSecondaryPercent = 30,
-            PersistenceKey = " inspector-width "
+            PersistenceKey = " inspector-width ",
+            AriaLabel = " Inspector panes "
         });
         var model = Assert.IsType<ZoorceSplitPaneOptions>(Assert.IsType<ViewViewComponentResult>(result).ViewData!.Model);
         Assert.Equal("inspector", model.Id);
+        Assert.Equal("Inspector panes", model.AriaLabel);
         Assert.Equal(25, model.InitialPrimaryPercent);
         Assert.Equal("inspector-width", model.PersistenceKey);
         Assert.Throws<ArgumentException>(() => new ZoorceSplitPaneOptions
@@ -166,5 +168,13 @@ public sealed class ExtendedControlsContractTests
             MinimumPrimaryPercent = 70,
             MinimumSecondaryPercent = 40
         }.Normalize());
+
+        Assert.Equal("Resizable content panes", (new ZoorceSplitPaneOptions
+        {
+            Id = "default-label",
+            Primary = new HtmlString("primary"),
+            Secondary = new HtmlString("secondary"),
+            AriaLabel = " "
+        }).Normalize().AriaLabel);
     }
 }

@@ -8,6 +8,9 @@ public sealed record ZoorceSplitPaneOptions
     /// <summary>Gets the unique DOM identifier for the split pane.</summary>
     public required string Id { get; init; }
 
+    /// <summary>Gets the accessible label announced for the split pane.</summary>
+    public string AriaLabel { get; init; } = "Resizable content panes";
+
     /// <summary>Gets content for the first pane.</summary>
     public required IHtmlContent Primary { get; init; }
 
@@ -51,6 +54,7 @@ public sealed record ZoorceSplitPaneOptions
         return this with
         {
             Id = Id.Trim(),
+            AriaLabel = string.IsNullOrWhiteSpace(AriaLabel) ? "Resizable content panes" : AriaLabel.Trim(),
             InitialPrimaryPercent = Math.Clamp(InitialPrimaryPercent, minimumPrimary, 100 - minimumSecondary),
             MinimumPrimaryPercent = minimumPrimary,
             MinimumSecondaryPercent = minimumSecondary,

@@ -5,7 +5,7 @@
     var primary = Model.InitiallyCollapsed ? Model.MinimumPrimaryPercent : Model.InitialPrimaryPercent;
     var classes = string.Join(' ', new[] { "z-split-pane", Model.CssClass }.Where(value => !string.IsNullOrWhiteSpace(value)));
 }
-<section id="@Model.Id" class="@classes" data-z-split-pane data-z-split-orientation="@orientation" data-z-split-min-primary="@Model.MinimumPrimaryPercent.ToString(System.Globalization.CultureInfo.InvariantCulture)" data-z-split-min-secondary="@Model.MinimumSecondaryPercent.ToString(System.Globalization.CultureInfo.InvariantCulture)" data-z-split-persistence="@Model.PersistenceKey" style="--z-split-primary:@primary.ToString(System.Globalization.CultureInfo.InvariantCulture)%" aria-label="Resizable content panes">
+<section id="@Model.Id" class="@classes" data-z-split-pane data-z-split-orientation="@orientation" data-z-split-min-primary="@Model.MinimumPrimaryPercent.ToString(System.Globalization.CultureInfo.InvariantCulture)" data-z-split-min-secondary="@Model.MinimumSecondaryPercent.ToString(System.Globalization.CultureInfo.InvariantCulture)" data-z-split-persistence="@Model.PersistenceKey" style="--z-split-primary:@primary.ToString(System.Globalization.CultureInfo.InvariantCulture)%" aria-label="@Model.AriaLabel">
     <div class="z-split-pane-primary" data-z-split-primary>@Model.Primary</div>
     <div class="z-split-pane-divider" role="separator" tabindex="0" aria-orientation="@ariaOrientation" aria-valuemin="@Model.MinimumPrimaryPercent" aria-valuemax="@(100 - Model.MinimumSecondaryPercent)" aria-valuenow="@primary" data-z-split-divider>
         @if (Model.Collapsible) { <button type="button" class="z-split-pane-collapse" aria-label="Collapse or restore first pane" data-z-split-collapse>‹</button> }
