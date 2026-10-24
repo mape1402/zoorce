@@ -32,7 +32,8 @@ public sealed class ZoorceTopBarViewComponent : ViewComponent
             _shell.ApplicationName,
             profile,
             initials,
-            _shell.DefaultTheme == Theming.ZoorceThemeMode.Dark));
+            _shell.DefaultTheme == Theming.ZoorceThemeMode.Dark,
+            _shell.NotificationCenter));
     }
 }
 
@@ -42,4 +43,5 @@ public sealed record ZoorceTopBarModel(
     string ApplicationName,
     UserMenuProfile? Profile,
     string Initials,
-    bool StartsDark);
+    bool StartsDark,
+    Zoorce.Web.UI.Foundation.Components.ZoorceNotificationCenterOptions? NotificationCenter);

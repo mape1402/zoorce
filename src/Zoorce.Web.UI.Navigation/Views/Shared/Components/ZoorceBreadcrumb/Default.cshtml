@@ -1,0 +1,24 @@
+@model Zoorce.Web.UI.Navigation.Components.ZoorceBreadcrumbOptions
+@{
+    var collapse = Model.Items.Count > Model.MaxVisible;
+    var tailCount = Math.Max(1, Model.MaxVisible - 2);
+    var visibleHead = collapse ? [Model.Items[0]] : Model.Items;
+    var visibleTail = collapse ? Model.Items.Skip(Model.Items.Count - tailCount).ToArray() : [];
+    var hiddenItems = collapse ? Model.Items.Skip(1).Take(Model.Items.Count - tailCount - 1).ToArray() : [];
+}
+<nav id="@Model.Id" class="z-breadcrumb" aria-label="@Model.AriaLabel" data-z-breadcrumb>
+    <ol>
+        @foreach (var item in visibleHead)
+        {
+            <li>@if (item.Current) { <span aria-current="page">@item.Text</span> } else { <a href="@item.Href">@if (item.Icon is not null) { <i aria-hidden="true">@item.Icon</i> }@item.Text</a> }</li>
+        }
+        @if (collapse)
+        {
+            <li class="z-breadcrumb-overflow"><button type="button" aria-label="Show collapsed breadcrumb locations" aria-expanded="false" data-z-breadcrumb-toggle>…</button><ul hidden data-z-breadcrumb-menu>@foreach (var item in hiddenItems) { <li><a href="@item.Href">@item.Text</a></li> }</ul></li>
+            @foreach (var item in visibleTail)
+            {
+                <li>@if (item.Current) { <span aria-current="page">@item.Text</span> } else { <a href="@item.Href">@if (item.Icon is not null) { <i aria-hidden="true">@item.Icon</i> }@item.Text</a> }</li>
+            }
+        }
+    </ol>
+</nav>

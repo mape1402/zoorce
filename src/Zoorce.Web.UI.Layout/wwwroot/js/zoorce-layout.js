@@ -299,6 +299,7 @@
         button.addEventListener("click", () => {
             const layer = document.querySelector(button.dataset.zModalOpen ?? button.dataset.zDrawerOpen);
             if (!layer) return;
+            if (layer.matches("[data-z-component-drawer]")) return;
             restoreFocus = document.activeElement;
             layer.hidden = false;
             layer.querySelector("[data-z-modal-focus]")?.focus();

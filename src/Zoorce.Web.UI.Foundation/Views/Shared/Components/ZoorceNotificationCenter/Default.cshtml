@@ -1,0 +1,26 @@
+@model Zoorce.Web.UI.Foundation.Components.ZoorceNotificationCenterOptions
+@{
+    var unread = Model.Items.Count(item => !item.IsRead);
+    var panelId = $"{Model.Id}-panel";
+}
+<section id="@Model.Id" class="z-notification-center" data-z-notification-center>
+    <button id="@($"{Model.Id}-trigger")" class="z-icon-button z-notification-trigger" type="button" data-z-notification-trigger aria-label="@Model.Label" aria-controls="@panelId" aria-expanded="false"><span aria-hidden="true">◔</span>@if (unread > 0) { <b data-z-notification-count>@unread</b> }</button>
+    <section id="@panelId" class="z-notification-panel" role="dialog" aria-modal="false" aria-label="@Model.Label" aria-labelledby="@($"{Model.Id}-panel-title")" hidden data-z-notification-panel>
+        <header><div><span class="z-section-kicker">Inbox</span><h2 id="@($"{Model.Id}-panel-title")">@Model.Label</h2></div>@if (unread > 0) { <button class="z-button z-button-ghost" type="button" data-z-notification-read-all>Mark all read</button> }</header>
+        @if (Model.ShowUnreadFilter) { <div class="z-notification-filters" role="group" aria-label="Notification filter"><button class="is-active" type="button" data-z-notification-filter="all" aria-pressed="true">All</button><button type="button" data-z-notification-filter="unread" aria-pressed="false">Unread</button></div> }
+        <div class="z-notification-list" data-z-notification-list>
+            @foreach (var item in Model.Items)
+            {
+                <article class="z-notification-item tone-@item.Tone.ToString().ToLowerInvariant() @(item.IsRead ? "is-read" : "is-unread")" data-z-notification-item data-z-notification-id="@item.Id" data-z-notification-read="@item.IsRead.ToString().ToLowerInvariant()">
+                    <span class="z-notification-icon" aria-hidden="true">@(item.Icon ?? "•")</span><div><strong>@item.Title</strong>@if (item.Description is not null) { <p>@item.Description</p> }<time datetime="@item.Timestamp.ToString("O")">@item.Timestamp.LocalDateTime.ToString("MMM d · HH:mm")</time></div>
+                    @if (item.ActionText is not null)
+                    {
+                        if (item.ActionHref is not null) { <a href="@item.ActionHref" data-z-notification-action>@item.ActionText</a> }
+                        else { <button type="button" data-z-notification-action>@item.ActionText</button> }
+                    }
+                </article>
+            }
+        </div>
+        <p class="z-notification-empty" data-z-notification-empty @(Model.Items.Count == 0 ? null : "hidden")>@Model.EmptyText</p>
+    </section>
+</section>

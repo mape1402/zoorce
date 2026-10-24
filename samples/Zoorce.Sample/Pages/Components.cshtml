@@ -2,6 +2,8 @@
 @using Zoorce.Web.UI.Abstractions.Data
 @using Zoorce.Web.UI.Charts
 @using Zoorce.Web.UI.DataGrid
+@using Microsoft.AspNetCore.Html
+@using Zoorce.Web.UI.Layout
 @{
     ViewData["Title"] = "Component lab";
     var starterRows = new IReadOnlyDictionary<string, string?>[]
@@ -115,6 +117,21 @@ This component is rendered **server-side** with advanced Markdown syntax, while 
     <section class="z-component-lab-section" aria-labelledby="markdown-title">
         <div class="z-component-lab-heading"><div><span class="z-section-kicker">Safe Markdown</span><h2 id="markdown-title">Portable documentation content</h2></div><p>The renderer can be injected into any Razor Pages product without inheriting KnOwl’s domain rules.</p></div>
         <zoorce-markdown markdown="@markdown" css-class="z-panel"></zoorce-markdown>
+    </section>
+
+    <section class="z-component-lab-section" aria-labelledby="split-pane-title">
+        <div class="z-component-lab-heading"><div><span class="z-section-kicker">Layout · local resize state</span><h2 id="split-pane-title">Split pane with keyboard resizing</h2></div><p>Each pane keeps its own content and scroll area. The divider supports pointer, touch and arrow-key adjustment, with an optional persisted width.</p></div>
+        @await Component.InvokeAsync("ZoorceSplitPane", new ZoorceSplitPaneOptions
+        {
+            Id = "component-split-pane",
+            InitialPrimaryPercent = 34,
+            MinimumPrimaryPercent = 22,
+            MinimumSecondaryPercent = 28,
+            Collapsible = true,
+            PersistenceKey = "zoorce-sample-component-split-pane",
+            Primary = new HtmlString("<h3 class=\"z-card-title\">Explorer</h3><p class=\"z-card-caption\">A fixed-size region for navigation, filters or a tree.</p><ul><li>Release queue</li><li>Review notes</li><li>Audit history</li></ul>"),
+            Secondary = new HtmlString("<h3 class=\"z-card-title\">Details</h3><p class=\"z-card-caption\">The adjacent panel can hold a data grid, inspector, editor or any host-defined content.</p><p>This example keeps the overall surface stable while only its internal allocation changes.</p>")
+        })
     </section>
 </section>
 

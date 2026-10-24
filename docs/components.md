@@ -2,7 +2,11 @@
 
 ## Foundation and layout
 
-`Zoorce.Web.UI.Foundation` contains reusable progress bars (linear and circular), skeletons, wait dialog/spinner, confirmation dialog, generic dialog, toast region, buttons, progress buttons, floating actions, speed dial, dropdown menus, avatars, badges, cards, message surfaces, and chips. `Zoorce.Web.UI.Layout` composes those primitives into a semantic application shell; sidebar navigation, top bar, user menu, command palette, and layout regions remain separately reusable components.
+`Zoorce.Web.UI.Foundation` contains reusable progress bars (linear and circular), skeletons, wait dialog/spinner, confirmation dialog, generic dialog, toast region, buttons, progress buttons, floating actions, speed dial, dropdown menus, avatars, badges, cards, message surfaces, chips, drawers, and notification centers. `Zoorce.Web.UI.Layout` composes those primitives into a semantic application shell; sidebar navigation, top bar, user menu, command palette, layout regions, and resizable split panes remain separately reusable components.
+
+`ZoorceDrawer` is a focus-managed modal surface with typed placement (`Start`, `End`, `Top`, `Bottom`), standard size tokens and an optional fixed CSS size. It keeps body and footer host-defined. `ZoorceNotificationCenter` owns its unread count, all/unread filter, item read state, close-on-outside-click behavior, and bubbling notification events; hosts pass typed notification items instead of duplicating popover markup.
+
+`ZoorceSplitPane` renders two host-defined regions separated by a pointer-, touch-, and keyboard-resizable divider. `InitialPrimaryPercent`, both pane minimums, orientation, collapse behavior and an optional persistence key are configured per instance. Its outer container is stable; only the allocation inside it changes.
 
 The shell receives `ZoorceShellOptions` from the host. `ZoorceThemeCatalogOptions` supplies the initial palette while `IZoorceThemeService` supports a runtime replacement. Do not copy layout markup into a sample or host page—use `ZoorceLayout` and customize providers/options instead.
 
@@ -74,7 +78,9 @@ Each form field has a dedicated View Component and typed options contract. Examp
 })
 ```
 
-The current catalog includes text, textarea, password, hidden, masked, numeric up/down, quantity stepper, currency, percentage, date/time/range/duration, sliders, checkbox, toggle, single/multi-select, searchable multi-select dropdown, select, combobox, autocomplete, multi-column combobox, listbox, dropdown tree, mention editor, radio/checkbox/chip groups, segmented control, transfer list, rating, tags, color, icon, emoji, phone, address, OTP, key/value, file upload, image gallery, and single-image avatar picker.
+The current catalog includes text, textarea, password, hidden, masked, numeric up/down, quantity stepper, currency, percentage, native date/time/range/duration, calendar date picker, sliders, checkbox, toggle, single/multi-select, searchable multi-select dropdown, select, combobox, autocomplete, multi-column combobox, listbox, dropdown tree, mention editor, radio/checkbox/chip groups, segmented control, transfer list, rating, tags, color, icon, emoji, phone, address, OTP, key/value, file upload, image gallery, and single-image avatar picker.
+
+`ZoorceDatePicker` is the calendar alternative to native date input. It supports one date or a range, locale-aware visible formatting, min/max constraints, excluded dates, a configurable first weekday, pointer and keyboard grid navigation, and ordinary hidden ISO form fields. In range mode it submits `Name-start` and `Name-end`.
 
 Named options expose the common label/value/state contract plus only relevant settings. File/image controls support accepted formats, one or many files, size/count limits, deferred/manual/automatic same-origin upload, persisted assets, and progress events. Avatar is intentionally a single image: its visual target opens selection, Edit replaces the image, and Remove clears it.
 
@@ -86,7 +92,7 @@ Form enhancement is progressive. Every field keeps an ordinary named HTML input 
 
 ## Navigation controls
 
-`Zoorce.Web.UI.Navigation` also provides accordion, tab set, tree view, menu bar, context menu, and toolbar components. They use their own roots for roving focus, expansion and selection state, and emit bubbling `zoorce:navigation:*` events. Context menus attach to a host selector and position themselves only while open; all other controls preserve ordinary server-rendered content when JavaScript is unavailable.
+`Zoorce.Web.UI.Navigation` also provides accordion, tab set, tree view, menu bar, context menu, toolbar, breadcrumbs, and pagination components. They use their own roots for roving focus, expansion and selection state, and emit bubbling `zoorce:navigation:*` events. `ZoorceBreadcrumb` uses semantic navigation and collapses middle locations into an accessible local menu. `ZoorcePagination` supports previous/next and numbered pages, optional page-size and direct-jump inputs, and emits `zoorce:pagination:change`; use `IsControlled` when the host owns page state. Context menus attach to a host selector and position themselves only while open; all other controls preserve ordinary server-rendered content when JavaScript is unavailable.
 
 ## Wizard
 

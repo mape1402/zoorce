@@ -1,4 +1,5 @@
 using Zoorce.Web.UI.Theming;
+using Zoorce.Web.UI.Foundation.Components;
 
 namespace Zoorce.Web.UI.Layout;
 
@@ -42,6 +43,11 @@ public sealed class ZoorceShellOptions
     /// Gets or sets the vertical density used by the sidebar navigation.
     /// </summary>
     public ZoorceNavigationDensity NavigationDensity { get; set; } = ZoorceNavigationDensity.Compact;
+
+    /// <summary>
+    /// Gets or sets the optional notification center rendered in the application top bar.
+    /// </summary>
+    public ZoorceNotificationCenterOptions? NotificationCenter { get; set; }
 
     /// <summary>Gets the central palette catalog consumed by every Zoorce package.</summary>
     public ZoorceThemeCatalogOptions Themes { get; } = new();

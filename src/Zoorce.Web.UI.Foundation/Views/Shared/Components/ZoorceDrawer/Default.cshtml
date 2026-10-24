@@ -1,0 +1,22 @@
+@model Zoorce.Web.UI.Foundation.Components.ZoorceDrawerOptions
+@{
+    var titleId = $"{Model.Id}-title";
+    var descriptionId = Model.Description is null ? null : $"{Model.Id}-description";
+    var position = Model.Position.ToString().ToLowerInvariant();
+    var size = Model.Size.ToString().ToLowerInvariant();
+    var classes = $"z-component-drawer z-component-drawer--{position} z-component-drawer--{size} {Model.CssClass}".Trim();
+    var style = Model.FixedSize is null ? null : $"--z-drawer-fixed-size: {Model.FixedSize};";
+}
+<div id="@Model.Id" class="z-drawer-layer z-component-drawer-layer" data-z-component-drawer data-z-drawer-backdrop="@Model.CloseOnBackdrop.ToString().ToLowerInvariant()" hidden>
+    <aside class="@classes" style="@style" role="dialog" aria-modal="true" aria-labelledby="@titleId" aria-describedby="@descriptionId" tabindex="-1" data-z-drawer-focus>
+        <header class="z-component-drawer-header">
+            <div>
+                <h2 id="@titleId">@Model.Title</h2>
+                @if (Model.Description is not null) { <p id="@descriptionId">@Model.Description</p> }
+            </div>
+            @if (Model.ShowCloseButton) { <button class="z-icon-button" type="button" data-z-drawer-close aria-label="Close @Model.Title">×</button> }
+        </header>
+        @if (Model.Body is not null) { <div class="z-component-drawer-body">@Model.Body</div> }
+        @if (Model.Footer is not null) { <footer class="z-component-drawer-footer">@Model.Footer</footer> }
+    </aside>
+</div>

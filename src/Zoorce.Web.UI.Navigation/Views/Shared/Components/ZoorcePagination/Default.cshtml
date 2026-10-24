@@ -1,0 +1,17 @@
+@model Zoorce.Web.UI.Navigation.Components.ZoorcePaginationOptions
+@{
+    var half = Model.WindowSize / 2;
+    var first = Math.Max(1, Math.Min(Model.CurrentPage - half, Model.TotalPages - Model.WindowSize + 1));
+    var last = Math.Min(Model.TotalPages, first + Model.WindowSize - 1);
+}
+<nav id="@Model.Id" class="z-pagination" aria-label="@Model.AriaLabel" data-z-pagination data-z-current-page="@Model.CurrentPage" data-z-total-pages="@Model.TotalPages" data-z-window-size="@Model.WindowSize" data-z-controlled="@Model.IsControlled.ToString().ToLowerInvariant()">
+    <button type="button" class="z-pagination-control" data-z-pagination-page="@(Model.CurrentPage - 1)" disabled="@(Model.CurrentPage == 1)" aria-label="Previous page">‹</button>
+    <div class="z-pagination-pages" data-z-pagination-pages>
+        @if (first > 1) { <button type="button" data-z-pagination-page="1">1</button> @if (first > 2) { <span aria-hidden="true">…</span> } }
+        @for (var page = first; page <= last; page++) { <button type="button" data-z-pagination-page="@(page)" aria-current="@(page == Model.CurrentPage ? "page" : null)">@(page)</button> }
+        @if (last < Model.TotalPages) { @if (last < Model.TotalPages - 1) { <span aria-hidden="true">…</span> } <button type="button" data-z-pagination-page="@Model.TotalPages">@Model.TotalPages</button> }
+    </div>
+    <button type="button" class="z-pagination-control" data-z-pagination-page="@(Model.CurrentPage + 1)" disabled="@(Model.CurrentPage == Model.TotalPages)" aria-label="Next page">›</button>
+    @if (Model.ShowJumpToPage) { <label class="z-pagination-jump">Go to <input type="number" min="1" max="@Model.TotalPages" value="@Model.CurrentPage" inputmode="numeric" data-z-pagination-jump /></label> }
+    @if (Model.ShowPageSize) { <label class="z-pagination-size">Rows <select data-z-pagination-page-size>@foreach (var size in Model.PageSizes) { <option value="@size" selected="@(size == Model.PageSize)">@size</option> }</select></label> }
+</nav>

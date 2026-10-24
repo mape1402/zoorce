@@ -68,6 +68,14 @@
     </div>
 </section>
 
+<section class="z-section" aria-labelledby="navigation-extended-title">
+    <div class="z-form-catalog-heading"><div><span class="z-section-kicker">Wayfinding and collections</span><h2 id="navigation-extended-title">Keep a large workspace oriented.</h2></div><p>Breadcrumbs collapse their middle locations without dropping hierarchy; pagination emits one small state-change event for the host.</p></div>
+    <div class="z-card" style="display:grid;gap:20px">
+        @await Component.InvokeAsync("ZoorceBreadcrumb", new ZoorceBreadcrumbOptions { Id = "navigation-breadcrumb", MaxVisible = 3, Items = [new ZoorceBreadcrumbItem { Text = "Workspace", Href = "#workspace", Icon = "⌂" }, new ZoorceBreadcrumbItem { Text = "Delivery", Href = "#delivery" }, new ZoorceBreadcrumbItem { Text = "Releases", Href = "#release-queue" }, new ZoorceBreadcrumbItem { Text = "Autumn release", Current = true }] })
+        @await Component.InvokeAsync("ZoorcePagination", new ZoorcePaginationOptions { Id = "navigation-pagination", CurrentPage = 4, TotalPages = 24, PageSize = 25, ShowJumpToPage = true })
+    </div>
+</section>
+
 @foreach (var destination in destinations)
 {
     <section class="z-section" id="@destination.Item1">

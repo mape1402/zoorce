@@ -10,6 +10,7 @@ using Zoorce.Web.UI.Navigation.Stepper;
 using Zoorce.Web.UI.Navigation.Wizard;
 using Zoorce.Web.UI.Timelines;
 using Zoorce.Web.UI.Diagrams;
+using Zoorce.Web.UI.Foundation.Components;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.Extensions.FileProviders;
@@ -27,6 +28,17 @@ builder.Services.AddRazorPages().AddZoorceWebUI(options =>
     options.SidebarCollapsedByDefault = false;
     options.PersistSidebarState = true;
     options.NavigationDensity = ZoorceNavigationDensity.Compact;
+    options.NotificationCenter = new ZoorceNotificationCenterOptions
+    {
+        Id = "shell-notifications",
+        Label = "Notifications",
+        Items =
+        [
+            new ZoorceNotificationItem { Id = "approval", Title = "Approval completed", Description = "Design approved the release proposal.", Timestamp = DateTimeOffset.UtcNow.AddMinutes(-12), Tone = ZoorceNotificationTone.Success, ActionText = "Review" },
+            new ZoorceNotificationItem { Id = "capacity", Title = "Capacity threshold reached", Description = "One production pool needs an owner.", Timestamp = DateTimeOffset.UtcNow.AddHours(-1), Tone = ZoorceNotificationTone.Warning, ActionText = "Inspect" },
+            new ZoorceNotificationItem { Id = "digest", Title = "Daily digest is ready", Description = "A summary of workspace activity is available.", Timestamp = DateTimeOffset.UtcNow.AddDays(-1), IsRead = true }
+        ]
+    };
 });
 builder.Services.AddScoped<INavigationProvider, SampleNavigationProvider>();
 builder.Services.AddScoped<IUserMenuProvider, SampleUserMenuProvider>();

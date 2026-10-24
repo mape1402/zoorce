@@ -16,6 +16,10 @@
         <button class="z-theme-toggle" type="button" data-z-theme-toggle aria-label="Switch color mode" aria-pressed="@Model.StartsDark.ToString().ToLowerInvariant()">
             <span class="z-theme-icon" aria-hidden="true">☼</span><span data-z-theme-label>Light</span>
         </button>
+        @if (Model.NotificationCenter is not null)
+        {
+            @await Component.InvokeAsync("ZoorceNotificationCenter", Model.NotificationCenter)
+        }
         @if (Model.Profile is not null)
         {
             <details class="z-user-menu" data-z-user-menu>
