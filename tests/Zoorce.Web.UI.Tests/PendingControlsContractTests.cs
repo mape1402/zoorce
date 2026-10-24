@@ -72,7 +72,8 @@ public sealed class PendingControlsContractTests
             HeaderMode = ZoorceDialogHeaderMode.None,
             BodyPadding = ZoorceDialogBodyPadding.Compact,
             CssClass = " dialog  contained ",
-            Size = " unsupported "
+            Size = " unsupported ",
+            FixedHeight = " 480px "
         });
         var dropdown = new ZoorceDropdownMenuViewComponent().Invoke(new ZoorceDropdownMenuOptions { Id = " menu ", Text = " More " });
         var fab = new ZoorceFloatingActionButtonViewComponent().Invoke(new ZoorceFloatingActionButtonOptions { Id = " add ", Label = " Add ", Icon = " + " });
@@ -89,6 +90,7 @@ public sealed class PendingControlsContractTests
         Assert.Equal(ZoorceDialogHeaderMode.None, dialogModel.HeaderMode);
         Assert.Equal(ZoorceDialogBodyPadding.Compact, dialogModel.BodyPadding);
         Assert.Equal("dialog contained", dialogModel.CssClass);
+        Assert.Equal("480px", dialogModel.FixedHeight);
         Assert.IsType<ViewViewComponentResult>(dropdown);
         Assert.Equal("+", Assert.IsType<ZoorceFloatingActionButtonOptions>(Assert.IsType<ViewViewComponentResult>(fab).ViewData!.Model).Icon);
         Assert.Equal("success", Assert.IsType<ZoorceMessageOptions>(Assert.IsType<ViewViewComponentResult>(message).ViewData!.Model).Tone);

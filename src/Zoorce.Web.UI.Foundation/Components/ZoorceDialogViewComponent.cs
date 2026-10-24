@@ -24,7 +24,8 @@ public sealed class ZoorceDialogViewComponent : ViewComponent
             CssClass = NormalizeCssClasses(options.CssClass),
             BodyCssClass = NormalizeCssClasses(options.BodyCssClass),
             FooterCssClass = NormalizeCssClasses(options.FooterCssClass),
-            Size = size
+            Size = size,
+            FixedHeight = TrimOrNull(options.FixedHeight)
         });
     }
 

@@ -47,6 +47,9 @@ public sealed record ZoorceDialogOptions
     /// <summary>Gets the maximum dialog width token: compact, default, wide, or full.</summary>
     public string Size { get; init; } = "default";
 
+    /// <summary>Gets the optional fixed surface height. The body becomes scrollable when its content exceeds this height.</summary>
+    public string? FixedHeight { get; init; }
+
     /// <summary>Gets whether clicking the backdrop closes the dialog.</summary>
     public bool CloseOnBackdrop { get; init; } = true;
 }

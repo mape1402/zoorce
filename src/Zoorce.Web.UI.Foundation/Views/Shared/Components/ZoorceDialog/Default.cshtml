@@ -4,12 +4,13 @@
     var titleId = $"{Model.Id}-title";
     var hasVisualHeader = Model.HeaderMode != ZoorceDialogHeaderMode.None;
     var usesCustomHeader = Model.Header is not null;
-    var dialogClasses = $"z-component-dialog z-component-dialog-{Model.Size} z-component-dialog--header-{Model.HeaderMode.ToString().ToLowerInvariant()} {Model.CssClass}".Trim();
+    var dialogClasses = $"z-component-dialog z-component-dialog-{Model.Size} z-component-dialog--header-{Model.HeaderMode.ToString().ToLowerInvariant()}{(Model.FixedHeight is null ? string.Empty : " z-component-dialog--fixed-height")} {Model.CssClass}".Trim();
     var bodyClasses = $"z-component-dialog-body z-component-dialog-body--{Model.BodyPadding.ToString().ToLowerInvariant()} {Model.BodyCssClass}".Trim();
     var footerClasses = $"z-component-dialog-footer {Model.FooterCssClass}".Trim();
+    var inlineStyle = Model.FixedHeight is null ? null : $"--z-component-dialog-fixed-height: {Model.FixedHeight};";
 }
 <div id="@Model.Id" class="z-dialog-layer z-component-dialog-layer" data-z-component-dialog data-z-dialog-backdrop="@Model.CloseOnBackdrop.ToString().ToLowerInvariant()" hidden>
-    <section class="@dialogClasses" role="dialog" aria-modal="true" aria-labelledby="@titleId" tabindex="-1" data-z-dialog-focus>
+    <section class="@dialogClasses" style="@inlineStyle" role="dialog" aria-modal="true" aria-labelledby="@titleId" tabindex="-1" data-z-dialog-focus>
         @if (!hasVisualHeader || usesCustomHeader)
         {
             <h2 id="@titleId" class="z-visually-hidden">@Model.Title</h2>
