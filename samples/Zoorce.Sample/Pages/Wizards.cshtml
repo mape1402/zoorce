@@ -1,0 +1,140 @@
+@page "/wizards"
+@using Zoorce.Web.UI.Navigation.Stepper
+@using Zoorce.Web.UI.Navigation.Wizard
+@{
+    ViewData["Title"] = "Workflow wizards";
+
+    var onboardingWizard = new ZoorceWizardOptions
+    {
+        Id = "workspace-onboarding-wizard",
+        AriaLabel = "Workspace onboarding",
+        Layout = ZoorceWizardLayout.Sidebar,
+        ExecutionMode = ZoorceWizardExecutionMode.Manual,
+        ShowSaveDraft = true,
+        FinishLabel = "Create workspace",
+        Steps =
+        [
+            new("identity", "Workspace identity", "Name the shared workspace", "1", ZoorceStepperState.Active, FormId: "workspace-identity-form"),
+            new("members", "Invite members", "Add the first collaborators", "+", FormId: "workspace-members-form", ShowSaveDraft: true),
+            new("guardrails", "Set guardrails", "Choose optional defaults", "◇", IsOptional: true, FormId: "workspace-guardrails-form"),
+            new("launch", "Ready to launch", "Review before creating", "✓", FormId: "workspace-launch-form", FinishLabel: "Create workspace")
+        ]
+    };
+
+    var releaseWizard = new ZoorceWizardOptions
+    {
+        Id = "release-gate-wizard",
+        AriaLabel = "Release gate",
+        Layout = ZoorceWizardLayout.Top,
+        ExecutionMode = ZoorceWizardExecutionMode.HostManaged,
+        TransitionUrl = "/api/wizards/release-transition",
+        ShowCancel = true,
+        ShowSaveDraft = true,
+        FinishLabel = "Release now",
+        TransitionRules = new ZoorceStepperTransitionRules
+        {
+            Forward = ZoorceStepperForwardRule.AdjacentOnly,
+            Backward = ZoorceStepperBackwardRule.CompletedOnly,
+            Warning = ZoorceStepperWarningRule.RequireAuthorization,
+            Error = ZoorceStepperErrorRule.Block,
+            OnBackward = ZoorceStepperBackwardEffect.Preserve
+        },
+        Steps =
+        [
+            new("scope", "Scope", "Name the release and its intended outcome", "1", ZoorceStepperState.Active, FormId: "release-scope-form"),
+            new("readiness", "Readiness", "The release owner records approval", "2", FormId: "release-readiness-form", ShowSaveDraft: true),
+            new("confirm", "Confirm", "Authorize the production handoff", "3", FormId: "release-confirm-form", FinishLabel: "Release now")
+        ]
+    };
+}
+
+<section class="z-stepper-gallery-page">
+    <div class="z-stepper-gallery-intro">
+        <div>
+            <span class="z-section-kicker">Guided, content-bearing workflows</span>
+            <h1>Progress, content and decisions stay in one deliberate surface.</h1>
+            <p>A wizard owns its step rail, active Razor panel and persistent actions. Choose who approves each action: the page itself or a same-origin host endpoint.</p>
+        </div>
+    </div>
+
+    <article class="z-stepper-example z-stepper-example--wide z-stepper-example--wizard">
+        <header><span>Sidebar · manual mode</span><h2>Workspace onboarding</h2><p>The page receives requests, performs its own validation, and explicitly commits each allowed transition.</p></header>
+        <zoorce-wizard options="onboardingWizard">
+            <zoorce-wizard-panel step-id="identity">
+                <form id="workspace-identity-form" class="z-form-grid" novalidate>
+                    <label class="z-form-field"><span>Workspace name</span><input name="workspaceName" required placeholder="Northstar" /><small>Use the name colleagues will recognize.</small></label>
+                    <label class="z-form-field"><span>Primary region</span><select name="region" required><option value="">Choose a region</option><option>Mexico City</option><option>US East</option><option>Europe West</option></select></label>
+                </form>
+            </zoorce-wizard-panel>
+            <zoorce-wizard-panel step-id="members">
+                <form id="workspace-members-form" class="z-form-grid" novalidate>
+                    <label class="z-form-field"><span>First collaborator</span><input name="memberEmail" type="email" required placeholder="name@company.com" /><small>They will receive an invitation after creation.</small></label>
+                    <label class="z-form-field"><span>Role</span><select name="role"><option>Admin</option><option>Editor</option><option>Viewer</option></select></label>
+                </form>
+            </zoorce-wizard-panel>
+            <zoorce-wizard-panel step-id="guardrails">
+                <form id="workspace-guardrails-form" class="z-form-grid" novalidate>
+                    <label class="z-form-field"><span>Review cadence</span><select name="reviewCadence"><option>Monthly</option><option>Quarterly</option><option>Only when needed</option></select></label>
+                    <label class="z-form-field"><span>Retention note</span><textarea name="retention" rows="4" placeholder="Keep this intentionally lightweight."></textarea></label>
+                </form>
+            </zoorce-wizard-panel>
+            <zoorce-wizard-panel step-id="launch">
+                <form id="workspace-launch-form" class="z-form-grid" novalidate>
+                    <label class="z-form-field"><span>Launch note</span><textarea name="launchNote" rows="4" placeholder="Share a concise welcome message."></textarea></label>
+                    <label class="z-form-field z-field-span-2"><span>Ready?</span><span class="z-form-check"><input type="checkbox" name="ready" required /> I have reviewed the setup with the workspace owner.</span></label>
+                </form>
+            </zoorce-wizard-panel>
+        </zoorce-wizard>
+    </article>
+
+    <article class="z-stepper-example z-stepper-example--wide z-stepper-example--wizard">
+        <header><span>Top · host-managed mode</span><h2>Release gate</h2><p>Each action is posted to the host. The endpoint authorizes progress, returns a snapshot and associates validation errors with the active panel.</p></header>
+        <zoorce-wizard options="releaseWizard">
+            <zoorce-wizard-panel step-id="scope">
+                <form id="release-scope-form" class="z-form-grid" novalidate>
+                    <label class="z-form-field z-field-span-2"><span>Release name</span><input id="releaseName" name="releaseName" placeholder="2026.10 checkout refinements" /><small>Try Next without a name to see an endpoint field error.</small></label>
+                    <label class="z-form-field"><span>Delivery area</span><select name="deliveryArea"><option>Checkout</option><option>Identity</option><option>Operations</option></select></label>
+                    <label class="z-form-field"><span>Risk</span><select name="risk"><option>Low</option><option>Moderate</option><option>High</option></select></label>
+                </form>
+            </zoorce-wizard-panel>
+            <zoorce-wizard-panel step-id="readiness">
+                <form id="release-readiness-form" class="z-form-grid" novalidate>
+                    <label class="z-form-field z-field-span-2"><span>Release-owner approval</span><select id="approval" name="approval" required><option value="">Choose a decision</option><option value="approved">Approved for production</option><option value="blocked">Blocked pending review</option></select><small>The sample endpoint requires Approved for production.</small></label>
+                    <label class="z-form-field"><span>Owner</span><input name="owner" placeholder="M. Perez" /></label>
+                    <label class="z-form-field"><span>Rollout window</span><input name="window" placeholder="Friday · 18:00 CST" /></label>
+                </form>
+            </zoorce-wizard-panel>
+            <zoorce-wizard-panel step-id="confirm">
+                <form id="release-confirm-form" class="z-form-grid" novalidate>
+                    <label class="z-form-field z-field-span-2"><span>Production handoff</span><span class="z-form-check"><input type="checkbox" name="handoff" required /> Monitoring and rollback ownership are confirmed.</span></label>
+                </form>
+            </zoorce-wizard-panel>
+        </zoorce-wizard>
+    </article>
+</section>
+
+@section Scripts {
+    <script>
+        (() => {
+            const wizard = document.getElementById("workspace-onboarding-wizard");
+            wizard?.addEventListener("zoorce:wizard:request-change", event => {
+                const controller = window.ZoorceWizards?.get(event.detail.wizardId);
+                const form = document.getElementById(wizard.querySelector(".z-wizard-step.is-current")?.dataset.zStepFormId ?? "");
+                if (form?.reportValidity && !form.reportValidity()) return;
+                controller?.commit(event.detail.targetStepId, event.detail.action);
+            });
+            wizard?.addEventListener("zoorce:wizard:request-save", () => window.Zoorce?.success("Draft saved", "The sample page handled this manual save request."));
+            wizard?.addEventListener("zoorce:wizard:request-cancel", () => window.Zoorce?.info("Cancellation requested", "The host can now confirm navigation or retain the current draft."));
+            wizard?.addEventListener("zoorce:wizard:request-finish", () => {
+                const form = document.getElementById("workspace-launch-form");
+                if (form?.reportValidity && !form.reportValidity()) return;
+                window.ZoorceWizards?.get("workspace-onboarding-wizard")?.complete("Workspace setup is complete.");
+                window.Zoorce?.success("Workspace created", "The manual wizard completed after host validation.");
+            });
+
+            document.getElementById("release-gate-wizard")?.addEventListener("zoorce:wizard:finish", () => {
+                window.Zoorce?.success("Release authorized", "The host-managed wizard completed its final transition.");
+            });
+        })();
+    </script>
+}

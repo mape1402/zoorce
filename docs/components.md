@@ -87,3 +87,39 @@ Form enhancement is progressive. Every field keeps an ordinary named HTML input 
 ## Navigation controls
 
 `Zoorce.Web.UI.Navigation` also provides accordion, tab set, tree view, menu bar, context menu, and toolbar components. They use their own roots for roving focus, expansion and selection state, and emit bubbling `zoorce:navigation:*` events. Context menus attach to a host selector and position themselves only while open; all other controls preserve ordinary server-rendered content when JavaScript is unavailable.
+
+## Wizard
+
+`zoorce-wizard` is a content-bearing workflow control. It owns the progress rail, exactly one active Razor panel, field-error region, and persistent action footer. Use `ZoorceWizardLayout.Sidebar` for a left rail beside content or `ZoorceWizardLayout.Top` for a horizontal rail above content. Every configured `ZoorceWizardStep` requires one nested `zoorce-wizard-panel` with the matching `step-id`.
+
+```cshtml
+@using Zoorce.Web.UI.Navigation.Stepper
+@using Zoorce.Web.UI.Navigation.Wizard
+@{
+    var wizard = new ZoorceWizardOptions
+    {
+        Id = "workspace-setup",
+        Layout = ZoorceWizardLayout.Sidebar,
+        ExecutionMode = ZoorceWizardExecutionMode.Manual,
+        ShowSaveDraft = true,
+        Steps =
+        [
+            new("identity", "Workspace identity", FormId: "identity-form", State: ZoorceStepperState.Active),
+            new("members", "Invite members", FormId: "members-form"),
+            new("review", "Review", FormId: "review-form", FinishLabel: "Create workspace")
+        ]
+    };
+}
+
+<zoorce-wizard options="wizard">
+    <zoorce-wizard-panel step-id="identity"><form id="identity-form">...</form></zoorce-wizard-panel>
+    <zoorce-wizard-panel step-id="members"><form id="members-form">...</form></zoorce-wizard-panel>
+    <zoorce-wizard-panel step-id="review"><form id="review-form">...</form></zoorce-wizard-panel>
+</zoorce-wizard>
+```
+
+In `Manual` mode the component emits `zoorce:wizard:request-change`, `zoorce:wizard:request-save`, `zoorce:wizard:request-cancel`, and `zoorce:wizard:request-finish`. The host owns validation and calls `ZoorceWizards.get(id).commit(stepId, action)` or `.complete(message)` only after approval. In `HostManaged` mode, set `TransitionUrl`; the browser posts `ZoorceWizardTransitionRequest` to that same-origin endpoint and applies the returned `ZoorceWizardTransitionDecision`. A rejected decision can return `FieldErrors` keyed by input name or id.
+
+The wizard and stepper use the same navigation rules (`ZoorceStepperTransitionRules`) and semantic step states/tones. This keeps forward/backward, warning, error, and authorization behavior aligned while the wizard provides the form panels and footer actions that a standalone stepper intentionally does not own.
+
+Native `input`, `select`, and `textarea` elements placed directly inside a `z-form-field` in a wizard panel receive the wizard's token-driven control surface, including hover, focus, validation, and light/dark-theme contrast. Existing Zoorce form components retain their own styles.

@@ -1,6 +1,7 @@
 (() => {
     "use strict";
 
+    const workflow = window.ZoorceWorkflow;
     const controllers = new WeakMap();
     const states = ["Pending", "Active", "Completed", "Attention", "Error", "Disabled"];
     const tones = ["Auto", "Neutral", "Primary", "Success", "Warning", "Danger", "Info"];
@@ -86,6 +87,18 @@
         }
 
         canChange(targetIndex, reason) {
+            if (workflow) {
+                return workflow.evaluateTransition({
+                    items: this.items().map(item => ({ state: this.itemState(item), navigable: item.dataset.zStepNavigable === "true" })),
+                    currentIndex: this.currentIndex(),
+                    targetIndex,
+                    reason,
+                    interaction: this.configuration.interaction,
+                    allowCompletedNavigation: this.configuration.allowCompletedNavigation,
+                    allowFutureNavigation: this.configuration.allowFutureNavigation,
+                    transitionRules: this.rules()
+                });
+            }
             const items = this.items();
             const currentIndex = this.currentIndex();
             const target = items[targetIndex];

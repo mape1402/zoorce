@@ -4,6 +4,7 @@ using Zoorce.Web.UI.Charts;
 using Zoorce.Web.UI.DataGrid;
 using Zoorce.Web.UI.Forms;
 using Zoorce.Web.UI.Navigation.Stepper;
+using Zoorce.Web.UI.Navigation.Wizard;
 using Zoorce.Web.UI.Timelines;
 
 namespace Zoorce.Web.UI.Tests;
@@ -561,6 +562,118 @@ public sealed class ComponentContractTests
     }
 
     [Fact]
+    public void Wizard_normalizes_layouts_labels_steps_and_transition_rules()
+    {
+        var normalized = (CreateWizard() with
+        {
+            Id = "  release-gate  ",
+            AriaLabel = " ",
+            CurrentStepId = "  approve  ",
+            Layout = (ZoorceWizardLayout)999,
+            ExecutionMode = (ZoorceWizardExecutionMode)999,
+            PreviousLabel = " ",
+            NextLabel = " ",
+            FinishLabel = " ",
+            SaveDraftLabel = " ",
+            CancelLabel = " ",
+            TransitionRules = new ZoorceStepperTransitionRules
+            {
+                Forward = (ZoorceStepperForwardRule)999,
+                Backward = (ZoorceStepperBackwardRule)999,
+                Warning = (ZoorceStepperWarningRule)999,
+                Error = (ZoorceStepperErrorRule)999,
+                OnBackward = (ZoorceStepperBackwardEffect)999
+            },
+            Steps =
+            [
+                new ZoorceWizardStep(" scope ", " ", " release scope ", " 1 ", ZoorceStepperState.Completed, " done ", FormId: " scope-form ", Tone: ZoorceStepperTone.Success),
+                new ZoorceWizardStep(" approve ", " Approve ", " ", null, ZoorceStepperState.Active, FormId: " ", Tone: (ZoorceStepperTone)999)
+            ]
+        }).Normalize();
+
+        Assert.Equal("release-gate", normalized.Id);
+        Assert.Equal("Guided workflow", normalized.AriaLabel);
+        Assert.Equal("approve", normalized.CurrentStepId);
+        Assert.Equal(ZoorceWizardLayout.Sidebar, normalized.Layout);
+        Assert.Equal(ZoorceWizardExecutionMode.Manual, normalized.ExecutionMode);
+        Assert.Equal("Back", normalized.PreviousLabel);
+        Assert.Equal("Continue", normalized.NextLabel);
+        Assert.Equal("Finish", normalized.FinishLabel);
+        Assert.Equal("Save draft", normalized.SaveDraftLabel);
+        Assert.Equal("Cancel", normalized.CancelLabel);
+        Assert.Equal(ZoorceStepperForwardRule.Auto, normalized.TransitionRules.Forward);
+        Assert.Equal(ZoorceStepperBackwardRule.Auto, normalized.TransitionRules.Backward);
+        Assert.Equal(ZoorceStepperWarningRule.Allow, normalized.TransitionRules.Warning);
+        Assert.Equal(ZoorceStepperErrorRule.Block, normalized.TransitionRules.Error);
+        Assert.Equal(ZoorceStepperBackwardEffect.Auto, normalized.TransitionRules.OnBackward);
+        Assert.Equal("scope", normalized.Steps[0].Id);
+        Assert.Equal("Step", normalized.Steps[0].Title);
+        Assert.Equal("release scope", normalized.Steps[0].SupportingText);
+        Assert.Equal("1", normalized.Steps[0].Icon);
+        Assert.Equal("done", normalized.Steps[0].StatusText);
+        Assert.Equal("scope-form", normalized.Steps[0].FormId);
+        Assert.Equal(ZoorceStepperTone.Success, normalized.Steps[0].Tone);
+        Assert.Null(normalized.Steps[1].SupportingText);
+        Assert.Null(normalized.Steps[1].FormId);
+        Assert.Equal(ZoorceStepperTone.Auto, normalized.Steps[1].Tone);
+
+        var hostManaged = (CreateWizard() with
+        {
+            Layout = ZoorceWizardLayout.Top,
+            ExecutionMode = ZoorceWizardExecutionMode.HostManaged,
+            TransitionUrl = " /api/wizards/authorize "
+        }).Normalize();
+
+        Assert.Equal(ZoorceWizardLayout.Top, hostManaged.Layout);
+        Assert.Equal(ZoorceWizardExecutionMode.HostManaged, hostManaged.ExecutionMode);
+        Assert.Equal("/api/wizards/authorize", hostManaged.TransitionUrl);
+    }
+
+    [Fact]
+    public void Wizard_rejects_invalid_identity_steps_current_step_and_host_managed_endpoint()
+    {
+        Assert.Throws<ArgumentException>(() => (CreateWizard() with { Id = " " }).Normalize());
+        Assert.Throws<ArgumentException>(() => new ZoorceWizardOptions { Id = "one", Steps = [new ZoorceWizardStep("only", "Only")] }.Normalize());
+        Assert.Throws<ArgumentNullException>(() => (CreateWizard() with { Steps = [null!, new ZoorceWizardStep("two", "Two")] }).Normalize());
+        Assert.Throws<ArgumentException>(() => (CreateWizard() with { Steps = [new ZoorceWizardStep(" ", "One"), new ZoorceWizardStep("two", "Two")] }).Normalize());
+        Assert.Throws<ArgumentException>(() => (CreateWizard() with { Steps = [new ZoorceWizardStep("same", "One"), new ZoorceWizardStep(" SAME ", "Two")] }).Normalize());
+        Assert.Throws<ArgumentException>(() => (CreateWizard() with { CurrentStepId = "missing" }).Normalize());
+        Assert.Throws<ArgumentException>(() => (CreateWizard() with
+        {
+            CurrentStepId = "scope",
+            Steps = [new ZoorceWizardStep("scope", "Scope", State: ZoorceStepperState.Disabled), new ZoorceWizardStep("approve", "Approve")]
+        }).Normalize());
+        Assert.Throws<ArgumentException>(() => (CreateWizard() with { ExecutionMode = ZoorceWizardExecutionMode.HostManaged, TransitionUrl = " " }).Normalize());
+    }
+
+    [Fact]
+    public void Wizard_transition_contracts_preserve_snapshots_authorization_and_field_errors()
+    {
+        var request = new ZoorceWizardTransitionRequest("release", "next", "scope", "approval", RequiresAuthorization: true, Values: new Dictionary<string, string[]> { ["owner"] = ["Ada"] });
+        var step = new ZoorceWizardStepSnapshot("approval", ZoorceStepperState.Attention, ZoorceStepperTone.Warning, "Approval", "Owner confirmation", "Review needed", "!", false);
+        var snapshot = new ZoorceWizardSnapshot("approval", [step]);
+        var decision = new ZoorceWizardTransitionDecision(false, "Choose an owner.", snapshot, new Dictionary<string, string[]> { ["owner"] = ["An owner is required."] });
+
+        Assert.Equal("release", request.WizardId);
+        Assert.Equal("next", request.Action);
+        Assert.Equal("scope", request.CurrentStepId);
+        Assert.Equal("approval", request.TargetStepId);
+        Assert.True(request.RequiresAuthorization);
+        Assert.Equal("Ada", request.Values!["owner"].Single());
+        Assert.False(decision.Allowed);
+        Assert.Equal("Choose an owner.", decision.Message);
+        Assert.Same(snapshot, decision.Snapshot);
+        Assert.Equal("An owner is required.", decision.FieldErrors!["owner"].Single());
+        Assert.Equal("approval", snapshot.CurrentStepId);
+        Assert.Same(step, snapshot.Steps.Single());
+        Assert.Equal(ZoorceStepperState.Attention, step.State);
+        Assert.Equal(ZoorceStepperTone.Warning, step.Tone);
+        Assert.False(step.IsNavigable);
+        Assert.Contains(ZoorceWizardLayout.Top, Enum.GetValues<ZoorceWizardLayout>());
+        Assert.Contains(ZoorceWizardExecutionMode.HostManaged, Enum.GetValues<ZoorceWizardExecutionMode>());
+    }
+
+    [Fact]
     public void Timeline_normalizes_items_presentation_and_explicit_overflow_behavior()
     {
         var normalized = (CreateTimeline() with
@@ -945,6 +1058,18 @@ public sealed class ComponentContractTests
         [
             new ZoorceStepperStep("brief", "Brief", State: ZoorceStepperState.Active),
             new ZoorceStepperStep("validate", "Validate")
+        ]
+    };
+
+    private static ZoorceWizardOptions CreateWizard() => new()
+    {
+        Id = "release-wizard",
+        AriaLabel = "Release workflow",
+        CurrentStepId = "scope",
+        Steps =
+        [
+            new ZoorceWizardStep("scope", "Scope", State: ZoorceStepperState.Active, FormId: "scope-form"),
+            new ZoorceWizardStep("approve", "Approve", FormId: "approval-form")
         ]
     };
 
