@@ -17,7 +17,11 @@
         <div style="display:grid;gap:12px;align-content:start">
             @await Component.InvokeAsync("ZoorceMessage", new ZoorceMessageOptions { Id = "feedback-message", Title = "Review window is open", Description = "Two approvals remain before the release can proceed.", Tone = "warning", Dismissible = true, ActionText = "View approvals" })
             <div class="z-filter-row">@await Component.InvokeAsync("ZoorceAvatar", new ZoorceAvatarOptions { Label = "Nora Ellis", Initials = "NE", Status = "online" }) @await Component.InvokeAsync("ZoorceBadge", new ZoorceBadgeOptions { Text = "3 approvals", Tone = "success" }) @await Component.InvokeAsync("ZoorceBadge", new ZoorceBadgeOptions { Dot = true, Tone = "warning", AriaLabel = "Attention required" })</div>
-            <div class="z-filter-row">@await Component.InvokeAsync("ZoorceProgressButton", new ZoorceProgressButtonOptions { Id = "feedback-progress", Text = "Syncing changes", Progress = 64, DisableWhileActive = false, Icon = "↻" }) @await Component.InvokeAsync("ZoorceDropdownMenu", new ZoorceDropdownMenuOptions { Id = "feedback-actions", Text = "More actions", Items = [new ZoorceMenuItem { Value = "duplicate", Text = "Duplicate", Icon = "⧉" }, new ZoorceMenuItem { Value = "archive", Text = "Archive", Icon = "⌫" }] })</div>
+            <div class="z-progress-button-demo" data-z-progress-demo>
+                @await Component.InvokeAsync("ZoorceProgressButton", new ZoorceProgressButtonOptions { Id = "feedback-progress", Text = "Sync changes", Progress = 0, Tone = "info", ActiveColor = "#0e7490", ActiveForegroundColor = "#ffffff", CompletionColor = "#059669", CompletionForegroundColor = "#ffffff", Icon = "↻" })
+                <p class="z-card-caption" data-z-progress-demo-status role="status">Ready to sync 12 staged changes. This instance uses custom active and completion colors.</p>
+            </div>
+            <div class="z-filter-row">@await Component.InvokeAsync("ZoorceDropdownMenu", new ZoorceDropdownMenuOptions { Id = "feedback-actions", Text = "More actions", Items = [new ZoorceMenuItem { Value = "duplicate", Text = "Duplicate", Icon = "⧉" }, new ZoorceMenuItem { Value = "archive", Text = "Archive", Icon = "⌫" }] })</div>
         </div>
     </div>
     <div class="z-filter-row" style="margin-top:14px">
@@ -32,3 +36,57 @@
 @await Component.InvokeAsync("ZoorceDrawer", new ZoorceDrawerOptions { Id = "feedback-component-drawer", Title = "Drawer component", Description = "A typed, focus-managed inspector surface.", Position = ZoorceDrawerPosition.End, Size = ZoorceDrawerSize.Compact, Body = new HtmlString("<p class=\"z-card-caption\">Drawers preserve page context while exposing filters, details or rapid editing.</p><div class=\"z-drawer-item\"><span>Theme</span><strong>Semantic tokens</strong></div><div class=\"z-drawer-item\"><span>Motion</span><strong>Reduced motion aware</strong></div><div class=\"z-drawer-item\"><span>Focus</span><strong>Keyboard ready</strong></div>"), Footer = new HtmlString("<button class=\"z-button z-button-primary\" type=\"button\" data-z-drawer-close>Done</button>") })
 
 <div class="z-dialog-layer" data-z-modal-layer id="feedback-modal" hidden><section class="z-dialog" role="dialog" aria-modal="true" aria-labelledby="feedback-modal-title" data-z-modal-focus tabindex="-1"><div class="z-dialog-icon" aria-hidden="true">✦</div><div class="z-dialog-copy"><h2 id="feedback-modal-title">Modal component</h2><p>Use this surface for focused decisions or small, self-contained workflows.</p></div><div class="z-dialog-actions"><button class="z-button z-button-ghost" type="button" data-z-modal-close>Close</button><button class="z-button z-button-primary" type="button" data-z-modal-close data-z-toast="The modal action completed." data-z-toast-title="Modal confirmed">Confirm</button></div></section></div>
+
+@section Scripts {
+    <script>
+        (() => {
+            const demo = document.querySelector("[data-z-progress-demo]");
+            const button = demo?.querySelector("[data-z-progress-button]");
+            const label = button?.querySelector("[data-z-progress-label]");
+            const icon = button?.querySelector("[data-z-progress-icon]");
+            const value = button?.querySelector("[data-z-progress-value]");
+            const status = demo?.querySelector("[data-z-progress-demo-status]");
+            if (!button || !label || !value || !status) return;
+
+            const setProgress = (percentage, text, state, busy, symbol) => {
+                const progress = Math.round(percentage);
+                button.style.setProperty("--z-button-progress", `${progress}%`);
+                button.dataset.zProgressState = state;
+                button.setAttribute("aria-busy", String(busy));
+                label.textContent = text;
+                if (icon) icon.textContent = symbol;
+                value.setAttribute("aria-valuenow", String(progress));
+                value.setAttribute("aria-valuetext", `${progress}% — ${text}`);
+            };
+
+            button.addEventListener("click", () => {
+                if (button.dataset.zProgressDemoRunning === "true") return;
+
+                button.dataset.zProgressDemoRunning = "true";
+                button.disabled = true;
+                status.textContent = "Synchronizing 12 staged changes…";
+                const startedAt = performance.now();
+                const duration = 2200;
+                setProgress(0, "Syncing 0%", "active", true, "↻");
+
+                const advance = now => {
+                    const elapsed = Math.min(1, (now - startedAt) / duration);
+                    const progress = Math.round(elapsed * 100);
+                    setProgress(progress, `Syncing ${progress}%`, "active", true, "↻");
+
+                    if (elapsed < 1) {
+                        requestAnimationFrame(advance);
+                        return;
+                    }
+
+                    button.dataset.zProgressDemoRunning = "false";
+                    button.disabled = false;
+                    setProgress(100, "Changes synced", "complete", false, "✓");
+                    status.textContent = "12 staged changes synchronized. Custom colors stay scoped to this button; select it to run again.";
+                };
+
+                requestAnimationFrame(advance);
+            });
+        })();
+    </script>
+}

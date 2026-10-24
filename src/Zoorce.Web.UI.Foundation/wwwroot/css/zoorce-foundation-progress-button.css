@@ -1,0 +1,126 @@
+/* Progress buttons retain the regular button shape while making state legible. */
+.z-progress-button {
+    --z-progress-active: var(--z-primary);
+    --z-progress-active-foreground: var(--z-primary-foreground);
+    --z-progress-complete: var(--z-success);
+    --z-progress-complete-foreground: var(--z-primary-foreground);
+    position: relative;
+    isolation: isolate;
+    display: inline-grid;
+    min-height: 38px;
+    overflow: hidden;
+    padding: 0;
+    border: 1px solid color-mix(in srgb, var(--z-progress-active) 50%, var(--z-border));
+    border-radius: 10px;
+    background: var(--z-surface);
+    color: var(--z-progress-active);
+    font: 780 12px var(--font-sans);
+    transition: border-color .16s ease, background .16s ease, color .16s ease, transform .16s ease;
+}
+
+.z-progress-button:hover:not(:disabled) {
+    transform: translateY(-1px);
+    border-color: var(--z-progress-active);
+}
+
+.z-progress-button-fill {
+    position: absolute;
+    z-index: 0;
+    inset: 0 auto 0 0;
+    width: var(--z-button-progress, 0%);
+    pointer-events: none;
+    background: var(--z-progress-active);
+    transition: width .24s ease;
+}
+
+.z-progress-button-success {
+    --z-progress-active: var(--z-success);
+    --z-progress-active-foreground: var(--z-primary-foreground);
+}
+
+.z-progress-button-warning {
+    --z-progress-active: var(--z-warning);
+    --z-progress-active-foreground: var(--z-primary-foreground);
+}
+
+.z-progress-button-danger {
+    --z-progress-active: var(--z-danger);
+    --z-progress-active-foreground: var(--z-danger-foreground);
+}
+
+.z-progress-button-info {
+    --z-progress-active: var(--z-info);
+    --z-progress-active-foreground: var(--z-primary-foreground);
+}
+
+.z-progress-button-neutral {
+    --z-progress-active: var(--z-muted);
+    --z-progress-active-foreground: var(--z-text);
+}
+
+.z-progress-button-complete-primary {
+    --z-progress-complete: var(--z-primary);
+    --z-progress-complete-foreground: var(--z-primary-foreground);
+}
+
+.z-progress-button-complete-warning {
+    --z-progress-complete: var(--z-warning);
+    --z-progress-complete-foreground: var(--z-primary-foreground);
+}
+
+.z-progress-button-complete-danger {
+    --z-progress-complete: var(--z-danger);
+    --z-progress-complete-foreground: var(--z-danger-foreground);
+}
+
+.z-progress-button-complete-info {
+    --z-progress-complete: var(--z-info);
+    --z-progress-complete-foreground: var(--z-primary-foreground);
+}
+
+.z-progress-button-complete-neutral {
+    --z-progress-complete: var(--z-muted);
+    --z-progress-complete-foreground: var(--z-text);
+}
+
+.z-progress-button-content {
+    position: relative;
+    z-index: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-width: 130px;
+    padding: 0 14px;
+    color: inherit;
+}
+
+.z-progress-button[aria-busy="true"] {
+    border-color: var(--z-progress-active);
+    background: var(--z-progress-active);
+    color: var(--z-progress-active-foreground);
+}
+
+.z-progress-button[aria-busy="true"] .z-progress-button-fill {
+    background: color-mix(in srgb, var(--z-progress-active-foreground) 22%, transparent);
+}
+
+.z-progress-button[data-z-progress-state="complete"] {
+    border-color: var(--z-progress-complete);
+    background: var(--z-progress-complete);
+    color: var(--z-progress-complete-foreground);
+}
+
+.z-progress-button[data-z-progress-state="complete"] .z-progress-button-fill {
+    background: color-mix(in srgb, var(--z-progress-complete-foreground) 22%, transparent);
+}
+
+.z-progress-button[disabled][aria-busy="true"] {
+    cursor: progress;
+    opacity: 1;
+}
+
+.z-progress-button[disabled]:not([aria-busy="true"]) {
+    cursor: not-allowed;
+    opacity: .56;
+}

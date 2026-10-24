@@ -6,6 +6,8 @@
 
 `ZoorceDrawer` is a focus-managed modal surface with typed placement (`Start`, `End`, `Top`, `Bottom`), standard size tokens and an optional fixed CSS size. It keeps body and footer host-defined. `ZoorceNotificationCenter` owns its unread count, all/unread filter, item read state, close-on-outside-click behavior, item hover/focus treatment, and bubbling notification events. Its default trigger is a bell; `TriggerIcon` may replace it, and `ItemTemplate` may render the contents of each item while the component keeps each item's wrapper, filtering and read state. A template can emit `data-z-notification-action` when it needs the standard action event.
 
+`ZoorceProgressButton` uses semantic `Tone` while it is active and `CompletionTone` after it completes (`primary`, `success`, `warning`, `danger`, `info`, or `neutral`). For an instance-specific brand or workflow color, set `ActiveColor`, `ActiveForegroundColor`, `CompletionColor`, and `CompletionForegroundColor` to a single CSS color value or token such as `var(--workspace-accent)`. Those overrides are scoped to the button and take precedence over its tones.
+
 `ZoorceSplitPane` renders two host-defined regions separated by a pointer-, touch-, and keyboard-resizable divider. `InitialPrimaryPercent`, both pane minimums, orientation, collapse behavior and an optional persistence key are configured per instance. Its outer container is stable; only the allocation inside it changes.
 
 The shell receives `ZoorceShellOptions` from the host. `ZoorceThemeCatalogOptions` supplies the initial palette while `IZoorceThemeService` supports a runtime replacement. Do not copy layout markup into a sample or host page—use `ZoorceLayout` and customize providers/options instead.

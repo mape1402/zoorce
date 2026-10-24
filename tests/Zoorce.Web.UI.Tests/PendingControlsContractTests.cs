@@ -78,7 +78,11 @@ public sealed class PendingControlsContractTests
         var dropdown = new ZoorceDropdownMenuViewComponent().Invoke(new ZoorceDropdownMenuOptions { Id = " menu ", Text = " More " });
         var fab = new ZoorceFloatingActionButtonViewComponent().Invoke(new ZoorceFloatingActionButtonOptions { Id = " add ", Label = " Add ", Icon = " + " });
         var message = new ZoorceMessageViewComponent().Invoke(new ZoorceMessageOptions { Id = " message ", Title = " Saved ", Tone = " SUCCESS " });
-        var progress = new ZoorceProgressButtonViewComponent().Invoke(new ZoorceProgressButtonOptions { Id = " save ", Text = " Save ", Progress = 180 });
+        var progress = new ZoorceProgressButtonViewComponent().Invoke(new ZoorceProgressButtonOptions
+        {
+            Id = " save ", Text = " Save ", Progress = 180, Tone = " INFO ", CompletionTone = " WARNING ",
+            ActiveColor = " #0e7490 ", ActiveForegroundColor = " #ffffff ", CompletionColor = " #059669 ", CompletionForegroundColor = " #ffffff "
+        });
         var speedDial = new ZoorceSpeedDialViewComponent().Invoke(new ZoorceSpeedDialOptions { Id = " quick ", Label = " Quick " });
 
         Assert.Equal("NE", Assert.IsType<ZoorceAvatarOptions>(Assert.IsType<ViewViewComponentResult>(avatar).ViewData!.Model).Initials);
@@ -94,9 +98,17 @@ public sealed class PendingControlsContractTests
         Assert.IsType<ViewViewComponentResult>(dropdown);
         Assert.Equal("+", Assert.IsType<ZoorceFloatingActionButtonOptions>(Assert.IsType<ViewViewComponentResult>(fab).ViewData!.Model).Icon);
         Assert.Equal("success", Assert.IsType<ZoorceMessageOptions>(Assert.IsType<ViewViewComponentResult>(message).ViewData!.Model).Tone);
-        Assert.Equal(100, Assert.IsType<ZoorceProgressButtonOptions>(Assert.IsType<ViewViewComponentResult>(progress).ViewData!.Model).Progress);
+        var progressModel = Assert.IsType<ZoorceProgressButtonOptions>(Assert.IsType<ViewViewComponentResult>(progress).ViewData!.Model);
+        Assert.Equal(100, progressModel.Progress);
+        Assert.Equal("info", progressModel.Tone);
+        Assert.Equal("warning", progressModel.CompletionTone);
+        Assert.Equal("#0e7490", progressModel.ActiveColor);
+        Assert.Equal("#ffffff", progressModel.ActiveForegroundColor);
+        Assert.Equal("#059669", progressModel.CompletionColor);
+        Assert.Equal("#ffffff", progressModel.CompletionForegroundColor);
         Assert.Equal("quick", Assert.IsType<ZoorceSpeedDialOptions>(Assert.IsType<ViewViewComponentResult>(speedDial).ViewData!.Model).Id);
         Assert.Throws<ArgumentException>(() => new ZoorceBadgeViewComponent().Invoke(new ZoorceBadgeOptions { Dot = true }));
+        Assert.Throws<ArgumentException>(() => new ZoorceProgressButtonViewComponent().Invoke(new ZoorceProgressButtonOptions { Id = "progress", Text = "Progress", ActiveColor = "#0e7490;position:fixed" }));
         Assert.Throws<ArgumentException>(() => new ZoorceDialogViewComponent().Invoke(new ZoorceDialogOptions
         {
             Id = "dialog",

@@ -21,6 +21,21 @@ public sealed record ZoorceProgressButtonOptions
     /// <summary>Gets the semantic button tone.</summary>
     public string Tone { get; init; } = "primary";
 
+    /// <summary>Gets the semantic tone rendered after progress reaches one hundred percent.</summary>
+    public string CompletionTone { get; init; } = "success";
+
+    /// <summary>Gets an optional CSS color that overrides the active progress tone for this instance.</summary>
+    public string? ActiveColor { get; init; }
+
+    /// <summary>Gets an optional CSS color placed on the active progress tone for this instance.</summary>
+    public string? ActiveForegroundColor { get; init; }
+
+    /// <summary>Gets an optional CSS color that overrides the completion tone for this instance.</summary>
+    public string? CompletionColor { get; init; }
+
+    /// <summary>Gets an optional CSS color placed on the completion tone for this instance.</summary>
+    public string? CompletionForegroundColor { get; init; }
+
     /// <summary>Gets an optional leading icon that remains visible above the fill.</summary>
     public string? Icon { get; init; }
 
@@ -38,7 +53,25 @@ public sealed record ZoorceProgressButtonOptions
             Text = Text.Trim(),
             Progress = Progress is null ? null : Math.Clamp(Progress.Value, 0, 100),
             Tone = string.IsNullOrWhiteSpace(Tone) ? "primary" : Tone.Trim().ToLowerInvariant(),
+            CompletionTone = string.IsNullOrWhiteSpace(CompletionTone) ? "success" : CompletionTone.Trim().ToLowerInvariant(),
+            ActiveColor = NormalizeCssColor(ActiveColor, nameof(ActiveColor)),
+            ActiveForegroundColor = NormalizeCssColor(ActiveForegroundColor, nameof(ActiveForegroundColor)),
+            CompletionColor = NormalizeCssColor(CompletionColor, nameof(CompletionColor)),
+            CompletionForegroundColor = NormalizeCssColor(CompletionForegroundColor, nameof(CompletionForegroundColor)),
             Icon = string.IsNullOrWhiteSpace(Icon) ? null : Icon.Trim()
         };
+    }
+
+    private static string? NormalizeCssColor(string? value, string parameterName)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return null;
+
+        var color = value.Trim();
+        if (color.IndexOfAny([';', '{', '}', '<', '>', '"', '\'']) >= 0)
+        {
+            throw new ArgumentException("A custom progress color must be a single CSS color value.", parameterName);
+        }
+
+        return color;
     }
 }
