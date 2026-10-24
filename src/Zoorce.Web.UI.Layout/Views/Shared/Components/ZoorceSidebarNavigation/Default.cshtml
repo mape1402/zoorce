@@ -15,8 +15,28 @@
         @await Html.PartialAsync("_ZoorceNavigation", Model.Items, new ViewDataDictionary(ViewData)
         {
             ["ZoorceNavigationDepth"] = 0,
-            ["ZoorceNavigationPath"] = "root"
+            ["ZoorceNavigationPath"] = "root",
+            ["ZoorceNavigationExpansion"] = Model.Shell.NavigationExpansion
         })
     </nav>
     <div class="z-sidebar-footer"><div class="z-pro-status"><span class="z-pro-orb" aria-hidden="true"></span><span><strong>All systems ready</strong><small>99.99% availability</small></span></div></div>
 </aside>
+<script>
+    (() => {
+        const shell = document.querySelector("[data-z-shell]");
+        const sidebar = document.querySelector("[data-z-sidebar]");
+        if (!shell || !sidebar || shell.dataset.navigationPersist !== "true") return;
+
+        try {
+            const saved = JSON.parse(localStorage.getItem("zoorce-navigation-expanded") ?? "{}");
+            if (!saved || typeof saved !== "object" || Array.isArray(saved)) return;
+
+            sidebar.querySelectorAll("[data-z-nav-group][data-z-nav-key]").forEach(group => {
+                const expanded = saved[group.dataset.zNavKey];
+                if (typeof expanded === "boolean") group.setAttribute("aria-expanded", String(expanded));
+            });
+        } catch {
+            // A blocked or malformed storage entry must not prevent navigation from rendering.
+        }
+    })();
+</script>

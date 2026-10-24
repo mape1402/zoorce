@@ -62,6 +62,8 @@ public sealed class ThemeAndServiceTests
             options.SidebarMode = ZoorceSidebarMode.Fixed;
             options.SidebarCollapsedByDefault = true;
             options.PersistSidebarState = false;
+            options.NavigationExpansion = ZoorceNavigationExpansionMode.AllExpanded;
+            options.PersistNavigationExpansion = false;
             options.NavigationDensity = ZoorceNavigationDensity.Dense;
             options.Light.Primary = "#7c3aed";
             options.Light.DataPrimary = "#2485df";
@@ -82,6 +84,8 @@ public sealed class ThemeAndServiceTests
         Assert.Equal(ZoorceSidebarMode.Fixed, configured.SidebarMode);
         Assert.True(configured.SidebarCollapsedByDefault);
         Assert.False(configured.PersistSidebarState);
+        Assert.Equal(ZoorceNavigationExpansionMode.AllExpanded, configured.NavigationExpansion);
+        Assert.False(configured.PersistNavigationExpansion);
         Assert.Equal(ZoorceNavigationDensity.Dense, configured.NavigationDensity);
         Assert.Empty(scope.ServiceProvider.GetRequiredService<INavigationProvider>().GetItems());
         Assert.Null(scope.ServiceProvider.GetRequiredService<IUserMenuProvider>().GetCurrentUser());
@@ -111,6 +115,8 @@ public sealed class ThemeAndServiceTests
         Assert.Equal(ZoorceSidebarMode.Collapsible, options.SidebarMode);
         Assert.False(options.SidebarCollapsedByDefault);
         Assert.True(options.PersistSidebarState);
+        Assert.Equal(ZoorceNavigationExpansionMode.ActivePath, options.NavigationExpansion);
+        Assert.True(options.PersistNavigationExpansion);
         Assert.Equal(ZoorceNavigationDensity.Compact, options.NavigationDensity);
     }
 
@@ -176,7 +182,7 @@ public sealed class ThemeAndServiceTests
     public void Contract_records_expose_every_configured_value()
     {
         var child = new NavigationItem("Child", "/child", "C", MatchMode: NavigationMatchMode.Prefix);
-        var parent = new NavigationItem("Parent", "/parent", "P", [child], NavigationMatchMode.Exact, ["/parent", "/parent/overview"]);
+        var parent = new NavigationItem("Parent", "/parent", "P", [child], NavigationMatchMode.Exact, ["/parent", "/parent/overview"], "parent", NavigationGroupExpansion.Collapsed);
         var root = new NavigationItem("Root", "/");
         var empty = new NavigationItem("Empty");
         var action = new UserMenuAction("Profile", "/profile", "◌");
@@ -188,6 +194,8 @@ public sealed class ThemeAndServiceTests
         Assert.Same(child, parent.Children!.Single());
         Assert.Equal(NavigationMatchMode.Exact, parent.MatchMode);
         Assert.Equal(["/parent", "/parent/overview"], parent.GetActiveUrls());
+        Assert.Equal("parent", parent.Id);
+        Assert.Equal(NavigationGroupExpansion.Collapsed, parent.GroupExpansion);
         Assert.Equal(NavigationMatchMode.Prefix, child.MatchMode);
         Assert.Equal(["/"], root.GetActiveUrls());
         Assert.Empty(empty.GetActiveUrls());

@@ -7,7 +7,7 @@ public sealed class SampleNavigationProvider : INavigationProvider
     public IReadOnlyList<NavigationItem> GetItems() =>
     [
         new("Overview", "/", "01", MatchMode: NavigationMatchMode.Exact),
-        new("Workspace", Icon: "02", Children:
+        new("Workspace", Icon: "02", Id: "workspace", GroupExpansion: NavigationGroupExpansion.Expanded, Children:
         [
             new("Dashboard", "/dashboard", "↗", MatchMode: NavigationMatchMode.Exact),
             new("Delivery", Icon: "↗", Children:
@@ -18,7 +18,7 @@ public sealed class SampleNavigationProvider : INavigationProvider
                 LabItem("Reviews", "reviews", "RV"),
                 LabItem("Risks", "risks", "RK")
             ]),
-            new("Build", Icon: "▤", Children:
+            new("Build", Icon: "▤", Id: "workspace-build", GroupExpansion: NavigationGroupExpansion.Expanded, Children:
             [
                 new("Components", "/components", "▤", MatchMode: NavigationMatchMode.Exact),
                 new("Charts", "/charts", "◒", MatchMode: NavigationMatchMode.Exact),

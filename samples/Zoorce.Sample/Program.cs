@@ -27,6 +27,8 @@ builder.Services.AddRazorPages().AddZoorceWebUI(options =>
     options.SidebarMode = ZoorceSidebarMode.Collapsible;
     options.SidebarCollapsedByDefault = false;
     options.PersistSidebarState = true;
+    options.NavigationExpansion = ZoorceNavigationExpansionMode.AllCollapsed;
+    options.PersistNavigationExpansion = true;
     options.NavigationDensity = ZoorceNavigationDensity.Compact;
     options.NotificationCenter = new ZoorceNotificationCenterOptions
     {

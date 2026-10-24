@@ -9,7 +9,9 @@ public sealed record NavigationItem(
     string? Icon = null,
     IReadOnlyList<NavigationItem>? Children = null,
     NavigationMatchMode MatchMode = NavigationMatchMode.Auto,
-    IReadOnlyList<string>? ActiveUrls = null)
+    IReadOnlyList<string>? ActiveUrls = null,
+    string? Id = null,
+    NavigationGroupExpansion GroupExpansion = NavigationGroupExpansion.Inherit)
 {
     /// <summary>
     /// Gets whether the item is a navigation group.

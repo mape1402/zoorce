@@ -40,6 +40,17 @@ public sealed class ZoorceShellOptions
     public bool PersistSidebarState { get; set; } = true;
 
     /// <summary>
+    /// Gets or sets how navigation groups are initially expanded when the visitor
+    /// has not saved an expansion preference.
+    /// </summary>
+    public ZoorceNavigationExpansionMode NavigationExpansion { get; set; } = ZoorceNavigationExpansionMode.ActivePath;
+
+    /// <summary>
+    /// Gets or sets whether group expansion choices made in the sidebar are kept locally.
+    /// </summary>
+    public bool PersistNavigationExpansion { get; set; } = true;
+
+    /// <summary>
     /// Gets or sets the vertical density used by the sidebar navigation.
     /// </summary>
     public ZoorceNavigationDensity NavigationDensity { get; set; } = ZoorceNavigationDensity.Compact;

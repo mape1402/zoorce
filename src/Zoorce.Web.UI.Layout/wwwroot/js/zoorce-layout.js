@@ -114,10 +114,43 @@
         updateSidebarControls();
     });
 
-    const setGroupExpanded = (button, expanded) => button.setAttribute("aria-expanded", String(expanded));
+    const navigationExpansionStorageKey = "zoorce-navigation-expanded";
+    const persistsNavigationExpansion = () => shell?.dataset.navigationPersist === "true";
+    const readNavigationExpansion = () => {
+        if (!persistsNavigationExpansion()) return {};
+        try {
+            const saved = JSON.parse(localStorage.getItem(navigationExpansionStorageKey) ?? "{}");
+            return saved && typeof saved === "object" && !Array.isArray(saved) ? saved : {};
+        } catch {
+            return {};
+        }
+    };
+    const persistNavigationExpansion = button => {
+        const key = button.dataset.zNavKey;
+        if (!key || !persistsNavigationExpansion()) return;
+        try {
+            const saved = readNavigationExpansion();
+            saved[key] = button.getAttribute("aria-expanded") === "true";
+            localStorage.setItem(navigationExpansionStorageKey, JSON.stringify(saved));
+        } catch {
+            // Keep the current-page state when browser storage is unavailable.
+        }
+    };
+    const restoreNavigationExpansion = () => {
+        const saved = readNavigationExpansion();
+        document.querySelectorAll("[data-z-nav-group][data-z-nav-key]").forEach(button => {
+            const expanded = saved[button.dataset.zNavKey];
+            if (typeof expanded === "boolean") button.setAttribute("aria-expanded", String(expanded));
+        });
+    };
+    const setGroupExpanded = (button, expanded, persist = true) => {
+        button.setAttribute("aria-expanded", String(expanded));
+        if (persist) persistNavigationExpansion(button);
+    };
     const visibleNavigationControls = () => [...document.querySelectorAll("[data-z-nav-group], [data-z-nav-link]")]
         .filter(control => control.getClientRects().length > 0);
 
+    restoreNavigationExpansion();
     document.querySelectorAll("[data-z-nav-group]").forEach(button => {
         button.addEventListener("click", () => {
             const expanded = button.getAttribute("aria-expanded") === "true";
@@ -162,7 +195,7 @@
         });
         document.querySelectorAll("[data-z-nav-group]").forEach(button => {
             const group = document.getElementById(button.getAttribute("aria-controls") ?? "");
-            if (group?.querySelector(".z-nav-link.is-active")) setGroupExpanded(button, true);
+            if (group?.querySelector(".z-nav-link.is-active")) setGroupExpanded(button, true, false);
         });
     };
     syncHashNavigation();

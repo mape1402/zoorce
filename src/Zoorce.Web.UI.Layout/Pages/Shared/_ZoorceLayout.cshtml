@@ -10,6 +10,7 @@
     var sidebarMode = shell.SidebarMode.ToString().ToLowerInvariant();
     var sidebarDefault = shell.SidebarCollapsedByDefault ? "collapsed" : "expanded";
     var navigationDensity = shell.NavigationDensity.ToString().ToLowerInvariant();
+    var navigationExpansion = shell.NavigationExpansion.ToString().ToLowerInvariant();
 }
 <!DOCTYPE html>
 <html lang="en" data-zoorce-theme="@defaultTheme">
@@ -43,7 +44,7 @@
 </head>
 <body>
     <a class="z-skip-link" href="#main-content">Skip to content</a>
-    <div class="z-app-shell" data-z-shell data-sidebar-mode="@sidebarMode" data-sidebar-default="@sidebarDefault" data-sidebar-persist="@shell.PersistSidebarState.ToString().ToLowerInvariant()" data-navigation-density="@navigationDensity">
+    <div class="z-app-shell" data-z-shell data-sidebar-mode="@sidebarMode" data-sidebar-default="@sidebarDefault" data-sidebar-persist="@shell.PersistSidebarState.ToString().ToLowerInvariant()" data-navigation-density="@navigationDensity" data-navigation-expansion="@navigationExpansion" data-navigation-persist="@shell.PersistNavigationExpansion.ToString().ToLowerInvariant()">
         @await Component.InvokeAsync("ZoorceSidebarNavigation")
         <button class="z-sidebar-backdrop" type="button" data-z-sidebar-backdrop data-z-sidebar-close aria-label="Close navigation" hidden></button>
         <div class="z-page-shell">

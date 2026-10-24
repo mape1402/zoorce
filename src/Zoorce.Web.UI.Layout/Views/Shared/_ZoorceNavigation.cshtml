@@ -4,6 +4,9 @@
 @{
     var depth = ViewData["ZoorceNavigationDepth"] is int configuredDepth ? configuredDepth : 0;
     var nodePath = ViewData["ZoorceNavigationPath"] as string ?? "root";
+    var expansionMode = ViewData["ZoorceNavigationExpansion"] is Zoorce.Web.UI.Layout.ZoorceNavigationExpansionMode configuredExpansion
+        ? configuredExpansion
+        : Zoorce.Web.UI.Layout.ZoorceNavigationExpansionMode.ActivePath;
     var currentPath = Context.Request.Path.Value ?? "/";
 
     string GetTargetPath(string target)
@@ -45,6 +48,19 @@
     bool HasActiveDescendant(NavigationItem item)
         => item.Children?.Any(child => IsServerActive(child) || HasActiveDescendant(child)) == true;
 
+    bool IsInitiallyExpanded(NavigationItem item)
+        => item.GroupExpansion switch
+        {
+            NavigationGroupExpansion.Expanded => true,
+            NavigationGroupExpansion.Collapsed => false,
+            _ => expansionMode switch
+            {
+                Zoorce.Web.UI.Layout.ZoorceNavigationExpansionMode.AllExpanded => true,
+                Zoorce.Web.UI.Layout.ZoorceNavigationExpansionMode.AllCollapsed => false,
+                _ => HasActiveDescendant(item)
+            }
+        };
+
     string GetClientMatchMode(NavigationItem item)
         => item.MatchMode == NavigationMatchMode.Auto && item.GetActiveUrls().Any(IsHashTarget)
             ? "hash"
@@ -60,9 +76,10 @@
         if (item.HasChildren)
         {
             var groupId = $"z-nav-group-{currentNodePath}";
-            var isExpanded = HasActiveDescendant(item);
+            var groupKey = string.IsNullOrWhiteSpace(item.Id) ? currentNodePath : item.Id.Trim();
+            var isExpanded = IsInitiallyExpanded(item);
             <li class="z-nav-node z-nav-node-group" data-z-nav-node data-z-nav-depth="@depth">
-                <button class="z-nav-group-trigger" type="button" data-z-nav-group aria-expanded="@isExpanded.ToString().ToLowerInvariant()" aria-controls="@groupId" title="@item.Text">
+                <button class="z-nav-group-trigger" type="button" data-z-nav-group data-z-nav-key="@groupKey" aria-expanded="@isExpanded.ToString().ToLowerInvariant()" aria-controls="@groupId" title="@item.Text">
                     <span class="z-nav-icon" aria-hidden="true">@item.Icon</span>
                     <span data-z-nav-copy>@item.Text</span>
                     <span class="z-nav-chevron" aria-hidden="true">⌄</span>

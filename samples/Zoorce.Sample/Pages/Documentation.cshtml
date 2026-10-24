@@ -9,5 +9,11 @@
 new NavigationItem("Docs", "/docs", "03", MatchMode: NavigationMatchMode.Prefix)
 new NavigationItem("Feedback", "/#feedback", "◉", MatchMode: NavigationMatchMode.Hash)</code><button class="z-code-copy" type="button" data-z-copy="#navigation-code">Copy</button></pre><h2 id="sidebar">Configure the sidebar</h2><pre class="z-code-block" id="sidebar-code"><code>options.SidebarMode = ZoorceSidebarMode.Collapsible;
 options.SidebarCollapsedByDefault = false;
-options.PersistSidebarState = true;</code><button class="z-code-copy" type="button" data-z-copy="#sidebar-code">Copy</button></pre></article><aside class="z-docs-toc"><strong>Contents</strong><a href="#registration">Install</a><a href="#navigation">Navigate</a><a href="#sidebar">Customize</a></aside></div>
+options.PersistSidebarState = true;
+options.NavigationExpansion = ZoorceNavigationExpansionMode.AllCollapsed;
+options.PersistNavigationExpansion = true;
+
+new NavigationItem("Workspace", Icon: "02", Id: "workspace",
+    GroupExpansion: NavigationGroupExpansion.Expanded,
+    Children: [...]);</code><button class="z-code-copy" type="button" data-z-copy="#sidebar-code">Copy</button></pre></article><aside class="z-docs-toc"><strong>Contents</strong><a href="#registration">Install</a><a href="#navigation">Navigate</a><a href="#sidebar">Customize</a></aside></div>
 </section>

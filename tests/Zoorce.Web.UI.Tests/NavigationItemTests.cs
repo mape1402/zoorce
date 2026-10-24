@@ -34,4 +34,18 @@ public sealed class NavigationItemTests
         Assert.True(root.Children!.Single().HasChildren);
         Assert.Same(leaf, root.Children!.Single().Children!.Single());
     }
+
+    [Fact]
+    public void Groups_can_supply_a_stable_identity_and_initial_expansion_override()
+    {
+        var item = new NavigationItem(
+            "Workspace",
+            Icon: "02",
+            Id: "workspace",
+            GroupExpansion: NavigationGroupExpansion.Expanded,
+            Children: [new NavigationItem("Dashboard", "/dashboard")]);
+
+        Assert.Equal("workspace", item.Id);
+        Assert.Equal(NavigationGroupExpansion.Expanded, item.GroupExpansion);
+    }
 }
