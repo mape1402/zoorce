@@ -19,9 +19,19 @@ public sealed class ZoorceTopBarViewComponent : ViewComponent
         _userMenuProvider = userMenuProvider ?? throw new ArgumentNullException(nameof(userMenuProvider));
     }
 
-    /// <summary>Renders the top bar for a page title.</summary>
-    public IViewComponentResult Invoke(string? title = null)
+    /// <summary>Renders the top bar for a page title and optional per-page back action.</summary>
+    public IViewComponentResult Invoke(string? title = null, ZoorceTopBarBackOptions? back = null)
     {
+        back ??= _shell.TopBarBack;
+        if (back?.Visible == true && !string.IsNullOrWhiteSpace(back.Url))
+        {
+            var url = back.Url.Trim();
+            if (url.StartsWith("//", StringComparison.Ordinal) || url.Contains('\\') ||
+                url.StartsWith("~//", StringComparison.Ordinal) ||
+                url.Any(char.IsControl) ||
+                (Uri.TryCreate(url, UriKind.Absolute, out var absolute) && absolute.Scheme is not ("http" or "https")))
+                throw new ArgumentException("The back destination must be a relative or HTTP(S) URL.", nameof(back));
+        }
         var profile = _userMenuProvider.GetCurrentUser();
         var initials = string.IsNullOrWhiteSpace(profile?.DisplayName)
             ? _shell.BrandMark
@@ -33,7 +43,8 @@ public sealed class ZoorceTopBarViewComponent : ViewComponent
             profile,
             initials,
             _shell.DefaultTheme == Theming.ZoorceThemeMode.Dark,
-            _shell.NotificationCenter));
+            _shell.NotificationCenter,
+            back));
     }
 }
 
@@ -44,4 +55,5 @@ public sealed record ZoorceTopBarModel(
     UserMenuProfile? Profile,
     string Initials,
     bool StartsDark,
-    Zoorce.Web.UI.Foundation.Components.ZoorceNotificationCenterOptions? NotificationCenter);
+    Zoorce.Web.UI.Foundation.Components.ZoorceNotificationCenterOptions? NotificationCenter,
+    ZoorceTopBarBackOptions? Back = null);
