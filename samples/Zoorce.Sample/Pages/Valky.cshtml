@@ -1,0 +1,44 @@
+@page "/valky"
+@{
+    ViewData["Title"] = "Valky assistant";
+}
+<section>
+    <div class="z-page-heading"><div><span class="z-section-kicker">Meet Valky</span><h1>A little help with a lot of personality.</h1><p>Choose a state, then select Valky to open or close her customizable message.</p></div></div>
+    <div class="z-card" data-valky-demo>
+        <div class="z-filter-row" aria-label="Valky animation states">
+            <button type="button" class="z-button z-button-secondary" data-state="idle">Idle</button>
+            <button type="button" class="z-button z-button-secondary" data-state="thinking">Thinking</button>
+            <button type="button" class="z-button z-button-secondary" data-state="talking">Talking</button>
+            <button type="button" class="z-button z-button-secondary" data-state="celebrating">Celebrating</button>
+        </div>
+        <p class="z-card-caption" data-valky-status role="status">State: idle. Select Valky to show her message.</p>
+        <div style="display:flex; justify-content:center; padding:100px 40px 20px">
+            <zoorce-valky id="valky-demo" state="idle" open="true" style="--z-valky-size: 220px" label="Valky, open or close help">
+                <strong>Hi, I'm Valky!</strong><p data-valky-message>I'm here if you need a paw.</p>
+                <a href="/documentation">Explore the documentation</a>
+            </zoorce-valky>
+        </div>
+    </div>
+    <div class="z-card" style="margin-top:16px"><h2>Make her yours</h2><p>Use child content for the bubble, set an initial state and choose inline or floating placement. The size and bubble colors are CSS variables. Valky respects reduced-motion preferences.</p><pre><code>&lt;zoorce-valky state="thinking" open="true" style="--z-valky-size: 180px"&gt;
+    &lt;strong&gt;Need a hand?&lt;/strong&gt;
+    &lt;p&gt;Your own content goes here.&lt;/p&gt;
+&lt;/zoorce-valky&gt;</code></pre></div>
+</section>
+@section Scripts {
+<script>
+(() => {
+    const demo = document.querySelector('[data-valky-demo]');
+    const valky = demo.querySelector('.z-valky');
+    const message = demo.querySelector('[data-valky-message]');
+    const status = demo.querySelector('[data-valky-status]');
+    const messages = { idle: "I'm here if you need a paw.", thinking: "Hmm… let me think about that!", talking: "Let's find the answer together.", celebrating: "We did it! Time to celebrate!" };
+    demo.querySelectorAll('[data-state]').forEach(button => button.addEventListener('click', () => {
+        const state = button.dataset.state;
+        valky.dataset.zValkyState = state;
+        valky.open = true;
+        message.textContent = messages[state];
+        status.textContent = `State: ${state}. Select Valky to show or hide her message.`;
+    }));
+})();
+</script>
+}
