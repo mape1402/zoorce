@@ -1,10 +1,10 @@
-# ZoorceCode
+# Zoorce Code
 
 [![Build](https://github.com/mape1402/zoorce/actions/workflows/build-and-release.yml/badge.svg?branch=main)](https://github.com/mape1402/zoorce/actions/workflows/build-and-release.yml)
 [![NuGet](https://img.shields.io/nuget/v/Zoorce.Web.UI?logo=nuget&label=NuGet)](https://www.nuget.org/packages/Zoorce.Web.UI)
 [![Downloads](https://img.shields.io/nuget/dt/Zoorce.Web.UI?logo=nuget&label=downloads)](https://www.nuget.org/packages/Zoorce.Web.UI)
 [![Coverage](https://img.shields.io/badge/coverage-%E2%89%A590%25-2ea44f)](docs/testing.md)
-[![License](https://img.shields.io/badge/license-pending%20designation-lightgrey)](#license)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 <p align="center">
   <img src="assets/zoorce-code-logo.png" alt="ZoorceCode — Powered by Elysium" width="900" />
@@ -31,6 +31,7 @@ Zoorce is an ecosystem of reusable libraries and tools developed by Elysium Codi
 | `Zoorce.Web.UI.Navigation` | Breadcrumbs, pagination, menus, tabs, trees, steppers and wizards. |
 | `Zoorce.Web.UI.Forms` | Typed input controls, date/time pickers and selection patterns. |
 | `Zoorce.Web.UI.DataGrid`, `.Charts`, `.Timelines`, `.Diagrams` | Independent data-rich visual components. |
+| `Zoorce.Web.UI.Theming` | Theme palettes, semantic tokens and color modes. |
 | `Zoorce.Web.UI.Realtime.SignalR` | Optional SignalR-to-invalidation adapter. |
 
 ## Getting started
@@ -44,6 +45,11 @@ dotnet add package Zoorce.Web.UI
 ### 2. Register Zoorce in `Program.cs`
 
 ```csharp
+using Zoorce.Web.UI;
+using Zoorce.Web.UI.Theming;
+
+var builder = WebApplication.CreateBuilder(args);
+
 builder.Services
     .AddRazorPages()
     .AddZoorceWebUI(shell =>
@@ -61,7 +67,24 @@ app.MapRazorPages().WithStaticAssets();
 app.Run();
 ```
 
-### 3. Render a component
+### 3. Enable the shell and tag helpers
+
+In `Pages/_ViewStart.cshtml`, select the included layout:
+
+```cshtml
+@{ Layout = "_ZoorceLayout"; }
+```
+
+Add the tag helpers in `Pages/_ViewImports.cshtml`:
+
+```cshtml
+@addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
+@addTagHelper *, Zoorce.Web.UI
+```
+
+The default shell has no application navigation until the host supplies a navigation provider. The layout loads the library styles and scripts; standalone pages can use `_ZoorceStandaloneLayout` instead.
+
+### 4. Render a component
 
 ```cshtml
 @using Zoorce.Web.UI.Foundation.Components
@@ -71,11 +94,20 @@ app.Run();
     Id = "publish-release",
     Text = "Publish release",
     Progress = 0,
-    Tone = ZoorceProgressButtonTone.Primary
+    Tone = "primary"
 })
 ```
 
 Use the component option type to own labels, variants, templates, state and behavior. For visual changes, set the semantic palette tokens once on the shell or scope CSS variables to an individual component root.
+
+For example, customize the progress button's active and completed colors:
+
+```css
+#publish-release {
+  --z-progress-active: #0e7490;
+  --z-progress-complete: #059669;
+}
+```
 
 ### Standalone sign-in page
 
@@ -139,20 +171,13 @@ Celebration runs once by default, returns to `idle`, and emits a bubbling `zoorc
 
 Customize `--z-valky-size`, `--z-valky-bubble-background`, `--z-valky-bubble-color`, `--z-valky-bubble-border`, `--z-valky-inset-inline`, `--z-valky-inset-block` and `--z-valky-z-index` per instance. The optional `image-url` and `body-image-url` override the head and headless-body artwork; replacements must match Valky's original 1230 × 1278 layout and layer alignment because the animation uses fixed clipping and facial coordinates. The component loads its own JavaScript module; ensure the library's static assets are served. Animations are disabled when reduced motion is requested, while one-shot celebration still returns to idle. See the **Valky assistant** sample for interactive states.
 
-```css
-#publish-release {
-  --z-progress-button-active: #0e7490;
-  --z-progress-button-complete: #059669;
-}
-```
-
 ## Run the sample
 
 ```bash
 dotnet run --project samples/Zoorce.Sample --urls http://127.0.0.1:5135
 ```
 
-Open `http://127.0.0.1:5135` to explore the component gallery, test light/dark themes and exercise interactive controls.
+Open `http://127.0.0.1:5135` to explore the component gallery, test light/dark themes and exercise interactive controls. The standalone sign-in example is at `/sign-in`; the status-page examples are at `/status/401`, `/status/403`, `/status/404`, `/status/500` and `/status/503`.
 
 ## Quality and release
 
@@ -171,4 +196,4 @@ See [component customization](docs/components.md), [architecture](docs/architect
 
 ## License
 
-The first release requires an explicit license designation before publication. The badge intentionally remains pending until the repository owner selects and adds the license text.
+Zoorce is licensed under the [MIT License](LICENSE). Copyright © 2026 Elysium Coding.
