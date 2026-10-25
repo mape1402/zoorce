@@ -1,6 +1,6 @@
 # ZoorceCode
 
-[![Build](https://img.shields.io/badge/build-local%20%2B%20CI-2ea44f?logo=githubactions&logoColor=white)](.github/workflows/ci.yml)
+[![Build](https://github.com/mape1402/zoorce/actions/workflows/build-and-release.yml/badge.svg?branch=main)](https://github.com/mape1402/zoorce/actions/workflows/build-and-release.yml)
 [![NuGet](https://img.shields.io/nuget/v/Zoorce.Web.UI?logo=nuget&label=NuGet)](https://www.nuget.org/packages/Zoorce.Web.UI)
 [![Downloads](https://img.shields.io/nuget/dt/Zoorce.Web.UI?logo=nuget&label=downloads)](https://www.nuget.org/packages/Zoorce.Web.UI)
 [![Coverage](https://img.shields.io/badge/coverage-%E2%89%A590%25-2ea44f)](docs/testing.md)
@@ -103,7 +103,7 @@ for project in src/*/*.csproj; do
 done
 ```
 
-The CI workflow builds the CSS, compiles the solution, enforces the coverage threshold and verifies that the aggregate packages can be packed. Tagging `v1.0.0` runs the release workflow and attaches the generated NuGet packages to the GitHub release.
+The build and release workflow builds the CSS, compiles the solution, enforces the coverage threshold and packages the libraries. A change to `.release` on `main` triggers the corresponding GitHub release and NuGet publication after those checks pass. See [RELEASE.md](RELEASE.md) for the release process and prerequisites.
 
 See [component customization](docs/components.md), [architecture](docs/architecture.md), [testing](docs/testing.md), and [the changelog](CHANGELOG.md).
 

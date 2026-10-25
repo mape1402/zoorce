@@ -2,7 +2,7 @@
 
 All notable changes to ZoorceCode are documented in this file.
 
-## [1.0.0] - 2026-10-24
+## [v1.0.0] - 2026-10-24
 
 ### Added
 
@@ -11,4 +11,4 @@ All notable changes to ZoorceCode are documented in this file.
 - Complete light and dark semantic palettes, preset themes and runtime token switching.
 - Date/time selection, drawers, notifications, breadcrumbs, pagination, split panes, workflow steppers and wizards.
 - A sample application that demonstrates and functionally exercises the component catalog.
-- Automated build, CSS generation, test coverage enforcement, package creation and tag-driven GitHub release preparation.
+- Automated build, CSS generation, test coverage enforcement, package creation and marker-driven GitHub and NuGet releases.
