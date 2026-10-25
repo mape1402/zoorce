@@ -18,6 +18,27 @@ namespace Zoorce.Web.UI.Tests;
 /// <summary>Exercises reusable shell, theme, and asynchronous-feedback component boundaries.</summary>
 public sealed class ShellThemeAndFoundationTests
 {
+    [Fact]
+    public void Top_bar_back_action_is_optional_and_host_controlled()
+    {
+        var defaults = new ZoorceTopBarBackOptions { Visible = true, Url = "/overview", Label = "Overview" };
+        var shell = Options.Create(new ZoorceShellOptions { TopBarBack = defaults });
+        var topBar = new ZoorceTopBarViewComponent(shell, new TestUserMenuProvider(null));
+        var defaultResult = Assert.IsType<ViewViewComponentResult>(topBar.Invoke());
+        Assert.Same(defaults, Assert.IsType<ZoorceTopBarModel>(defaultResult.ViewData!.Model).Back);
+
+        var hidden = new ZoorceTopBarBackOptions { Visible = false };
+        var hiddenResult = Assert.IsType<ViewViewComponentResult>(topBar.Invoke(back: hidden));
+        Assert.Same(hidden, Assert.IsType<ZoorceTopBarModel>(hiddenResult.ViewData!.Model).Back);
+        var button = new ZoorceTopBarBackOptions { Visible = true };
+        Assert.Same(button, Assert.IsType<ZoorceTopBarModel>(Assert.IsType<ViewViewComponentResult>(topBar.Invoke(back: button)).ViewData!.Model).Back);
+        Assert.Throws<ArgumentException>(() => topBar.Invoke(back: new ZoorceTopBarBackOptions { Visible = true, Url = "javascript:alert(1)" }));
+        Assert.Throws<ArgumentException>(() => topBar.Invoke(back: new ZoorceTopBarBackOptions { Visible = true, Url = "//evil.example" }));
+        Assert.Throws<ArgumentException>(() => topBar.Invoke(back: new ZoorceTopBarBackOptions { Visible = true, Url = "/\\evil.example" }));
+        var noDefault = new ZoorceTopBarViewComponent(Options.Create(new ZoorceShellOptions()), new TestUserMenuProvider(null));
+        Assert.Null(Assert.IsType<ZoorceTopBarModel>(Assert.IsType<ViewViewComponentResult>(noDefault.Invoke()).ViewData!.Model).Back);
+    }
+
     [Theory]
     [InlineData(401, "Sign in", "/login")]
     [InlineData(403, "Go to home", "/home")]

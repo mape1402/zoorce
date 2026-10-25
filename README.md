@@ -100,6 +100,36 @@ The default shell has no application navigation until the host supplies a naviga
 
 Use the component option type to own labels, variants, templates, state and behavior. For visual changes, set the semantic palette tokens once on the shell or scope CSS variables to an individual component root.
 
+### Optional top-bar back action
+
+The back action is hidden by default. To show it on one Razor Page, configure it before the layout renders:
+
+```cshtml
+@using Zoorce.Web.UI.Layout.Components
+@{
+    ViewData["ZoorceTopBarBack"] = new ZoorceTopBarBackOptions
+    {
+        Visible = true,
+        Label = "Back to projects",
+        Url = "~/projects"
+    };
+}
+```
+
+Set `shell.TopBarBack` during registration to supply a default for all pages. A page can override that default, including hiding it with `Visible = false`. With `Url`, the control is a normal link. Without `Url`, it is a button and the host can attach a click handler to `[data-z-topbar-back]`; Zoorce does not assume browser history or provide navigation behavior. The Navigation sample demonstrates a page-specific link.
+
+For a custom action, omit `Url` and register the handler in the page's `Scripts` section:
+
+```cshtml
+@section Scripts {
+    <script>
+        document.querySelector('button[data-z-topbar-back]')?.addEventListener('click', () => {
+            // Perform the host application's action here.
+        });
+    </script>
+}
+```
+
 For example, customize the progress button's active and completed colors:
 
 ```css

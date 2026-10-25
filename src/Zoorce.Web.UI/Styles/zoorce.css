@@ -600,3 +600,6 @@ html.z-diagram-focus-active, body.z-diagram-focus-active { overflow: hidden; }.z
 .z-data-grid tbody tr:not(.z-grid-virtual-spacer):last-child td {
   border-bottom: 1px solid color-mix(in srgb, var(--z-border) 73%, transparent);
 }
+
+.z-topbar-back { flex: none; text-decoration: none; }
+.z-topbar-back:focus-visible { outline: 2px solid var(--z-primary); outline-offset: 3px; }

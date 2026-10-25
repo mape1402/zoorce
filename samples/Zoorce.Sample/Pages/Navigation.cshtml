@@ -2,8 +2,10 @@
 @using Microsoft.AspNetCore.Html
 @using Zoorce.Web.UI.Foundation.Components
 @using Zoorce.Web.UI.Navigation.Components
+@using Zoorce.Web.UI.Layout.Components
 @{
     ViewData["Title"] = "Navigation scale lab";
+    ViewData["ZoorceTopBarBack"] = new ZoorceTopBarBackOptions { Visible = true, Url = "~/", Label = "Back to overview" };
     var destinations = new[]
     {
         ("release-queue", "Release queue", "Delivery work that is ready for the next decision."),

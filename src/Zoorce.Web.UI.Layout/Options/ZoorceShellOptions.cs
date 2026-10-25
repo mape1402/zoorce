@@ -1,5 +1,6 @@
 using Zoorce.Web.UI.Theming;
 using Zoorce.Web.UI.Foundation.Components;
+using Zoorce.Web.UI.Layout.Components;
 
 namespace Zoorce.Web.UI.Layout;
 
@@ -59,6 +60,9 @@ public sealed class ZoorceShellOptions
     /// Gets or sets the optional notification center rendered in the application top bar.
     /// </summary>
     public ZoorceNotificationCenterOptions? NotificationCenter { get; set; }
+
+    /// <summary>Gets or sets the optional default back action; individual pages can override it.</summary>
+    public ZoorceTopBarBackOptions? TopBarBack { get; set; }
 
     /// <summary>Gets the central palette catalog consumed by every Zoorce package.</summary>
     public ZoorceThemeCatalogOptions Themes { get; } = new();

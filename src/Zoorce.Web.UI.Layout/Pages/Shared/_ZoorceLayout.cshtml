@@ -2,6 +2,7 @@
 @using Zoorce.Web.UI.Layout
 @using Zoorce.Web.UI.Theming
 @using Zoorce.Web.UI.Foundation.WaitDialog
+@using Zoorce.Web.UI.Layout.Components
 @inject IOptions<ZoorceShellOptions> ZoorceOptions
 @{
     var shell = ZoorceOptions.Value;
@@ -49,7 +50,7 @@
         @await Component.InvokeAsync("ZoorceSidebarNavigation")
         <button class="z-sidebar-backdrop" type="button" data-z-sidebar-backdrop data-z-sidebar-close aria-label="Close navigation" hidden></button>
         <div class="z-page-shell">
-            @await Component.InvokeAsync("ZoorceTopBar", new { title = pageTitle })
+            @await Component.InvokeAsync("ZoorceTopBar", new { title = pageTitle, back = ViewData["ZoorceTopBarBack"] as ZoorceTopBarBackOptions })
             <main class="z-main" id="main-content">@RenderBody()</main>
         </div>
     </div>
