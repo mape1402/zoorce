@@ -17,6 +17,7 @@ All notable changes to ZoorceCode are documented in this file.
 
 ### Fixed
 
+- Sign-in, status-page, and top-bar back actions accept valid root-relative destinations on Linux.
 - The infinite-scroll data grid header now extends over the reserved scrollbar gutter before and after overflow appears.
 - Data grid rows retain their bottom separator when there is only one row or when the row is the last one displayed.
 

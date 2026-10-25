@@ -12,10 +12,7 @@ public sealed class ZoorceStatusPageViewComponent : ViewComponent
         ArgumentNullException.ThrowIfNull(options);
         foreach (var action in options.Actions)
         {
-            var url = action.Url?.Trim();
-            if (string.IsNullOrWhiteSpace(url) || url.StartsWith("//", StringComparison.Ordinal) ||
-                url.StartsWith("\\", StringComparison.Ordinal) || url.Any(char.IsControl) ||
-                (Uri.TryCreate(url, UriKind.Absolute, out var absolute) && absolute.Scheme is not ("http" or "https")))
+            if (!ZoorceNavigationUrl.IsSafe(action.Url))
                 throw new ArgumentException("Action destinations must be relative or HTTP(S) URLs.", nameof(options));
         }
         return View(options);
