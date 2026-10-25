@@ -20,9 +20,15 @@ public sealed class ZoorceValkyTagHelper : TagHelper
     public bool Open { get; set; }
     /// <summary>Gets or sets whether the companion is fixed to the viewport.</summary>
     public bool Floating { get; set; }
-    /// <summary>Gets or sets a custom image URL. Custom art must use the same layer layout.</summary>
+    /// <summary>Gets or sets the head artwork URL. Custom artwork must use the same layer layout.</summary>
     [HtmlAttributeName("image-url")]
     public string? ImageUrl { get; set; }
+    /// <summary>Gets or sets the headless body artwork URL, aligned with the head artwork.</summary>
+    [HtmlAttributeName("body-image-url")]
+    public string? BodyImageUrl { get; set; }
+    /// <summary>Gets or sets whether celebration repeats until the host changes the state.</summary>
+    [HtmlAttributeName("celebration-loop")]
+    public bool CelebrationLoop { get; set; }
     /// <summary>Gets or sets extra root classes.</summary>
     [HtmlAttributeName("css-class")]
     public string? CssClass { get; set; }
@@ -42,27 +48,31 @@ public sealed class ZoorceValkyTagHelper : TagHelper
         var child = await output.GetChildContentAsync();
         var image = ImageUrl ?? $"{ViewContext?.HttpContext.Request.PathBase}/_content/Zoorce.Web.UI/images/valky.png";
         var encodedImage = HtmlEncoder.Default.Encode(image);
+        var bodyImage = HtmlEncoder.Default.Encode(BodyImageUrl ?? $"{ViewContext?.HttpContext.Request.PathBase}/_content/Zoorce.Web.UI/images/valky-body.png");
+        var script = HtmlEncoder.Default.Encode($"{ViewContext?.HttpContext.Request.PathBase}/_content/Zoorce.Web.UI/js/zoorce-valky.js");
         var clip = "valky-" + Guid.NewGuid().ToString("N");
         var content = new HtmlContentBuilder();
         content.AppendHtml("<summary class=\"z-valky-trigger\" aria-label=\"");
         content.Append(Label);
         content.AppendHtml("\"><svg class=\"z-valky-art\" viewBox=\"0 0 1230 1278\" aria-hidden=\"true\" focusable=\"false\"><defs>");
-        content.AppendHtml($"<clipPath id=\"{clip}-body\"><path d=\"M0 600 L305 600 L370 610 L470 650 L610 670 L740 540 L1230 540 L1230 1278 L0 1278Z\"/></clipPath><clipPath id=\"{clip}-head\"><path d=\"M0 0 H850 V440 L750 510 L680 625 L600 660 L470 640 L330 590 L280 550 H0Z\"/></clipPath><clipPath id=\"{clip}-tail\"><path d=\"M850 625 H1230 V1200 H990 L900 900Z\"/></clipPath></defs>");
-        content.AppendHtml($"<image class=\"z-valky-body\" href=\"{encodedImage}\" width=\"1230\" height=\"1278\" clip-path=\"url(#{clip}-body)\"/><image class=\"z-valky-tail\" href=\"{encodedImage}\" width=\"1230\" height=\"1278\" clip-path=\"url(#{clip}-tail)\"/><g class=\"z-valky-head\"><image href=\"{encodedImage}\" width=\"1230\" height=\"1278\" clip-path=\"url(#{clip}-head)\"/><g class=\"z-valky-blink\" fill=\"#262120\"><ellipse cx=\"440\" cy=\"415\" rx=\"42\" ry=\"48\"/><ellipse cx=\"600\" cy=\"330\" rx=\"37\" ry=\"47\"/></g></g></svg></summary>");
+        content.AppendHtml($"<clipPath id=\"{clip}-body\"><path d=\"M0 0 H840 L850 650 L885 740 L930 835 L985 1030 L1000 1278 H0Z\"/></clipPath><clipPath id=\"{clip}-head\"><path d=\"M0 0 H840 V425 L750 450 L716 500 L680 548 L644 592 L610 624 L558 635 L500 625 L445 608 L392 585 L340 567 L300 550 L270 520 H0Z\"/></clipPath><clipPath id=\"{clip}-tail\"><path d=\"M840 620 H1230 V1200 H950 L885 850Z\"/></clipPath></defs>");
+        content.AppendHtml($"<image class=\"z-valky-tail\" href=\"{bodyImage}\" width=\"1230\" height=\"1278\" clip-path=\"url(#{clip}-tail)\"/><image class=\"z-valky-body\" href=\"{bodyImage}\" width=\"1230\" height=\"1278\" clip-path=\"url(#{clip}-body)\"/><g class=\"z-valky-head\"><image href=\"{encodedImage}\" width=\"1230\" height=\"1278\" clip-path=\"url(#{clip}-head)\"/><g class=\"z-valky-blink\" fill=\"#292421\"><ellipse cx=\"443\" cy=\"416\" rx=\"43\" ry=\"40\"/><ellipse cx=\"601\" cy=\"333\" rx=\"39\" ry=\"42\"/></g><path class=\"z-valky-mouth-cover\" d=\"M525 527 Q557 507 581 513 Q615 494 649 499 Q657 510 650 533 Q637 581 599 593 Q558 604 536 568 Z\" fill=\"#241e1d\"/></g></svg></summary>");
         content.AppendHtml("<div class=\"z-valky-bubble\" role=\"region\" aria-label=\"");
         content.Append(Label);
         content.AppendHtml("\">");
         if (!child.IsEmptyOrWhiteSpace) content.AppendHtml(child);
         else if (!string.IsNullOrWhiteSpace(Message)) content.Append(Message);
         content.AppendHtml("</div>");
+        content.AppendHtml($"<script type=\"module\" src=\"{script}\"></script>");
 
         output.TagName = "details";
         output.TagMode = TagMode.StartTagAndEndTag;
         output.Attributes.RemoveAll("state"); output.Attributes.RemoveAll("label");
         output.Attributes.RemoveAll("message"); output.Attributes.RemoveAll("floating");
-        output.Attributes.RemoveAll("image-url"); output.Attributes.RemoveAll("css-class");
+        output.Attributes.RemoveAll("image-url"); output.Attributes.RemoveAll("body-image-url"); output.Attributes.RemoveAll("celebration-loop"); output.Attributes.RemoveAll("css-class");
         output.Attributes.SetAttribute("class", $"z-valky{(Floating ? " z-valky--floating" : "")} {CssClass}".Trim());
         output.Attributes.SetAttribute("data-z-valky-state", state);
+        output.Attributes.SetAttribute("data-z-valky-celebration", CelebrationLoop ? "loop" : "once");
         if (Open) output.Attributes.SetAttribute("open", "open");
         else output.Attributes.RemoveAll("open");
         output.Content.SetHtmlContent(content);
