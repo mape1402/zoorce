@@ -37,6 +37,7 @@
             this.searchTimer = 0;
             this.body = root.querySelector("[data-z-grid-body]");
             this.viewport = root.querySelector("[data-z-grid-viewport]");
+            this.header = root.querySelector(".z-data-grid thead");
             this.empty = root.querySelector("[data-z-grid-empty]");
             this.summary = root.querySelector("[data-z-grid-summary]");
             this.state = root.querySelector("[data-z-grid-state]");
@@ -47,6 +48,7 @@
             this.sentinel = root.querySelector("[data-z-grid-sentinel]");
             this.updateNoticeButton = root.querySelector("[data-z-grid-update-notice]");
             this.bind();
+            this.observeHeader();
             this.connectInvalidation();
             this.load(1, { reset: true });
         }
@@ -91,6 +93,22 @@
                     rootMargin: `0px 0px ${Number(this.configuration.prefetchThreshold ?? 144)}px 0px`
                 });
                 this.observer.observe(this.sentinel);
+            }
+        }
+
+        observeHeader() {
+            if (this.configuration.loadMode !== "InfiniteScroll" || !this.viewport || !this.header) return;
+
+            const syncHeight = () => {
+                const height = this.header.getBoundingClientRect().height;
+                if (height > 0) this.viewport.style.setProperty("--z-grid-header-height", `${height}px`);
+            };
+            syncHeight();
+            if ("ResizeObserver" in window) {
+                this.headerObserver = new ResizeObserver(syncHeight);
+                this.headerObserver.observe(this.header);
+            } else {
+                window.addEventListener("resize", syncHeight, { signal: this.abortController.signal });
             }
         }
 
@@ -268,6 +286,8 @@
             this.abortController.abort();
             this.requestController?.abort();
             this.observer?.disconnect();
+            this.headerObserver?.disconnect();
+            this.viewport?.style.removeProperty("--z-grid-header-height");
             if (this.renderFrame) window.cancelAnimationFrame(this.renderFrame);
             this.unsubscribeRealtime?.();
         }
