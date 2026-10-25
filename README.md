@@ -10,7 +10,7 @@
   <img src="assets/zoorce-code-logo.png" alt="ZoorceCode — Powered by Elysium" width="900" />
 </p>
 
-ZoorceCode is a modular, server-rendered and progressively enhanced UI library for ASP.NET Core Razor Pages. Every component owns its markup, lifecycle and optional data binding; the host keeps ownership of domain state, navigation and transport.
+Zoorce is an ecosystem of reusable libraries and tools developed by Elysium Coding. This repository provides `Zoorce.Web.UI`, its modular, server-rendered and progressively enhanced UI library for ASP.NET Core Razor Pages. Every component owns its markup, lifecycle and optional data binding; the host keeps ownership of domain state, navigation and transport.
 
 ## Highlights
 
@@ -76,6 +76,30 @@ app.Run();
 ```
 
 Use the component option type to own labels, variants, templates, state and behavior. For visual changes, set the semantic palette tokens once on the shell or scope CSS variables to an individual component root.
+
+### Standalone sign-in page
+
+The sign-in entry point is a presentation component, not an authentication provider. Create a Razor Page and opt out of your application shell by selecting `_ZoorceStandaloneLayout`. Configure the button to target your application's authentication challenge endpoint; configure and secure that endpoint in the host application. If the application uses a fallback authorization policy, allow anonymous access to the sign-in page and its challenge endpoint as appropriate, and validate any return URL in the host.
+
+```cshtml
+@page "/sign-in"
+@using Zoorce.Web.UI.Layout.Components
+@{
+    Layout = "_ZoorceStandaloneLayout";
+    ViewData["Title"] = "Sign in";
+}
+@await Component.InvokeAsync("ZoorceSignIn", new ZoorceSignInOptions
+{
+    ApplicationName = "Your application",
+    SignInUrl = "/account/challenge",
+    Title = "Welcome back.",
+    Description = "Sign in to continue."
+})
+```
+
+Brand mark or logo, optional wordmark image (`WordmarkUrl`), brand subtitle and hero highlights, illustration, headings, descriptions, button label, hint and footer links are configurable through `ZoorceSignInOptions`. A host can set `WordmarkClass` for custom wordmark styling and disable the diagonal light trails with `ShowShootingStars`. Their color can be overridden with `--z-signin-spark-color`. The default animated vector illustration follows the theme's primary color, and animations respect reduced-motion preferences. You can supply an `IllustrationUrl` for custom artwork, although a raster image will not automatically recolor with the theme. The standalone layout applies the configured Zoorce theme without rendering the sidebar or top bar. Use `ViewData["Language"]` to set the document language. The host can optionally set `SignInEnabled` to `false` when it needs a disabled button.
+
+The sample's sign-in button opens the sample home page by default. Set `Sample:SignInUrl` to a host-owned authentication challenge URL to use another destination. Zoorce does not authenticate users or configure an identity provider; the host application owns that integration and its security.
 
 ### Valky help companion
 

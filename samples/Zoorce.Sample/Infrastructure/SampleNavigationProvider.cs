@@ -25,6 +25,7 @@ public sealed class SampleNavigationProvider : INavigationProvider
                 new("Diagrams", "/diagrams", "◇", MatchMode: NavigationMatchMode.Exact),
                 new("Steppers", "/steppers", "⇢", MatchMode: NavigationMatchMode.Exact),
                 new("Wizards", "/wizards", "↳", MatchMode: NavigationMatchMode.Exact),
+                new("Sign-in page", "/sign-in", "→", MatchMode: NavigationMatchMode.Exact),
                 new("Valky assistant", "/valky", "♥", MatchMode: NavigationMatchMode.Exact),
                 new("Timelines", "/timeline", "◷", MatchMode: NavigationMatchMode.Exact),
                 new("Infinite grid", "/data-grid", "∞", MatchMode: NavigationMatchMode.Exact),

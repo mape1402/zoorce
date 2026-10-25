@@ -1,0 +1,82 @@
+.z-signin {
+    --z-signin-accent: var(--z-primary);
+    --z-signin-hero-background: color-mix(in srgb, var(--z-signin-accent) 43%, #11101d);
+    --z-signin-hero-foreground: #fff;
+    min-height: 100dvh;
+    color: var(--z-text);
+    background: var(--z-canvas);
+}
+.z-signin-frame { display: grid; grid-template-columns: 1.05fr .95fr; min-height: 100dvh; }
+.z-signin-hero { position: relative; isolation: isolate; display: flex; align-items: center; min-width: 0; overflow: hidden; background: radial-gradient(ellipse at 94% 13%, color-mix(in srgb, var(--z-signin-accent) 58%, transparent), transparent 58%), radial-gradient(ellipse at 0% 98%, color-mix(in srgb, var(--z-signin-accent) 42%, transparent), transparent 58%), linear-gradient(140deg, var(--z-signin-hero-background), color-mix(in srgb, var(--z-signin-accent) 28%, #10101c)); color: var(--z-signin-hero-foreground); }
+.z-signin-hero::before { position: absolute; inset: 0; pointer-events: none; content: ''; opacity: var(--z-signin-hero-texture-opacity, .55); background-image: radial-gradient(color-mix(in srgb, var(--z-signin-hero-texture-color, var(--z-signin-hero-foreground)) 28%, transparent) 1px, transparent 1px), linear-gradient(color-mix(in srgb, var(--z-signin-hero-texture-color, var(--z-signin-hero-foreground)) 9%, transparent) 1px, transparent 1px), linear-gradient(90deg, color-mix(in srgb, var(--z-signin-hero-texture-color, var(--z-signin-hero-foreground)) 9%, transparent) 1px, transparent 1px); background-size: 24px 24px, 72px 72px, 72px 72px; }
+.z-signin-art { position: absolute; z-index: -1; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.z-signin-hero-brand { position: absolute; z-index: 1; top: clamp(28px, 5vw, 72px); left: clamp(28px, 5vw, 80px); display: flex; align-items: center; gap: 12px; font-size: 12px; font-weight: 750; letter-spacing: .02em; }
+.z-signin-hero-mark, .z-signin-logo { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 12px; }
+.z-signin-hero-mark { border: 1px solid rgb(255 255 255 / .35); background: rgb(255 255 255 / .12); font-size: 18px; letter-spacing: 0; }
+.z-signin-brand-text { display: grid; gap: 5px; }
+.z-signin-wordmark { display: block; }
+.z-signin-wordmark img { display: block; max-width: 220px; max-height: 44px; object-fit: contain; object-position: left center; }
+.z-signin-brand-text small { font-size: 10px; font-weight: 500; letter-spacing: .02em; text-transform: none; opacity: .7; }
+.z-signin-logo { object-fit: contain; }
+.z-signin-hero-copy { position: relative; z-index: 1; max-width: 490px; margin: 0 clamp(28px, 5vw, 80px); }
+.z-signin-hero-label, .z-signin-eyebrow { font-size: 11px; font-weight: 750; letter-spacing: .03em; }
+.z-signin-hero-label { opacity: .8; }
+.z-signin-hero-copy h2 { margin: 12px 0; font-size: clamp(38px, 4.3vw, 72px); line-height: 1.05; letter-spacing: -.05em; }
+.z-signin-hero-copy p { max-width: 360px; margin: 0; font-size: 15px; line-height: 1.6; opacity: .85; }
+.z-signin-highlights { display: flex; flex-wrap: wrap; gap: 9px; max-width: 440px; margin: 25px 0 0; padding: 0; list-style: none; }
+.z-signin-highlights li { padding: 7px 10px; border: 1px solid rgb(255 255 255 / .24); border-radius: 8px; background: rgb(255 255 255 / .07); font-size: 11px; font-weight: 650; letter-spacing: .01em; }
+.z-signin-chip { position: absolute; top: 7%; right: 2%; width: min(46%, 420px); color: var(--z-signin-hero-foreground); opacity: .65; pointer-events: none; }
+.z-signin-chip-traces { opacity: .4; }
+.z-signin-chip-flow { stroke-dasharray: 10 45; animation: z-signin-chip-flow 2.2s linear infinite; }
+.z-signin-chip-nodes { animation: z-signin-data-lights 1.4s ease-in-out infinite alternate; }
+@keyframes z-signin-chip-flow { to { stroke-dashoffset: -55; } }
+.z-signin-streaks { position: absolute; inset: 0; overflow: hidden; color: var(--z-signin-spark-color, var(--z-signin-hero-foreground)); pointer-events: none; }
+.z-signin-streaks span { position: absolute; top: -5%; left: 78%; width: 125px; height: 2px; opacity: 0; background: linear-gradient(90deg, transparent, currentColor); border-radius: 50%; filter: drop-shadow(0 0 5px currentColor); transform: rotate(135deg); animation: z-signin-shooting-star 6s linear infinite; }
+.z-signin-streaks span:nth-child(2) { top: 9%; left: 105%; width: 90px; animation-duration: 7.5s; animation-delay: -2s; }
+.z-signin-streaks span:nth-child(3) { top: -2%; left: 47%; width: 105px; animation-duration: 9s; animation-delay: -5s; }
+.z-signin-streaks span:nth-child(4) { top: 32%; left: 100%; width: 80px; animation-duration: 8s; animation-delay: -3.5s; }
+@keyframes z-signin-shooting-star { 0%, 4% { opacity: 0; transform: translate3d(0, 0, 0) rotate(135deg); } 8% { opacity: .9; } 30% { opacity: .75; } 38%, 100% { opacity: 0; transform: translate3d(-440px, 440px, 0) rotate(135deg); } }
+.z-signin-composition { position: absolute; right: 0; bottom: 0; width: min(58%, 500px); color: var(--z-signin-hero-foreground); opacity: .8; pointer-events: none; }
+.z-signin-network-tracks { opacity: .25; }
+.z-signin-network-pulses path { stroke-dasharray: 15 80; animation: z-signin-data-flow 2.8s linear infinite; }
+.z-signin-network-pulses path:nth-child(2) { animation-delay: -1s; }
+.z-signin-network-pulses path:nth-child(3) { animation-delay: -1.8s; }
+.z-signin-network-lights { animation: z-signin-data-lights 1.4s ease-in-out infinite alternate; }
+@keyframes z-signin-data-flow { to { stroke-dashoffset: -95; } }
+@keyframes z-signin-data-lights { from { opacity: .3; } to { opacity: 1; } }
+.z-signin-panel { display: grid; place-items: center; min-width: 0; padding: 36px; background-color: var(--z-canvas); background-image: radial-gradient(color-mix(in srgb, var(--z-signin-accent) 16%, transparent) .75px, transparent .75px); background-size: 20px 20px; }
+.z-signin-content { position: relative; width: min(100%, 420px); padding: 38px; overflow: hidden; border: 1px solid var(--z-border); border-radius: 18px; background: var(--z-surface); box-shadow: 0 12px 36px color-mix(in srgb, var(--z-shadow) 24%, transparent); }
+.z-signin-content::before { position: absolute; inset: 0 0 auto; height: 4px; background: var(--z-signin-accent); content: ''; }
+.z-signin-action-icon { display: grid; place-items: center; width: 50px; height: 50px; margin-bottom: 26px; border: 1px solid color-mix(in srgb, var(--z-signin-accent) 25%, var(--z-border)); border-radius: 14px; background: color-mix(in srgb, var(--z-signin-accent) 10%, var(--z-surface)); color: var(--z-signin-accent); }
+.z-signin-action-icon svg { width: 22px; height: 22px; }
+.z-signin-eyebrow { color: var(--z-signin-accent); }
+.z-signin-content h1 { margin: 9px 0 10px; font-size: clamp(27px, 2.4vw, 34px); line-height: 1.15; letter-spacing: -.04em; }
+.z-signin-description { margin: 0; color: var(--z-muted); font-size: 14px; line-height: 1.6; }
+.z-signin-button { display: flex; align-items: center; justify-content: center; gap: 12px; width: 100%; min-height: 52px; margin-top: 27px; padding: 0 16px; border: 1px solid transparent; border-radius: 10px; background: var(--z-signin-accent); color: var(--z-primary-foreground, #fff); font: inherit; font-size: 14px; font-weight: 750; text-decoration: none; transition: filter .15s ease, transform .15s ease; }
+.z-signin-button:not(:disabled):hover { filter: brightness(1.08); transform: translateY(-1px); }
+.z-signin-button:disabled { opacity: .55; cursor: not-allowed; }
+.z-signin-button:focus-visible, .z-signin-footer a:focus-visible { outline: 3px solid var(--z-signin-accent); outline-offset: 4px; }
+.z-signin-hint { margin: 15px 0 0; color: var(--z-muted); font-size: 12px; line-height: 1.5; }
+.z-signin-footer { display: flex; flex-wrap: wrap; gap: 12px 20px; margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--z-border); color: var(--z-muted); font-size: 12px; }
+.z-signin-footer a:hover { color: var(--z-text); }
+@media (max-width: 760px) {
+    .z-signin-frame { grid-template-columns: 1fr; grid-template-rows: minmax(330px, auto) 1fr; }
+    .z-signin-hero { align-items: end; }
+    .z-signin-hero-brand { top: 22px; left: 24px; }
+    .z-signin-hero-mark, .z-signin-logo { width: 36px; height: 36px; }
+    .z-signin-hero-copy { margin: 100px 24px 25px; }
+    .z-signin-hero-copy h2 { font-size: clamp(32px, 8vw, 48px); }
+    .z-signin-hero-copy p { font-size: 13px; }
+    .z-signin-highlights { gap: 6px; margin-top: 14px; }
+    .z-signin-highlights li { padding: 5px 7px; font-size: 10px; }
+    .z-signin-chip { top: 0; right: -40px; width: 190px; opacity: .3; }
+    .z-signin-streaks span { width: 80px; }
+    .z-signin-composition { width: 250px; right: -40px; bottom: -25px; opacity: .18; }
+    .z-signin-panel { padding: 28px 20px; }
+    .z-signin-content { padding: 28px; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .z-signin-network-pulses path, .z-signin-network-lights, .z-signin-streaks span, .z-signin-chip-flow, .z-signin-chip-nodes { animation: none; }
+    .z-signin-button { transition: none; }
+    .z-signin-button:not(:disabled):hover { transform: none; }
+}

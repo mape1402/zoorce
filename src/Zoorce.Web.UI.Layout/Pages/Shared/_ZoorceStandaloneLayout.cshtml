@@ -1,0 +1,29 @@
+@using Microsoft.Extensions.Options
+@using Zoorce.Web.UI.Layout
+@using Zoorce.Web.UI.Theming
+@inject IOptions<ZoorceShellOptions> ZoorceOptions
+@{
+    var shell = ZoorceOptions.Value;
+    var defaultTheme = shell.DefaultTheme == ZoorceThemeMode.Light ? "light" : "dark";
+    var pageTitle = ViewData["Title"]?.ToString() ?? shell.ApplicationName;
+}
+<!DOCTYPE html>
+<html lang="@(ViewData["Language"] ?? "en")" data-zoorce-theme="@defaultTheme">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="dark light" />
+    <title>@pageTitle · @shell.ApplicationName</title>
+    <script>
+        (() => { try { const theme = localStorage.getItem("zoorce-theme"); if (theme === "light" || theme === "dark") document.documentElement.dataset.zoorceTheme = theme; } catch { /* Storage may be unavailable. */ } })();
+    </script>
+    <style>@Html.Raw(shell.ToCssThemeRules())</style>
+    <link rel="stylesheet" href="~/_content/Zoorce.Web.UI/css/zoorce.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/_content/Zoorce.Web.UI.Layout/css/zoorce-sign-in.css" asp-append-version="true" />
+    @await RenderSectionAsync("Head", required: false)
+</head>
+<body>
+    @RenderBody()
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

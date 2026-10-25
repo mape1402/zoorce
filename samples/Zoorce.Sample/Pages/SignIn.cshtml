@@ -1,0 +1,26 @@
+@page "/sign-in"
+@using Zoorce.Web.UI.Layout.Components
+@inject IConfiguration Configuration
+@{
+    Layout = "_ZoorceStandaloneLayout";
+    ViewData["Title"] = "Sign in";
+}
+@await Component.InvokeAsync("ZoorceSignIn", new ZoorceSignInOptions
+{
+    ApplicationName = "Zoorce Code",
+    BrandSubtitle = "Powered by Elysium",
+    WordmarkUrl = "~/assets/zoorce-code-logo.png",
+    WordmarkClass = "sample-zoorce-wordmark",
+    SignInUrl = string.IsNullOrWhiteSpace(Configuration["Sample:SignInUrl"]) ? Url.Content("~/") : Configuration["Sample:SignInUrl"]!,
+    HeroLabel = "An Elysium Coding ecosystem",
+    HeroTitle = "The source behind the force.",
+    HeroDescription = "Reusable libraries, tools, and shared foundations for building applications with consistency and efficiency.",
+    HeroHighlights = ["Libraries", "Tools", "Components"],
+    Description = "Sign in to access your workspace."
+})
+@section Head {
+    <style>
+        .sample-zoorce-wordmark { position: relative; width: 220px; aspect-ratio: 1290 / 205; overflow: hidden; }
+        .sample-zoorce-wordmark img { position: absolute; width: 150.8%; max-width: none; max-height: none; height: auto; left: -46.1%; top: -140%; }
+    </style>
+}

@@ -19,6 +19,20 @@ namespace Zoorce.Web.UI.Tests;
 public sealed class ShellThemeAndFoundationTests
 {
     [Fact]
+    public void Sign_in_requires_a_safe_host_destination_and_preserves_custom_options()
+    {
+        var component = new ZoorceSignInViewComponent();
+        Assert.Throws<ArgumentNullException>(() => component.Invoke(null!));
+        Assert.IsType<ViewViewComponentResult>(component.Invoke(new ZoorceSignInOptions()));
+        Assert.Throws<ArgumentException>(() => component.Invoke(new ZoorceSignInOptions { SignInUrl = "" }));
+        Assert.Throws<ArgumentException>(() => component.Invoke(new ZoorceSignInOptions { SignInUrl = "javascript:alert(1)" }));
+        Assert.Throws<ArgumentException>(() => component.Invoke(new ZoorceSignInOptions { SignInUrl = "//evil.example" }));
+        Assert.IsType<ViewViewComponentResult>(component.Invoke(new ZoorceSignInOptions { SignInEnabled = false }));
+        var options = new ZoorceSignInOptions { SignInUrl = "/account/challenge", Title = "Welcome", IllustrationUrl = "/art.png" };
+        var result = Assert.IsType<ViewViewComponentResult>(component.Invoke(options));
+        Assert.Same(options, result.ViewData!.Model);
+    }
+    [Fact]
     public void Foundation_view_components_reject_missing_models_and_return_view_results()
     {
         Assert.Throws<ArgumentNullException>(() => new ZoorceProgressViewComponent().Invoke(null!));

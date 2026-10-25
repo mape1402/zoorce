@@ -1,0 +1,109 @@
+@model Zoorce.Web.UI.Layout.Components.ZoorceSignInOptions
+<main class="z-signin">
+  <div class="z-signin-frame">
+    <section class="z-signin-hero" aria-label="@Model.HeroTitle">
+        @if (!string.IsNullOrWhiteSpace(Model.IllustrationUrl))
+        {
+            <img class="z-signin-art" src="@Url.Content(Model.IllustrationUrl)" alt="" />
+        }
+        else
+        {
+            <svg class="z-signin-chip" viewBox="0 0 440 220" aria-hidden="true" focusable="false">
+                <g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                    <g class="z-signin-chip-traces" stroke-width="1.5">
+                        <path d="M155 76h-40l-23-23H45 M155 105H70l-21 21H21 M155 134h-31l-28 28H52 M285 76h34l22-22h49 M285 105h76l19 19h37 M285 134h38l27 27h52" />
+                        <path d="M188 54V29h-26 M220 54V18 M252 54V29h26 M188 156v25h-26 M220 156v36 M252 156v25h26" />
+                    </g>
+                    <g class="z-signin-chip-flow" stroke-width="3">
+                        <path d="M155 76h-40l-23-23H45 M155 105H70l-21 21H21 M155 134h-31l-28 28H52 M285 76h34l22-22h49 M285 105h76l19 19h37 M285 134h38l27 27h52" />
+                    </g>
+                    <rect x="155" y="54" width="130" height="102" rx="17" fill="currentColor" fill-opacity=".08" stroke-opacity=".72" stroke-width="1.5" />
+                    <rect x="175" y="72" width="90" height="66" rx="10" stroke-opacity=".45" stroke-width="1.3" />
+                    <path d="M202 89l-12 16 12 16 M238 89l12 16-12 16 M226 85l-12 40" stroke-opacity=".9" stroke-width="3" />
+                </g>
+                <g class="z-signin-chip-nodes" fill="currentColor"><circle cx="45" cy="53" r="3" /><circle cx="21" cy="126" r="3" /><circle cx="52" cy="162" r="3" /><circle cx="390" cy="54" r="3" /><circle cx="417" cy="124" r="3" /><circle cx="402" cy="161" r="3" /></g>
+            </svg>
+            <svg class="z-signin-composition" viewBox="0 0 600 410" aria-hidden="true" focusable="false">
+                <g class="z-signin-network-tracks" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M172 203 H229 Q244 203 252 192 L286 146 Q294 135 310 135 H421" />
+                    <path d="M172 203 H233 Q247 203 257 213 L294 252 Q304 263 320 263 H421" />
+                    <path d="M121 245 V300 Q121 320 141 320 H256" />
+                </g>
+                <g class="z-signin-network-pulses" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M172 203 H229 Q244 203 252 192 L286 146 Q294 135 310 135 H421" />
+                    <path d="M172 203 H233 Q247 203 257 213 L294 252 Q304 263 320 263 H421" />
+                    <path d="M121 245 V300 Q121 320 141 320 H256" />
+                </g>
+                <g class="z-signin-network-nodes" fill="currentColor" fill-opacity=".11" stroke="currentColor" stroke-opacity=".65" stroke-width="1.5">
+                    <rect x="70" y="157" width="102" height="88" rx="22" />
+                    <rect x="421" y="92" width="92" height="86" rx="20" />
+                    <rect x="421" y="220" width="92" height="86" rx="20" />
+                    <rect x="256" y="293" width="75" height="54" rx="16" />
+                </g>
+                <g fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M110 186l-13 15 13 15 M132 186l13 15-13 15 M126 181l-10 40" />
+                    <rect x="445" y="114" width="44" height="15" rx="5" /><rect x="445" y="139" width="44" height="15" rx="5" />
+                    <ellipse cx="467" cy="246" rx="21" ry="7" /><path d="M446 246v26c0 4 9 7 21 7s21-3 21-7v-26 M446 259c0 4 9 7 21 7s21-3 21-7" />
+                    <path d="M276 320h34 M293 310v20" />
+                </g>
+                <g class="z-signin-network-lights" fill="currentColor">
+                    <circle cx="452" cy="121.5" r="2.5" /><circle cx="452" cy="146.5" r="2.5" />
+                </g>
+            </svg>
+        }
+        @if (Model.ShowShootingStars)
+        {
+            <div class="z-signin-streaks" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
+        }
+        <div class="z-signin-hero-brand">
+            @if (!string.IsNullOrWhiteSpace(Model.WordmarkUrl))
+            {
+                <span class="z-signin-brand-text">
+                    <span class="z-signin-wordmark @Model.WordmarkClass"><img src="@Url.Content(Model.WordmarkUrl)" alt="@Model.ApplicationName" /></span>
+                    @if (!string.IsNullOrWhiteSpace(Model.BrandSubtitle)) { <small>@Model.BrandSubtitle</small> }
+                </span>
+            }
+            else
+            {
+                @if (!string.IsNullOrWhiteSpace(Model.LogoUrl)) { <img class="z-signin-logo" src="@Url.Content(Model.LogoUrl)" alt="" /> }
+                else { <span class="z-signin-hero-mark" aria-hidden="true">@Model.BrandMark</span> }
+                <span class="z-signin-brand-text"><span>@Model.ApplicationName</span>@if (!string.IsNullOrWhiteSpace(Model.BrandSubtitle)) { <small>@Model.BrandSubtitle</small> }</span>
+            }
+        </div>
+        <div class="z-signin-hero-copy">
+            <span class="z-signin-hero-label">@Model.HeroLabel</span>
+            <h2>@Model.HeroTitle</h2>
+            <p>@Model.HeroDescription</p>
+            @if (Model.HeroHighlights.Count > 0)
+            {
+                <ul class="z-signin-highlights">
+                    @foreach (var highlight in Model.HeroHighlights) { <li>@highlight</li> }
+                </ul>
+            }
+        </div>
+    </section>
+    <section class="z-signin-panel" aria-labelledby="z-signin-heading">
+        <div class="z-signin-content">
+            <span class="z-signin-action-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="10" width="14" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v2"/></svg></span>
+            <div class="z-signin-eyebrow">@Model.Eyebrow</div>
+            <h1 id="z-signin-heading">@Model.Title</h1>
+            <p class="z-signin-description">@Model.Description</p>
+              @if (Model.SignInEnabled)
+              {
+                <a class="z-signin-button" href="@Url.Content(Model.SignInUrl)"><span>@Model.SignInText</span><span aria-hidden="true">→</span></a>
+              }
+              else
+              {
+                <button class="z-signin-button" type="button" disabled><span>@Model.SignInText</span><span aria-hidden="true">→</span></button>
+              }
+            @if (!string.IsNullOrWhiteSpace(Model.Hint)) { <p class="z-signin-hint">@Model.Hint</p> }
+        @if (Model.Links.Count > 0)
+        {
+            <nav class="z-signin-footer" aria-label="Support and information">
+                @foreach (var link in Model.Links) { <a href="@Url.Content(link.Url)">@link.Text</a> }
+            </nav>
+        }
+        </div>
+    </section>
+  </div>
+</main>
