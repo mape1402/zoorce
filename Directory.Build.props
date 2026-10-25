@@ -4,6 +4,11 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <Version>1.0.0</Version>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageIcon>nuget-icon.png</PackageIcon>
     <PackageReleaseNotes>Initial 1.0.0 release of the Zoorce component library.</PackageReleaseNotes>
   </PropertyGroup>
+  <ItemGroup>
+    <None Include="$(MSBuildThisFileDirectory)assets/nuget-icon.png" Pack="true" PackagePath="/" />
+  </ItemGroup>
 </Project>

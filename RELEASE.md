@@ -8,6 +8,6 @@ The marker only triggers publication when it changes in a push to `main`. A manu
 
 - Set the repository variable `NUGET_USER` to the nuget.org account that configured the Trusted Publishing policy.
 - Configure a NuGet Trusted Publishing policy for this repository and `.github/workflows/build-and-release.yml`.
-- Select and add a license before publishing packages. No license has been designated yet.
+- Packages declare the MIT license; the full license text is available in [LICENSE](LICENSE).
 
 The initial marker is `v1.0.0`. Merging its addition into `main` will initiate publication after the checks succeed, so configure the prerequisites first.
