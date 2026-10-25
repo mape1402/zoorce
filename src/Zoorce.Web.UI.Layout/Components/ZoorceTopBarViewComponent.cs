@@ -25,11 +25,7 @@ public sealed class ZoorceTopBarViewComponent : ViewComponent
         back ??= _shell.TopBarBack;
         if (back?.Visible == true && !string.IsNullOrWhiteSpace(back.Url))
         {
-            var url = back.Url.Trim();
-            if (url.StartsWith("//", StringComparison.Ordinal) || url.Contains('\\') ||
-                url.StartsWith("~//", StringComparison.Ordinal) ||
-                url.Any(char.IsControl) ||
-                (Uri.TryCreate(url, UriKind.Absolute, out var absolute) && absolute.Scheme is not ("http" or "https")))
+            if (!ZoorceNavigationUrl.IsSafe(back.Url))
                 throw new ArgumentException("The back destination must be a relative or HTTP(S) URL.", nameof(back));
         }
         var profile = _userMenuProvider.GetCurrentUser();

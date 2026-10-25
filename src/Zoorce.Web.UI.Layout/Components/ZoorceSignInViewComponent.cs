@@ -12,10 +12,7 @@ public sealed class ZoorceSignInViewComponent : ViewComponent
         if (!options.SignInEnabled) return View(options);
         if (string.IsNullOrWhiteSpace(options.SignInUrl))
             throw new ArgumentException("A sign-in destination is required.", nameof(options));
-        var url = options.SignInUrl.Trim();
-        if (url.StartsWith("//", StringComparison.Ordinal) || url.StartsWith("\\", StringComparison.Ordinal) ||
-            (Uri.TryCreate(url, UriKind.Absolute, out var absolute) && absolute.Scheme is not ("http" or "https")) ||
-            url.Any(char.IsControl))
+        if (!ZoorceNavigationUrl.IsSafe(options.SignInUrl))
             throw new ArgumentException("The sign-in destination must be a relative URL or an HTTP(S) URL.", nameof(options));
         return View(options);
     }

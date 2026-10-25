@@ -18,6 +18,42 @@ namespace Zoorce.Web.UI.Tests;
 /// <summary>Exercises reusable shell, theme, and asynchronous-feedback component boundaries.</summary>
 public sealed class ShellThemeAndFoundationTests
 {
+    [Theory]
+    [InlineData("/home", true)]
+    [InlineData("~/home", true)]
+    [InlineData("home/details?tab=1", true)]
+    [InlineData("https://example.com/login", true)]
+    [InlineData("http://example.com/login", true)]
+    [InlineData("//evil.example", false)]
+    [InlineData("~//evil.example", false)]
+    [InlineData("/\\evil.example", false)]
+    [InlineData("javascript:alert(1)", false)]
+    [InlineData("file:///etc/passwd", false)]
+    [InlineData("/home\n", false)]
+    public void Navigation_destinations_are_consistent_across_components(string url, bool safe)
+    {
+        var signIn = new ZoorceSignInViewComponent();
+        var status = new ZoorceStatusPageViewComponent();
+        var topBar = new ZoorceTopBarViewComponent(Options.Create(new ZoorceShellOptions()), new TestUserMenuProvider(null));
+
+        void SignIn() => signIn.Invoke(new ZoorceSignInOptions { SignInUrl = url });
+        void Status() => status.Invoke(new ZoorceStatusPageOptions { Actions = [new("Continue", url)] });
+        void Back() => topBar.Invoke(back: new ZoorceTopBarBackOptions { Visible = true, Url = url });
+
+        if (safe)
+        {
+            SignIn();
+            Status();
+            Back();
+        }
+        else
+        {
+            Assert.Throws<ArgumentException>(SignIn);
+            Assert.Throws<ArgumentException>(Status);
+            Assert.Throws<ArgumentException>(Back);
+        }
+    }
+
     [Fact]
     public void Top_bar_back_action_is_optional_and_host_controlled()
     {
