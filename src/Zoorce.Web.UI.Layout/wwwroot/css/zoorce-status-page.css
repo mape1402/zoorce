@@ -1,0 +1,57 @@
+.z-status-page {
+    --z-status-accent: var(--z-primary);
+    --z-status-foreground: #fff;
+    --z-status-suit: #f3f0ff;
+    --z-status-helmet: #d9d2f1;
+    --z-status-outline: #29213f;
+    --z-status-visor: color-mix(in srgb, var(--z-status-accent) 42%, #17152d);
+    position: relative; isolation: isolate; min-height: 100dvh; overflow: hidden;
+    display: flex; flex-direction: column; color: var(--z-status-foreground);
+    background: radial-gradient(ellipse at 85% 12%, color-mix(in srgb, var(--z-status-accent) 56%, transparent), transparent 52%), radial-gradient(ellipse at 5% 100%, color-mix(in srgb, var(--z-status-accent) 34%, transparent), transparent 52%), linear-gradient(140deg, color-mix(in srgb, var(--z-status-accent) 38%, #11101d), #11101d);
+}
+.z-status-grid { position: absolute; inset: 0; pointer-events: none; opacity: var(--z-status-texture-opacity, .55); background-image: radial-gradient(color-mix(in srgb, var(--z-status-foreground) 28%, transparent) 1px, transparent 1px), linear-gradient(color-mix(in srgb, var(--z-status-foreground) 9%, transparent) 1px, transparent 1px), linear-gradient(90deg, color-mix(in srgb, var(--z-status-foreground) 9%, transparent) 1px, transparent 1px); background-size: 24px 24px, 72px 72px, 72px 72px; }
+.z-status-brand { position: relative; z-index: 1; display: inline-grid; gap: 4px; align-self: flex-start; margin: clamp(24px, 4vw, 64px); font-size: 20px; font-weight: 800; letter-spacing: -.03em; }
+.z-status-brand small { font-size: 11px; font-weight: 500; letter-spacing: 0; opacity: .75; }
+.z-status-layout { position: relative; z-index: 1; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: center; gap: clamp(20px, 5vw, 80px); width: min(1080px, calc(100% - 64px)); margin: auto; padding: 30px 0 90px; }
+.z-status-copy { max-width: 520px; }
+.z-status-code { display: block; color: color-mix(in srgb, var(--z-status-foreground) 68%, var(--z-status-accent)); font-size: clamp(72px, 9vw, 140px); font-weight: 800; line-height: .9; letter-spacing: -.07em; }
+.z-status-copy h1 { margin: 24px 0 12px; font-size: clamp(30px, 3.5vw, 48px); line-height: 1.08; letter-spacing: -.04em; }
+.z-status-copy p { max-width: 440px; margin: 0; font-size: 16px; line-height: 1.65; opacity: .85; }
+.z-status-details { margin-top: 18px; font-size: 14px; }
+.z-status-details summary { width: fit-content; cursor: pointer; font-weight: 650; }
+.z-status-details summary:focus-visible { outline: 3px solid var(--z-status-foreground); outline-offset: 4px; }
+.z-status-details p { margin-top: 8px; white-space: pre-wrap; font-size: 13px; overflow-wrap: anywhere; }
+.z-status-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 28px; }
+.z-status-action { display: inline-flex; align-items: center; justify-content: center; gap: 16px; min-height: 48px; padding: 0 22px; border: 1px solid transparent; border-radius: 10px; background: var(--z-status-action-background, var(--z-status-foreground)); color: var(--z-status-action-foreground, #211938); font-weight: 750; text-decoration: none; transition: transform .15s ease, filter .15s ease; }
+.z-status-action:hover { transform: translateY(-2px); filter: brightness(.95); }
+.z-status-action:focus-visible { outline: 3px solid var(--z-status-foreground); outline-offset: 4px; }
+.z-status-action-secondary { background: transparent; border-color: color-mix(in srgb, var(--z-status-foreground) 50%, transparent); color: var(--z-status-foreground); }
+.z-status-scene { position: relative; display: grid; place-items: center; min-width: 0; }
+.z-status-astronaut { display: block; width: min(100%, 440px); overflow: visible; color: var(--z-status-foreground); }
+.z-status-astronaut-float { transform-origin: 50% 55%; animation: z-status-float 5s ease-in-out infinite; }
+.z-status-orbit { transform-origin: center; animation: z-status-orbit 24s linear infinite; }
+.z-status-custom-art { width: min(100%, 440px); }
+.z-status-custom-art img, .z-status-custom-art svg { display: block; max-width: 100%; height: auto; }
+.z-status-bubble { position: absolute; z-index: 2; top: 0; right: -2%; max-width: 200px; padding: 13px 17px; border: 1px solid color-mix(in srgb, var(--z-status-foreground) 35%, transparent); border-radius: 15px 15px 15px 3px; background: color-mix(in srgb, var(--z-status-accent) 30%, #191426); box-shadow: 0 12px 35px rgb(0 0 0 / .16); font-size: 13px; font-weight: 650; line-height: 1.4; }
+.z-status-streaks { position: absolute; inset: 0; overflow: hidden; color: var(--z-status-spark-color, var(--z-status-foreground)); pointer-events: none; }
+.z-status-streaks span { position: absolute; top: -5%; left: 78%; width: 125px; height: 2px; opacity: 0; background: linear-gradient(90deg, transparent, currentColor); border-radius: 50%; filter: drop-shadow(0 0 5px currentColor); animation: z-status-shooting-star 6s linear infinite; }
+.z-status-streaks span:nth-child(2) { top: 9%; left: 105%; width: 90px; animation-duration: 7.5s; animation-delay: -2s; }
+.z-status-streaks span:nth-child(3) { top: -2%; left: 47%; width: 105px; animation-duration: 9s; animation-delay: -5s; }
+.z-status-streaks span:nth-child(4) { top: 32%; left: 100%; width: 80px; animation-duration: 8s; animation-delay: -3.5s; }
+@keyframes z-status-float { 0%, 100% { transform: translateY(0) rotate(-2deg); } 50% { transform: translateY(-16px) rotate(2deg); } }
+@keyframes z-status-orbit { to { transform: rotate(360deg); } }
+@keyframes z-status-shooting-star { 0%, 4% { opacity: 0; transform: translate3d(0, 0, 0) rotate(135deg); } 8% { opacity: .9; } 30% { opacity: .75; } 38%, 100% { opacity: 0; transform: translate3d(-440px, 440px, 0) rotate(135deg); } }
+@media (max-width: 760px) {
+    .z-status-brand { margin: 24px; }
+    .z-status-layout { width: calc(100% - 48px); grid-template-columns: 1fr; gap: 8px; padding: 10px 0 50px; }
+    .z-status-scene { grid-row: 1; width: min(100%, 320px); margin: 0 auto; }
+    .z-status-bubble { top: 0; right: -2%; max-width: 150px; font-size: 12px; }
+    .z-status-copy { text-align: center; margin: 0 auto; }
+    .z-status-copy h1 { margin-top: 16px; }
+    .z-status-actions { justify-content: center; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .z-status-astronaut-float, .z-status-orbit, .z-status-streaks span { animation: none; }
+    .z-status-action { transition: none; }
+    .z-status-action:hover { transform: none; }
+}

@@ -101,6 +101,26 @@ Brand mark or logo, optional wordmark image (`WordmarkUrl`), brand subtitle and 
 
 The sample's sign-in button opens the sample home page by default. Set `Sample:SignInUrl` to a host-owned authentication challenge URL to use another destination. Zoorce does not authenticate users or configure an identity provider; the host application owns that integration and its security.
 
+### Standalone status pages
+
+`ZoorceStatusPage` provides themed, animated presentations for 401, 403, 404, 500 and 503. The component renders presentation only: the host chooses when to show it, handles exceptions and authentication, and sets or preserves the actual HTTP response status. For example, in a Razor Page:
+
+```cshtml
+@page "/status/404"
+@using Zoorce.Web.UI.Layout.Components
+@{
+    Layout = "_ZoorceStandaloneLayout";
+    Response.StatusCode = 404;
+    ViewData["Title"] = "Page not found";
+    var status = ZoorceStatusPageOptions.ForStatus(404, homeUrl: Url.Content("~/"));
+}
+@await Component.InvokeAsync("ZoorceStatusPage", status)
+```
+
+Use `ForStatus(code, homeUrl, signInUrl, retryUrl)` to configure host-owned destinations; for retry actions, pass the intended safe retry URL. Customize the status code, title, description, speech, brand, CSS class and action list. The optional `Details` and `DetailsLabel` display host-approved diagnostic text; details are never populated automatically. Provide trusted `IHtmlContent` via `IllustrationContent` and `AdditionalContent`. Set `ShowIllustration` or `ShowShootingStars` to false, set `Speech` to null to hide its bubble, or use an empty action list. CSS variables including `--z-status-accent`, `--z-status-foreground`, `--z-status-suit`, `--z-status-visor`, `--z-status-spark-color` and `--z-status-texture-opacity` control appearance. The component respects reduced-motion preferences. If using a different layout, include `~/_content/Zoorce.Web.UI.Layout/css/zoorce-status-page.css` yourself.
+
+Configure the host's exception handler and status-code handling or routing to render the desired page. Avoid exposing exception details, validate any user-provided return URL, and explicitly preserve the desired HTTP status. The sample links to `/status/401`, `/status/403`, `/status/404`, `/status/500` and `/status/503`; those demonstration routes return the indicated status code and are not an authentication implementation.
+
 ### Valky help companion
 
 Register the tag helpers with `@addTagHelper *, Zoorce.Web.UI` in `_ViewImports.cshtml`, then place Valky wherever help is needed:
