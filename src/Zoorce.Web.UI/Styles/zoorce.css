@@ -551,3 +551,15 @@ html.z-diagram-focus-active, body.z-diagram-focus-active { overflow: hidden; }.z
 .z-progress-button-demo { display: flex; align-items: center; flex-wrap: wrap; gap: 10px 12px; padding: 12px; border: 1px solid var(--z-border); border-radius: 12px; background: color-mix(in srgb, var(--z-subtle) 72%, var(--z-surface)); }
 .z-progress-button-demo .z-card-caption { flex: 1 1 180px; margin: 0; }
 @media (max-width: 590px) { .z-progress-button-demo { align-items: flex-start; flex-direction: column; }.z-progress-button-demo .z-card-caption { flex-basis: auto; } }
+
+/* Paint the reserved scrollbar gutter behind the sticky header, even before overflow. */
+.z-data-grid-component.is-infinite .z-data-grid-viewport {
+  --z-grid-header-background: color-mix(in srgb, var(--z-elevated) 94%, var(--z-primary) 6%);
+  background: linear-gradient(to bottom,
+    var(--z-grid-header-background) 0 calc(var(--z-grid-header-height, 37px) - 1px),
+    var(--z-border) calc(var(--z-grid-header-height, 37px) - 1px) var(--z-grid-header-height, 37px),
+    var(--z-surface) var(--z-grid-header-height, 37px));
+}
+:root[data-zoorce-theme="light"] .z-data-grid-component.is-infinite .z-data-grid-viewport {
+  --z-grid-header-background: color-mix(in srgb, var(--z-subtle) 86%, var(--z-surface) 14%);
+}
