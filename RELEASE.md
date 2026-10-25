@@ -1,18 +1,13 @@
-# ZoorceCode 1.0.0 release
+# ZoorceCode releases
 
-## Contents
+The release process follows Mule's build-and-release workflow. Update `.release` to a single version tag such as `v1.0.0` and add the corresponding `## [v1.0.0]` section to `CHANGELOG.md`. When that change reaches `main`, the workflow builds and tests the solution, enforces coverage, creates `releases/v1.0.0`, extracts the changelog notes, packages the libraries, creates the GitHub tag and release, and publishes the packages to NuGet.
 
-- Version: `1.0.0`
-- Date: 2026-10-24
-- Package entry point: `Zoorce.Web.UI`
-- Release notes: [CHANGELOG.md](CHANGELOG.md)
-
-## Release pipeline
-
-Pushing the `v1.0.0` tag invokes `.github/workflows/release.yml`. The workflow builds the CSS, restores, compiles, tests, packs every package project and attaches the `.nupkg` artifacts to the GitHub release.
+The marker only triggers publication when it changes in a push to `main`. A manual workflow dispatch is also supported from an existing `releases/vX.Y.Z` branch. Existing tags pointing to another commit are rejected; published versions must not be moved or overwritten.
 
 ## Publication prerequisites
 
-- Attach this local repository to its GitHub remote.
-- Add the repository license text and package license metadata selected by the owner.
-- Configure NuGet publishing credentials if packages should be pushed to nuget.org after the GitHub release.
+- Set the repository variable `NUGET_USER` to the nuget.org account that configured the Trusted Publishing policy.
+- Configure a NuGet Trusted Publishing policy for this repository and `.github/workflows/build-and-release.yml`.
+- Select and add a license before publishing packages. No license has been designated yet.
+
+The initial marker is `v1.0.0`. Merging its addition into `main` will initiate publication after the checks succeed, so configure the prerequisites first.
