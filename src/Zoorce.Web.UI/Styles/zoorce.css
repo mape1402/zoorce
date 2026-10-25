@@ -595,3 +595,8 @@ html.z-diagram-focus-active, body.z-diagram-focus-active { overflow: hidden; }.z
 :root[data-zoorce-theme="light"] .z-data-grid-component.is-infinite .z-data-grid-viewport {
   --z-grid-header-background: color-mix(in srgb, var(--z-subtle) 86%, var(--z-surface) 14%);
 }
+
+/* A single or final data row still needs a visible lower boundary. */
+.z-data-grid tbody tr:not(.z-grid-virtual-spacer):last-child td {
+  border-bottom: 1px solid color-mix(in srgb, var(--z-border) 73%, transparent);
+}
