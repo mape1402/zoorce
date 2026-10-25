@@ -26,6 +26,14 @@ public sealed class SampleNavigationProvider : INavigationProvider
                 new("Steppers", "/steppers", "⇢", MatchMode: NavigationMatchMode.Exact),
                 new("Wizards", "/wizards", "↳", MatchMode: NavigationMatchMode.Exact),
                 new("Sign-in page", "/sign-in", "→", MatchMode: NavigationMatchMode.Exact),
+                new("Status pages", Icon: "!", Children:
+                [
+                    new("401 · Sign in required", "/status/401", "401", MatchMode: NavigationMatchMode.Exact),
+                    new("403 · Access denied", "/status/403", "403", MatchMode: NavigationMatchMode.Exact),
+                    new("404 · Not found", "/status/404", "404", MatchMode: NavigationMatchMode.Exact),
+                    new("500 · Server error", "/status/500", "500", MatchMode: NavigationMatchMode.Exact),
+                    new("503 · Unavailable", "/status/503", "503", MatchMode: NavigationMatchMode.Exact)
+                ]),
                 new("Valky assistant", "/valky", "♥", MatchMode: NavigationMatchMode.Exact),
                 new("Timelines", "/timeline", "◷", MatchMode: NavigationMatchMode.Exact),
                 new("Infinite grid", "/data-grid", "∞", MatchMode: NavigationMatchMode.Exact),

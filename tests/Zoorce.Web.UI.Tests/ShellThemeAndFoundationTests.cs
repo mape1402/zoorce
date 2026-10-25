@@ -18,6 +18,33 @@ namespace Zoorce.Web.UI.Tests;
 /// <summary>Exercises reusable shell, theme, and asynchronous-feedback component boundaries.</summary>
 public sealed class ShellThemeAndFoundationTests
 {
+    [Theory]
+    [InlineData(401, "Sign in", "/login")]
+    [InlineData(403, "Go to home", "/home")]
+    [InlineData(404, "Go to home", "/home")]
+    [InlineData(500, "Try again", "/retry")]
+    [InlineData(503, "Try again", "/retry")]
+    public void Status_page_defaults_preserve_host_destinations(int status, string text, string url)
+    {
+        var options = ZoorceStatusPageOptions.ForStatus(status, "/home", "/login", "/retry");
+        Assert.Equal(status, options.StatusCode);
+        Assert.Equal("Houston, we have a problem.", options.Speech);
+        Assert.Equal(text, Assert.Single(options.Actions).Text);
+        Assert.Equal(url, Assert.Single(options.Actions).Url);
+        Assert.IsType<ViewViewComponentResult>(new ZoorceStatusPageViewComponent().Invoke(options));
+    }
+
+    [Fact]
+    public void Status_page_allows_no_actions_and_rejects_unsafe_destinations()
+    {
+        var component = new ZoorceStatusPageViewComponent();
+        Assert.Throws<ArgumentNullException>(() => component.Invoke(null!));
+        Assert.Throws<ArgumentOutOfRangeException>(() => ZoorceStatusPageOptions.ForStatus(418));
+        Assert.IsType<ViewViewComponentResult>(component.Invoke(new ZoorceStatusPageOptions { Actions = [] }));
+        Assert.Throws<ArgumentException>(() => component.Invoke(new ZoorceStatusPageOptions { Actions = [new("Bad", "javascript:alert(1)")] }));
+        Assert.Throws<ArgumentException>(() => component.Invoke(new ZoorceStatusPageOptions { Actions = [new("Bad", "//evil.example")] }));
+    }
+
     [Fact]
     public void Sign_in_requires_a_safe_host_destination_and_preserves_custom_options()
     {

@@ -1,0 +1,12 @@
+@page "/status/{code:int}"
+@using Zoorce.Web.UI.Layout.Components
+@{
+    Layout = "_ZoorceStandaloneLayout";
+    var code = int.TryParse(RouteData.Values["code"]?.ToString(), out var value) ? value : 404;
+    if (code is not (401 or 403 or 404 or 500 or 503)) { code = 404; }
+    Response.StatusCode = code;
+    var options = ZoorceStatusPageOptions.ForStatus(code, Url.Content("~/"), Url.Content("~/sign-in"), Url.Content($"~/status/{code}"));
+    if (code == 500) { options.Details = "Example diagnostic information supplied by the application."; }
+    ViewData["Title"] = $"{code} · {options.Title}";
+}
+@await Component.InvokeAsync("ZoorceStatusPage", options)
