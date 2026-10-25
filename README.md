@@ -89,7 +89,11 @@ Register the tag helpers with `@addTagHelper *, Zoorce.Web.UI` in `_ViewImports.
 </zoorce-valky>
 ```
 
-The initial `state` is `idle`, `thinking`, `talking`, or `celebrating`. A host can change it at runtime with `element.dataset.zValkyState = 'thinking'`. The native details control owns bubble open/close, including keyboard interaction; its `open` property can also be changed by the host. Bubble content is a Razor template; alternatively use `message` for encoded plain text. `floating` is optional. Customize `--z-valky-size`, `--z-valky-bubble-background`, `--z-valky-bubble-color`, `--z-valky-bubble-border`, `--z-valky-inset-inline`, `--z-valky-inset-block` and `--z-valky-z-index` per instance. Animations are disabled when reduced motion is requested. See the **Valky assistant** sample for interactive states.
+The initial `state` is `idle`, `thinking`, `talking`, or `celebrating`. A host can change it at runtime with `element.dataset.zValkyState = 'thinking'`. The native details control owns bubble open/close, including keyboard interaction; its `open` property can also be changed by the host. Bubble content is a Razor template; alternatively use `message` for encoded plain text. `floating` is optional.
+
+Celebration runs once by default, returns to `idle`, and emits a bubbling `zoorce:valky-state-change` event with `detail.state` and `detail.reason` (`celebration-complete`). Set `celebration-loop="true"` to keep celebrating until the host changes the state; at runtime set `element.dataset.zValkyCelebration` to `loop` or `once`. Customize the duration with `--z-valky-celebration-speed` and the one-shot repetition count with `--z-valky-celebration-count`.
+
+Customize `--z-valky-size`, `--z-valky-bubble-background`, `--z-valky-bubble-color`, `--z-valky-bubble-border`, `--z-valky-inset-inline`, `--z-valky-inset-block` and `--z-valky-z-index` per instance. The optional `image-url` and `body-image-url` override the head and headless-body artwork; replacements must match Valky's original 1230 × 1278 layout and layer alignment because the animation uses fixed clipping and facial coordinates. The component loads its own JavaScript module; ensure the library's static assets are served. Animations are disabled when reduced motion is requested, while one-shot celebration still returns to idle. See the **Valky assistant** sample for interactive states.
 
 ```css
 #publish-release {

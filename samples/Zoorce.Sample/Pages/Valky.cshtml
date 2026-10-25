@@ -11,6 +11,7 @@
             <button type="button" class="z-button z-button-secondary" data-state="talking">Talking</button>
             <button type="button" class="z-button z-button-secondary" data-state="celebrating">Celebrating</button>
         </div>
+        <label style="display:inline-flex; align-items:center; gap:8px; margin-top:14px"><input type="checkbox" data-valky-loop /> Repeat celebration until another state is selected</label>
         <p class="z-card-caption" data-valky-status role="status">State: idle. Select Valky to show her message.</p>
         <div style="display:flex; justify-content:center; padding:100px 40px 20px">
             <zoorce-valky id="valky-demo" state="idle" open="true" style="--z-valky-size: 220px" label="Valky, open or close help">
@@ -32,6 +33,12 @@
     const message = demo.querySelector('[data-valky-message]');
     const status = demo.querySelector('[data-valky-status]');
     const messages = { idle: "I'm here if you need a paw.", thinking: "Hmm… let me think about that!", talking: "Let's find the answer together.", celebrating: "We did it! Time to celebrate!" };
+    const loop = demo.querySelector('[data-valky-loop]');
+    loop.addEventListener('change', () => { valky.dataset.zValkyCelebration = loop.checked ? 'loop' : 'once'; });
+    valky.addEventListener('zoorce:valky-state-change', event => {
+        message.textContent = messages[event.detail.state];
+        status.textContent = `State: ${event.detail.state}. Celebration completed.`;
+    });
     demo.querySelectorAll('[data-state]').forEach(button => button.addEventListener('click', () => {
         const state = button.dataset.state;
         valky.dataset.zValkyState = state;

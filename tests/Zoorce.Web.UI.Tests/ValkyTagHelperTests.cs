@@ -18,6 +18,21 @@ public sealed class ValkyTagHelperTests
         Assert.Contains("&lt;hello&gt;", output.Content.GetContent());
         Assert.Contains("aria-label=\"Valky help\"", output.Content.GetContent());
         Assert.Contains("/_content/Zoorce.Web.UI/images/valky.png", output.Content.GetContent());
+        Assert.Contains("/_content/Zoorce.Web.UI/images/valky-body.png", output.Content.GetContent());
+        Assert.Contains("/_content/Zoorce.Web.UI/js/zoorce-valky.js", output.Content.GetContent());
+        Assert.Equal("once", output.Attributes["data-z-valky-celebration"].Value);
+    }
+
+    [Fact]
+    public async Task Supports_aligned_custom_layers_and_looping_celebration()
+    {
+        var output = CreateOutput();
+        var helper = new ZoorceValkyTagHelper { State = "celebrating", ImageUrl = "/head.png", BodyImageUrl = "/body.png", CelebrationLoop = true };
+        await helper.ProcessAsync(CreateContext(), output);
+        Assert.Contains("/head.png", output.Content.GetContent());
+        Assert.Contains("/body.png", output.Content.GetContent());
+        Assert.Equal("loop", output.Attributes["data-z-valky-celebration"].Value);
+        Assert.Contains("z-valky-mouth-cover", output.Content.GetContent());
     }
 
     [Fact]
