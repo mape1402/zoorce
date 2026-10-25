@@ -7,6 +7,32 @@
   --font-sans: "Inter", "Aptos", "Segoe UI", sans-serif;
 }
 
+/* Valky's artwork is shared by the separate, independently animated layers. */
+.z-valky { --z-valky-size: 180px; --z-valky-bubble-background: var(--z-surface, #fff); --z-valky-bubble-color: var(--z-text, #222); --z-valky-bubble-border: var(--z-border, #ccc); position: relative; display: inline-flex; align-items: end; width: var(--z-valky-size); max-width: 100%; }
+.z-valky--floating { position: fixed; right: var(--z-valky-inset-inline, 24px); bottom: var(--z-valky-inset-block, 24px); z-index: var(--z-valky-z-index, 50); }
+.z-valky-trigger { width: 100%; list-style: none; cursor: pointer; border-radius: 20%; }
+.z-valky-trigger::-webkit-details-marker { display: none; }
+.z-valky-trigger:focus-visible { outline: 3px solid var(--z-primary, #6d28d9); outline-offset: 4px; }
+.z-valky-art { display: block; width: 100%; height: auto; overflow: visible; }
+.z-valky-body { clip-path: none; }
+.z-valky-head { transform-origin: 43% 48%; mask-image: linear-gradient(to bottom, #000 0%, #000 36%, transparent 53%); animation: z-valky-idle-head 5s ease-in-out infinite; }
+.z-valky-tail { display: none; }
+.z-valky-blink { opacity: 0; animation: z-valky-blink 5.5s infinite; }
+.z-valky[data-z-valky-state="thinking"] .z-valky-head { animation: z-valky-think 3s ease-in-out infinite; }
+.z-valky[data-z-valky-state="talking"] .z-valky-head { animation: z-valky-talk 1.4s ease-in-out infinite; }
+.z-valky[data-z-valky-state="celebrating"] .z-valky-head { animation: z-valky-celebrate 1s ease-in-out infinite; }
+.z-valky[data-z-valky-state="celebrating"] .z-valky-tail { animation-duration: .5s; }
+.z-valky-bubble { position: absolute; right: calc(100% - 25px); bottom: 72%; width: max-content; max-width: min(280px, calc(100vw - 40px)); padding: 14px 17px; border: 1px solid var(--z-valky-bubble-border); border-radius: 16px 16px 4px 16px; background: var(--z-valky-bubble-background); color: var(--z-valky-bubble-color); box-shadow: 0 8px 30px #0002; overflow-wrap: anywhere; }
+.z-valky:not([open]) .z-valky-bubble { display: none; }
+@keyframes z-valky-breathe { 0%, 100% { transform: scaleY(1); } 50% { transform: scaleY(1.012); } }
+@keyframes z-valky-idle-head { 0%, 100% { transform: rotate(0); } 50% { transform: rotate(1deg); } }
+@keyframes z-valky-think { 0%, 100% { transform: rotate(-2deg); } 50% { transform: rotate(2deg); } }
+@keyframes z-valky-talk { 0%, 100% { transform: rotate(0); } 50% { transform: rotate(2deg) translateY(-5px); } }
+@keyframes z-valky-celebrate { 0%, 100% { transform: rotate(-1.5deg); } 50% { transform: rotate(1.5deg); } }
+@keyframes z-valky-tail { 0%, 100% { transform: rotate(0); } 50% { transform: rotate(3deg); } }
+@keyframes z-valky-blink { 0%, 45%, 48%, 100% { opacity: 0; } 46%, 47% { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .z-valky-head, .z-valky-body, .z-valky-tail, .z-valky-blink { animation: none !important; } }
+
 :root {
   color-scheme: dark;
   font-family: var(--font-sans);

@@ -77,6 +77,20 @@ app.Run();
 
 Use the component option type to own labels, variants, templates, state and behavior. For visual changes, set the semantic palette tokens once on the shell or scope CSS variables to an individual component root.
 
+### Valky help companion
+
+Register the tag helpers with `@addTagHelper *, Zoorce.Web.UI` in `_ViewImports.cshtml`, then place Valky wherever help is needed:
+
+```cshtml
+<zoorce-valky id="help-companion" state="thinking" open="true" floating="true"
+              label="Valky, open or close help" style="--z-valky-size: 180px">
+    <strong>Need a hand?</strong>
+    <p>Replace this content with your application's help.</p>
+</zoorce-valky>
+```
+
+The initial `state` is `idle`, `thinking`, `talking`, or `celebrating`. A host can change it at runtime with `element.dataset.zValkyState = 'thinking'`. The native details control owns bubble open/close, including keyboard interaction; its `open` property can also be changed by the host. Bubble content is a Razor template; alternatively use `message` for encoded plain text. `floating` is optional. Customize `--z-valky-size`, `--z-valky-bubble-background`, `--z-valky-bubble-color`, `--z-valky-bubble-border`, `--z-valky-inset-inline`, `--z-valky-inset-block` and `--z-valky-z-index` per instance. Animations are disabled when reduced motion is requested. See the **Valky assistant** sample for interactive states.
+
 ```css
 #publish-release {
   --z-progress-button-active: #0e7490;
