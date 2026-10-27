@@ -23,6 +23,9 @@ public sealed record ZoorceChartOptions
     /// <summary>Gets how bar series should be composed when the visualization is a bar chart.</summary>
     public ZoorceChartBarMode BarMode { get; init; } = ZoorceChartBarMode.Grouped;
 
+    /// <summary>Gets how multiple area series should be composed.</summary>
+    public ZoorceChartAreaMode AreaMode { get; init; } = ZoorceChartAreaMode.Overlay;
+
     /// <summary>Gets the interpolation used by line-like visualizations.</summary>
     public ZoorceChartCurve Curve { get; init; } = ZoorceChartCurve.Smooth;
 

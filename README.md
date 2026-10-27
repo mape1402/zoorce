@@ -221,7 +221,7 @@ Customize `--z-valky-size`, `--z-valky-bubble-background`, `--z-valky-bubble-col
 })
 ```
 
-`Monotone` is opt-in and preserves the bounds between adjacent observations, including uneven X values; `Smooth` retains its existing appearance. The catalogue includes trend, area, range area, grouped/stacked bars, combo/secondary-axis, donut or pie (`DonutInnerRadius = 0`), radial, gauge, funnel, heatmap/calendar heatmap, scatter/bubble, bullet, histogram, waterfall, lollipop, slope, radar, candlestick, box plot, treemap, Sankey and Gantt charts. Specialized visuals accept their explicit data contracts (`OhlcPoints`, `BoxPlotPoints`, `TreemapItems`, `SankeyNodes`/`SankeyLinks`, and `GanttItems`) rather than overloading ordinary point data.
+`Monotone` is opt-in and preserves the bounds between adjacent observations, including uneven X values; `Smooth` retains its existing appearance. Use `AreaMode = ZoorceChartAreaMode.Stacked` for a cumulative stacked-area visualization, or `Stacked100` to normalize every category. The catalogue includes trend, area, range area, grouped/stacked bars, combo/secondary-axis, donut or pie (`DonutInnerRadius = 0`), radial, gauge, funnel, heatmap/calendar heatmap, scatter/bubble, bullet, histogram, waterfall, lollipop, slope, radar, candlestick, box plot, treemap, Sankey and Gantt charts. Specialized visuals accept their explicit data contracts (`OhlcPoints`, `BoxPlotPoints`, `TreemapItems`, `SankeyNodes`/`SankeyLinks`, and `GanttItems`) rather than overloading ordinary point data.
 
 ## Run the sample
 

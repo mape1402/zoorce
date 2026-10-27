@@ -306,6 +306,7 @@ public sealed class ComponentContractTests
         var normalized = (CreateChart() with
         {
             Curve = ZoorceChartCurve.Monotone,
+            AreaMode = ZoorceChartAreaMode.Stacked100,
             Appearance = new ZoorceChartAppearanceOptions { Surface = ZoorceChartSurface.Bare, CssClass = " embedded-chart " },
             Header = new ZoorceChartHeaderOptions { Visible = true, ShowMetric = false },
             Legend = new ZoorceChartLegendOptions { Visible = false, Interactive = false },
@@ -315,6 +316,7 @@ public sealed class ComponentContractTests
         }).Normalize();
 
         Assert.Equal(ZoorceChartCurve.Monotone, normalized.Curve);
+        Assert.Equal(ZoorceChartAreaMode.Stacked100, normalized.AreaMode);
         Assert.Equal(ZoorceChartSurface.Bare, normalized.Appearance.Surface);
         Assert.Equal("embedded-chart", normalized.Appearance.CssClass);
         Assert.False(normalized.Header.ShowMetric);
