@@ -17,6 +17,8 @@
         header = Model.Header,
         legend = Model.Legend,
         tooltip = Model.Tooltip,
+        axes = Model.Axes,
+        plot = Model.Plot,
         showLegend = Model.ShowLegend,
         showGrid = Model.ShowGrid,
         showAxes = Model.ShowAxes,
@@ -45,13 +47,26 @@
         var suffix = Model.ValueSuffix ?? string.Empty;
         return $"{DisplayValue(value)}{(suffix.Length > 0 && char.IsLetter(suffix[0]) ? " " : string.Empty)}{suffix}";
     }
+    var chartStyle = Model.Plot.Height is { } plotHeight ? $"--z-chart-height: {plotHeight}px;" : null;
 }
-<section id="@Model.Id" class="z-component z-chart-component @(Model.Appearance.CssClass ?? string.Empty)" data-z-chart data-z-chart-kind="@Model.Kind" data-z-chart-size="@Model.Size" data-z-chart-surface="@Model.Appearance.Surface" aria-label="@Model.Summary">
+<section id="@Model.Id" class="z-component z-chart-component @(Model.Appearance.CssClass ?? string.Empty)" style="@chartStyle" data-z-chart data-z-chart-kind="@Model.Kind" data-z-chart-size="@Model.Size" data-z-chart-surface="@Model.Appearance.Surface" data-z-chart-height="@(Model.Plot.Height?.ToString(CultureInfo.InvariantCulture) ?? string.Empty)" data-z-chart-surface-background="@Model.Appearance.ShowSurfaceBackground.ToString().ToLowerInvariant()" data-z-chart-surface-border="@Model.Appearance.ShowSurfaceBorder.ToString().ToLowerInvariant()" data-z-chart-plot-background="@Model.Appearance.ShowPlotBackground.ToString().ToLowerInvariant()" data-z-chart-plot-border="@Model.Appearance.ShowPlotBorder.ToString().ToLowerInvariant()" aria-label="@Model.Summary">
     <script type="application/json" data-z-chart-config>@Html.Raw(configuration)</script>
-    @if (Model.Header.Visible)
+    @if (Model.Header.Visible && (Model.Header.ShowTitle || Model.Header.ShowSummary || Model.Header.ShowMetric))
     {
     <div class="z-chart-component-header">
-        <div class="z-chart-copy"><p class="z-card-title">@Model.Title</p><p class="z-card-caption">@Model.Summary</p></div>
+        @if (Model.Header.ShowTitle || Model.Header.ShowSummary)
+        {
+        <div class="z-chart-copy">
+            @if (Model.Header.ShowTitle)
+            {
+            <p class="z-card-title">@Model.Title</p>
+            }
+            @if (Model.Header.ShowSummary)
+            {
+            <p class="z-card-caption">@Model.Summary</p>
+            }
+        </div>
+        }
         @if (Model.Header.ShowMetric)
         {
         <div class="z-chart-metric" aria-live="polite"><strong data-z-chart-metric>@DisplayWithSuffix(latestValue)</strong><span data-z-chart-delta class="@(change is > 0 ? "is-positive" : change is < 0 ? "is-negative" : string.Empty)">@(change is null ? "Awaiting data" : $"{(change >= 0 ? "+" : string.Empty)}{DisplayWithSuffix(change)} vs. previous")</span></div>
@@ -61,8 +76,6 @@
     <div class="z-chart-legend" data-z-chart-legend aria-label="Toggle data series" @((Model.ShowLegend && Model.Legend.Visible) ? null : "hidden")></div>
     <div class="z-chart-visual" data-z-chart-visual>
         <svg class="z-native-chart" data-z-chart-canvas role="img" aria-label="@Model.Summary" focusable="false" shape-rendering="geometricPrecision" text-rendering="geometricPrecision">
-            <title>@Model.Title</title>
-            <desc>@Model.Summary</desc>
         </svg>
         <div class="z-chart-tooltip" data-z-chart-tooltip role="status" aria-live="polite" hidden></div>
         <span class="z-component-state z-chart-live-state" data-z-chart-state aria-live="polite"></span>

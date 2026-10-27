@@ -41,6 +41,12 @@ public sealed record ZoorceChartOptions
     /// <summary>Gets settings for pointer and keyboard data feedback.</summary>
     public ZoorceChartTooltipOptions Tooltip { get; init; } = new();
 
+    /// <summary>Gets settings for scales, grid lines and axis labels.</summary>
+    public ZoorceChartAxesOptions Axes { get; init; } = new();
+
+    /// <summary>Gets settings for optional visual details inside the plot.</summary>
+    public ZoorceChartPlotOptions Plot { get; init; } = new();
+
     /// <summary>Gets whether the chart legend is visible and can toggle a series.</summary>
     public bool ShowLegend { get; init; } = true;
 
@@ -131,7 +137,9 @@ public sealed record ZoorceChartOptions
             Appearance = (Appearance ?? new ZoorceChartAppearanceOptions()) with { CssClass = TrimOrNull(Appearance?.CssClass) },
             Header = Header ?? new ZoorceChartHeaderOptions(),
             Legend = Legend ?? new ZoorceChartLegendOptions(),
-            Tooltip = Tooltip ?? new ZoorceChartTooltipOptions()
+            Tooltip = Tooltip ?? new ZoorceChartTooltipOptions(),
+            Axes = (Axes ?? new ZoorceChartAxesOptions()).Normalize(),
+            Plot = (Plot ?? new ZoorceChartPlotOptions()).Normalize()
         };
     }
 

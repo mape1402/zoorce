@@ -610,6 +610,12 @@ html.z-diagram-focus-active, body.z-diagram-focus-active { overflow: hidden; }.z
 .z-chart-component[data-z-chart-surface="Bare"] .z-chart-visual { background: transparent; border: 0; border-radius: 0; padding: 0; min-height: unset; }
 .z-chart-component[data-z-chart-surface="Bare"] .z-chart-component-header { padding-inline: 0; }
 .z-chart-component[data-z-chart-surface="Bare"] .z-chart-legend { padding-inline: 0; }
+.z-chart-component[data-z-chart-surface-background="false"] { background: transparent; }
+.z-chart-component[data-z-chart-surface-background="false"]::after { display: none; }
+.z-chart-component[data-z-chart-surface-border="false"] { border-color: transparent; box-shadow: none; }
+.z-chart-component[data-z-chart-plot-background="false"] .z-chart-visual { background: transparent; }
+.z-chart-component[data-z-chart-plot-border="false"] .z-chart-visual { border-color: transparent; }
+.z-chart-component[data-z-chart-height]:not([data-z-chart-height=""]) .z-chart-visual { height: var(--z-chart-height); }
 .z-native-chart-range-area { fill-opacity: .18; stroke: none; }
 .z-native-chart-radar-grid { fill: color-mix(in srgb, var(--z-subtle) 45%, transparent); stroke: var(--z-border); stroke-width: 1; }
 .z-native-chart-radar { fill-opacity: .16; stroke-width: 2.25; stroke-linejoin: round; }

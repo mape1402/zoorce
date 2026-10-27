@@ -203,7 +203,7 @@ Customize `--z-valky-size`, `--z-valky-bubble-background`, `--z-valky-bubble-col
 
 ### Native charts
 
-`ZoorceChart` is a native-SVG component: charts inherit the active Zoorce palette and do not require a third-party charting runtime. The existing card remains the default, while the host can remove all card chrome for dashboard composition with `ZoorceChartSurface.Bare`. Header, metric, legend interaction and tooltip feedback are independently optional.
+`ZoorceChart` is a native-SVG component: charts inherit the active Zoorce palette and do not require a third-party charting runtime. Every decorative layer is optional: the host controls the outer surface, plot background and border, title, summary, metric, legend, grid, scale labels, category labels, data labels, line outlines, terminal markers, target markers and tooltips.
 
 ```cshtml
 @await Component.InvokeAsync("ZoorceChart", new ZoorceChartOptions
@@ -214,14 +214,36 @@ Customize `--z-valky-size`, `--z-valky-bubble-background`, `--z-valky-bubble-col
     Kind = ZoorceChartKind.Area,
     Curve = ZoorceChartCurve.Monotone,
     MinimumValue = 0,
-    Appearance = new ZoorceChartAppearanceOptions { Surface = ZoorceChartSurface.Bare },
-    Header = new ZoorceChartHeaderOptions { ShowMetric = false },
+    Appearance = new ZoorceChartAppearanceOptions
+    {
+        Surface = ZoorceChartSurface.Bare,
+        ShowSurfaceBackground = false,
+        ShowSurfaceBorder = false,
+        ShowPlotBackground = false,
+        ShowPlotBorder = false
+    },
+    Header = new ZoorceChartHeaderOptions { Visible = false },
     Legend = new ZoorceChartLegendOptions { Visible = false },
+    Axes = new ZoorceChartAxesOptions
+    {
+        Visible = false,
+        ShowGridLines = false,
+        ShowValueLabels = false,
+        ShowCategoryLabels = false
+    },
+    Plot = new ZoorceChartPlotOptions
+    {
+        ShowSeriesLines = false,
+        ShowLineMarkers = false,
+        ShowDataLabels = false,
+        ShowTargetMarker = false,
+        Height = 248
+    },
     Series = activitySeries
 })
 ```
 
-`Monotone` is opt-in and preserves the bounds between adjacent observations, including uneven X values; `Smooth` retains its existing appearance. Use `AreaMode = ZoorceChartAreaMode.Stacked` for a cumulative stacked-area visualization, or `Stacked100` to normalize every category. The catalogue includes trend, area, range area, grouped/stacked bars, combo/secondary-axis, donut or pie (`DonutInnerRadius = 0`), radial, gauge, funnel, heatmap/calendar heatmap, scatter/bubble, bullet, histogram, waterfall, lollipop, slope, radar, candlestick, box plot, treemap, Sankey and Gantt charts. Specialized visuals accept their explicit data contracts (`OhlcPoints`, `BoxPlotPoints`, `TreemapItems`, `SankeyNodes`/`SankeyLinks`, and `GanttItems`) rather than overloading ordinary point data.
+`Axes.ValueTickCount` controls numerical scale density (2–12), while `Axes.CategoryLabelInterval` controls label frequency (`0` chooses automatically); `MinimumValue` and `MaximumValue` keep domain bounds explicit. `Monotone` is opt-in and preserves the bounds between adjacent observations, including uneven X values; `Smooth` retains its existing appearance. Use `AreaMode = ZoorceChartAreaMode.Stacked` for a cumulative stacked-area visualization, or `Stacked100` to normalize every category. The catalogue includes trend, area, range area, grouped/stacked bars, combo/secondary-axis, donut or pie (`DonutInnerRadius = 0`), radial, gauge, funnel, heatmap/calendar heatmap, scatter/bubble, bullet, histogram, waterfall, lollipop, slope, radar, candlestick, box plot, treemap, Sankey and Gantt charts. Specialized visuals accept their explicit data contracts (`OhlcPoints`, `BoxPlotPoints`, `TreemapItems`, `SankeyNodes`/`SankeyLinks`, and `GanttItems`) rather than overloading ordinary point data.
 
 ## Run the sample
 
