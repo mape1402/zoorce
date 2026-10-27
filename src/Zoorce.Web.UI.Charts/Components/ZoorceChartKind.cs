@@ -43,5 +43,41 @@ public enum ZoorceChartKind
     Histogram,
 
     /// <summary>Explains how sequential positive and negative changes produce a total.</summary>
-    Waterfall
+    Waterfall,
+
+    /// <summary>Shows a shaded interval between lower and upper observations.</summary>
+    RangeArea,
+
+    /// <summary>Combines bars, lines and areas in one coordinate system.</summary>
+    Combo,
+
+    /// <summary>Compares categories around a shared radial axis.</summary>
+    Radar,
+
+    /// <summary>Shows several proportional values as concentric rings.</summary>
+    Radial,
+
+    /// <summary>Shows daily values as a calendar-aligned heatmap.</summary>
+    CalendarHeatmap,
+
+    /// <summary>Shows values as stems with an emphasized endpoint.</summary>
+    Lollipop,
+
+    /// <summary>Shows the change between two comparable observations.</summary>
+    Slope,
+
+    /// <summary>Shows open, high, low and close financial observations.</summary>
+    Candlestick,
+
+    /// <summary>Shows quartiles, median and outliers for a distribution.</summary>
+    BoxPlot,
+
+    /// <summary>Shows hierarchical values as nested rectangles.</summary>
+    Treemap,
+
+    /// <summary>Shows weighted relationships between nodes.</summary>
+    Sankey,
+
+    /// <summary>Shows scheduled work over time.</summary>
+    Gantt
 }

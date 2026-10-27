@@ -11,4 +11,5 @@ public sealed record ZoorceChartPoint(
     decimal? Low = null,
     decimal? High = null,
     decimal? Size = null,
-    string? Group = null);
+    string? Group = null,
+    DateTimeOffset? Timestamp = null);

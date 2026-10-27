@@ -26,6 +26,18 @@ public sealed record ZoorceChartOptions
     /// <summary>Gets the interpolation used by line-like visualizations.</summary>
     public ZoorceChartCurve Curve { get; init; } = ZoorceChartCurve.Smooth;
 
+    /// <summary>Gets presentation settings. A bare surface leaves the host in control of the card.</summary>
+    public ZoorceChartAppearanceOptions Appearance { get; init; } = new();
+
+    /// <summary>Gets settings for the title, summary and current metric area.</summary>
+    public ZoorceChartHeaderOptions Header { get; init; } = new();
+
+    /// <summary>Gets settings for the optional series legend.</summary>
+    public ZoorceChartLegendOptions Legend { get; init; } = new();
+
+    /// <summary>Gets settings for pointer and keyboard data feedback.</summary>
+    public ZoorceChartTooltipOptions Tooltip { get; init; } = new();
+
     /// <summary>Gets whether the chart legend is visible and can toggle a series.</summary>
     public bool ShowLegend { get; init; } = true;
 
@@ -47,6 +59,9 @@ public sealed record ZoorceChartOptions
     /// <summary>Gets an optional goal marker used by bullet and gauge charts.</summary>
     public decimal? TargetValue { get; init; }
 
+    /// <summary>Gets the hole ratio for a donut chart. Set this to zero to render a pie chart.</summary>
+    public decimal DonutInnerRadius { get; init; } = .56m;
+
     /// <summary>Gets an optional suffix presented with the primary metric, for example <c>%</c>.</summary>
     public string? ValueSuffix { get; init; }
 
@@ -55,6 +70,24 @@ public sealed record ZoorceChartOptions
 
     /// <summary>Gets initial server-rendered series.</summary>
     public IReadOnlyList<ZoorceChartSeries> Series { get; init; } = [];
+
+    /// <summary>Gets financial observations for a candlestick chart.</summary>
+    public IReadOnlyList<ZoorceChartOhlcPoint> OhlcPoints { get; init; } = [];
+
+    /// <summary>Gets statistical observations for a box plot.</summary>
+    public IReadOnlyList<ZoorceChartBoxPlotPoint> BoxPlotPoints { get; init; } = [];
+
+    /// <summary>Gets weighted rectangles for a treemap.</summary>
+    public IReadOnlyList<ZoorceChartTreemapItem> TreemapItems { get; init; } = [];
+
+    /// <summary>Gets nodes for a Sankey diagram.</summary>
+    public IReadOnlyList<ZoorceChartSankeyNode> SankeyNodes { get; init; } = [];
+
+    /// <summary>Gets relationships for a Sankey diagram.</summary>
+    public IReadOnlyList<ZoorceChartSankeyLink> SankeyLinks { get; init; } = [];
+
+    /// <summary>Gets scheduled items for a Gantt chart.</summary>
+    public IReadOnlyList<ZoorceChartGanttItem> GanttItems { get; init; } = [];
 
     /// <summary>Validates and normalizes the component configuration.</summary>
     public ZoorceChartOptions Normalize()
@@ -65,7 +98,12 @@ public sealed record ZoorceChartOptions
         }
 
         var binding = (Binding ?? new ZoorceDataBindingOptions()).Normalize();
-        if (Series.Count == 0 && string.IsNullOrWhiteSpace(binding.Source))
+        if (RequiresSpecializedData(Kind) && string.IsNullOrWhiteSpace(binding.Source) && !HasSpecializedData())
+        {
+            throw new ArgumentException($"A {Kind} chart requires its corresponding specialized data.", nameof(Kind));
+        }
+
+        if (!RequiresSpecializedData(Kind) && Series.Count == 0 && string.IsNullOrWhiteSpace(binding.Source))
         {
             throw new ArgumentException("A chart requires initial series or a REST source URL.", nameof(Series));
         }
@@ -75,16 +113,37 @@ public sealed record ZoorceChartOptions
             throw new ArgumentException("The minimum chart value cannot exceed the maximum chart value.", nameof(MinimumValue));
         }
 
+        if (DonutInnerRadius is < 0 or >= 1)
+        {
+            throw new ArgumentOutOfRangeException(nameof(DonutInnerRadius), "The donut inner radius must be greater than or equal to zero and less than one.");
+        }
+
         return this with
         {
             Id = Id.Trim(),
             Title = string.IsNullOrWhiteSpace(Title) ? "Chart" : Title.Trim(),
             Summary = string.IsNullOrWhiteSpace(Summary) ? "Data visualization" : Summary.Trim(),
             ValueSuffix = string.IsNullOrWhiteSpace(ValueSuffix) ? null : ValueSuffix.Trim(),
-            Binding = binding
+            Binding = binding,
+            Appearance = (Appearance ?? new ZoorceChartAppearanceOptions()) with { CssClass = TrimOrNull(Appearance?.CssClass) },
+            Header = Header ?? new ZoorceChartHeaderOptions(),
+            Legend = Legend ?? new ZoorceChartLegendOptions(),
+            Tooltip = Tooltip ?? new ZoorceChartTooltipOptions()
         };
     }
 
     private static string? TrimOrNull(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+    private static bool RequiresSpecializedData(ZoorceChartKind kind) => kind is ZoorceChartKind.Candlestick or ZoorceChartKind.BoxPlot or ZoorceChartKind.Treemap or ZoorceChartKind.Sankey or ZoorceChartKind.Gantt;
+
+    private bool HasSpecializedData() => Kind switch
+    {
+        ZoorceChartKind.Candlestick => OhlcPoints.Count > 0,
+        ZoorceChartKind.BoxPlot => BoxPlotPoints.Count > 0,
+        ZoorceChartKind.Treemap => TreemapItems.Count > 0,
+        ZoorceChartKind.Sankey => SankeyNodes.Count > 0 && SankeyLinks.Count > 0,
+        ZoorceChartKind.Gantt => GanttItems.Count > 0,
+        _ => false
+    };
 
 }

@@ -4,7 +4,7 @@
     const svgNamespace = "http://www.w3.org/2000/svg";
     const palette = ["var(--z-data-primary)", "var(--z-data-secondary)", "var(--z-data-tertiary)", "var(--z-data-quaternary)", "var(--z-data-quinary)"];
     const controllers = new WeakMap();
-    const chartKindsWithoutAxes = new Set(["Donut", "Gauge", "Funnel", "Heatmap", "Bullet"]);
+    const chartKindsWithoutAxes = new Set(["Donut", "Gauge", "Funnel", "Heatmap", "Bullet", "Radial", "Treemap", "Sankey"]);
     const number = value => Number.isFinite(Number(value)) ? Number(value) : 0;
     const clamp = (value, minimum, maximum) => Math.min(maximum, Math.max(minimum, value));
     const unique = values => [...new Set(values)];
@@ -61,6 +61,63 @@
         const opposite = polar(centerX, centerY, radius, 180);
         return `M ${start.x} ${start.y} A ${radius} ${radius} 0 1 1 ${opposite.x} ${opposite.y} A ${radius} ${radius} 0 1 1 ${start.x} ${start.y}`;
     };
+    const sectorPath = (centerX, centerY, outerRadius, innerRadius, startAngle, sweepAngle) => {
+        const sweep = clamp(sweepAngle, 0, 359.999);
+        if (sweep < .01) return "";
+        const outerStart = polar(centerX, centerY, outerRadius, startAngle);
+        const outerEnd = polar(centerX, centerY, outerRadius, startAngle + sweep);
+        const large = sweep > 180 ? 1 : 0;
+        if (innerRadius <= .5) return `M ${centerX} ${centerY} L ${outerStart.x} ${outerStart.y} A ${outerRadius} ${outerRadius} 0 ${large} 1 ${outerEnd.x} ${outerEnd.y} Z`;
+        const innerEnd = polar(centerX, centerY, innerRadius, startAngle + sweep);
+        const innerStart = polar(centerX, centerY, innerRadius, startAngle);
+        return `M ${outerStart.x} ${outerStart.y} A ${outerRadius} ${outerRadius} 0 ${large} 1 ${outerEnd.x} ${outerEnd.y} L ${innerEnd.x} ${innerEnd.y} A ${innerRadius} ${innerRadius} 0 ${large} 0 ${innerStart.x} ${innerStart.y} Z`;
+    };
+    const straightPath = points => points.map((point, index) => `${index ? "L" : "M"} ${point.x} ${point.y}`).join(" ");
+    const monotonePath = points => {
+        if (points.length < 3) return straightPath(points);
+        const widths = []; const slopes = [];
+        for (let index = 0; index < points.length - 1; index += 1) {
+            const width = points[index + 1].x - points[index].x;
+            const slope = (points[index + 1].y - points[index].y) / width;
+            if (!Number.isFinite(width) || !Number.isFinite(slope) || width <= 0) return straightPath(points);
+            widths.push(width); slopes.push(slope);
+        }
+        const tangents = new Array(points.length).fill(0);
+        tangents[0] = slopes[0]; tangents[tangents.length - 1] = slopes.at(-1);
+        for (let index = 1; index < points.length - 1; index += 1) {
+            const previous = slopes[index - 1]; const next = slopes[index];
+            if (!previous || !next || previous * next <= 0) continue;
+            const previousWidth = widths[index - 1]; const nextWidth = widths[index];
+            const firstWeight = 2 * nextWidth + previousWidth;
+            const secondWeight = nextWidth + 2 * previousWidth;
+            tangents[index] = (firstWeight + secondWeight) / (firstWeight / previous + secondWeight / next);
+            if (!Number.isFinite(tangents[index])) return straightPath(points);
+        }
+        // Fritsch–Carlson's limiter makes each Hermite segment shape-preserving,
+        // including non-uniform x intervals and local extrema.
+        for (let index = 0; index < slopes.length; index += 1) {
+            const slope = slopes[index];
+            if (!slope) { tangents[index] = 0; tangents[index + 1] = 0; continue; }
+            let left = tangents[index] / slope; let right = tangents[index + 1] / slope;
+            if (!Number.isFinite(left) || !Number.isFinite(right)) return straightPath(points);
+            if (left < 0 || right < 0) { tangents[index] = 0; tangents[index + 1] = 0; continue; }
+            const magnitude = left * left + right * right;
+            if (magnitude > 9) {
+                const limiter = 3 / Math.sqrt(magnitude);
+                tangents[index] = limiter * left * slope;
+                tangents[index + 1] = limiter * right * slope;
+            }
+        }
+        let path = `M ${points[0].x} ${points[0].y}`;
+        for (let index = 0; index < points.length - 1; index += 1) {
+            const current = points[index]; const next = points[index + 1]; const width = widths[index];
+            const first = { x: current.x + width / 3, y: current.y + tangents[index] * width / 3 };
+            const second = { x: next.x - width / 3, y: next.y - tangents[index + 1] * width / 3 };
+            if (![first.x, first.y, second.x, second.y].every(Number.isFinite)) return straightPath(points);
+            path += ` C ${first.x} ${first.y}, ${second.x} ${second.y}, ${next.x} ${next.y}`;
+        }
+        return path;
+    };
     const pathFor = (points, curve) => {
         if (!points.length) return "";
         if (points.length === 1) return `M ${points[0].x} ${points[0].y}`;
@@ -69,7 +126,8 @@
                 ? `M ${point.x} ${point.y}`
                 : `${path} H ${point.x} V ${point.y}`, "");
         }
-        if (curve !== "Smooth") return points.map((point, index) => `${index ? "L" : "M"} ${point.x} ${point.y}`).join(" ");
+        if (curve === "Monotone") return monotonePath(points);
+        if (curve !== "Smooth") return straightPath(points);
         let path = `M ${points[0].x} ${points[0].y}`;
         for (let index = 0; index < points.length - 1; index += 1) {
             const previous = points[index - 1] ?? points[index];
@@ -93,7 +151,8 @@
                 low: Number.isFinite(Number(point.low)) ? number(point.low) : null,
                 high: Number.isFinite(Number(point.high)) ? number(point.high) : null,
                 size: Number.isFinite(Number(point.size)) ? number(point.size) : null,
-                group: point.group == null ? null : String(point.group)
+                group: point.group == null ? null : String(point.group),
+                timestamp: point.timestamp == null || Number.isNaN(Date.parse(point.timestamp)) ? null : String(point.timestamp)
             }))
         }))
         : [];
@@ -101,7 +160,11 @@
     class NativeChartController {
         constructor(root, configuration) {
             this.root = root;
-            this.configuration = { curve: "Smooth", barMode: "Grouped", showLegend: true, showGrid: true, showAxes: true, showTooltip: true, ...configuration };
+            this.configuration = {
+                curve: "Smooth", barMode: "Grouped", showLegend: true, showGrid: true, showAxes: true, showTooltip: true,
+                appearance: { surface: "Card" }, header: { visible: true, showMetric: true }, legend: { visible: true, interactive: true }, tooltip: { visible: true },
+                donutInnerRadius: .56, ...configuration
+            };
             this.canvas = root.querySelector("[data-z-chart-canvas]");
             this.visual = root.querySelector("[data-z-chart-visual]");
             this.legend = root.querySelector("[data-z-chart-legend]");
@@ -220,8 +283,14 @@
             this.clearLayers();
             this.hideTooltip();
             const visible = this.visibleSeries().filter(seriesItem => seriesItem.points.length);
+            const kind = this.configuration.kind || "Line";
             this.updateLegend();
             this.updateMetadata(visible);
+            if (kind === "Candlestick" && Array.isArray(this.configuration.ohlcPoints) && this.configuration.ohlcPoints.length) return this.renderCandlestick(...Object.values(this.dimensions()));
+            if (kind === "BoxPlot" && Array.isArray(this.configuration.boxPlotPoints) && this.configuration.boxPlotPoints.length) return this.renderBoxPlot(...Object.values(this.dimensions()));
+            if (kind === "Treemap" && Array.isArray(this.configuration.treemapItems) && this.configuration.treemapItems.length) return this.renderTreemap(...Object.values(this.dimensions()));
+            if (kind === "Sankey" && Array.isArray(this.configuration.sankeyNodes) && this.configuration.sankeyNodes.length) return this.renderSankey(...Object.values(this.dimensions()));
+            if (kind === "Gantt" && Array.isArray(this.configuration.ganttItems) && this.configuration.ganttItems.length) return this.renderGantt(...Object.values(this.dimensions()));
             if (!visible.length) {
                 this.setState(this.series.length ? "Select a data series to display it." : "No data is available.");
                 return;
@@ -234,18 +303,23 @@
                 viewBox: `0 0 ${width} ${height}`,
                 preserveAspectRatio: "xMinYMin meet"
             });
-            const values = visible.flatMap(seriesItem => seriesItem.points.map(point => point.value));
-            const kind = this.configuration.kind || "Line";
             if (kind === "Donut") return this.renderDonut(visible, width, height);
+            if (kind === "Radial") return this.renderRadial(visible, width, height);
             if (kind === "Gauge") return this.renderGauge(visible, width, height);
             if (kind === "Funnel") return this.renderFunnel(visible, width, height);
             if (kind === "Heatmap") return this.renderHeatmap(visible, width, height);
+            if (kind === "CalendarHeatmap") return this.renderCalendarHeatmap(visible, width, height);
             if (kind === "Scatter" || kind === "Bubble") return this.renderScatter(visible, width, height, kind === "Bubble");
             if (kind === "Bullet") return this.renderBullet(visible, width, height);
             if (kind === "Histogram") return this.renderHistogram(visible, width, height);
             if (kind === "Waterfall") return this.renderWaterfall(visible, width, height);
             if (kind === "HorizontalBar") return this.renderHorizontalBars(visible, width, height);
             if (kind === "Bar") return this.renderBars(visible, width, height);
+            if (kind === "RangeArea") return this.renderRangeArea(visible, width, height);
+            if (kind === "Combo") return this.renderCombo(visible, width, height);
+            if (kind === "Radar") return this.renderRadar(visible, width, height);
+            if (kind === "Lollipop") return this.renderLollipops(visible, width, height);
+            if (kind === "Slope") return this.renderSlope(visible, width, height);
             this.renderTrend(visible, width, height, kind === "Area", kind === "Sparkline");
         }
 
@@ -253,6 +327,25 @@
             const primary = series[0];
             const points = primary?.points ?? [];
             const kind = this.configuration.kind || "Line";
+            if (!points.length) {
+                const specialized = (() => {
+                    if (kind === "Candlestick") {
+                        const point = this.configuration.ohlcPoints?.at(-1); return point ? { value: number(point.close), label: "Close" } : null;
+                    }
+                    if (kind === "BoxPlot") {
+                        const point = this.configuration.boxPlotPoints?.at(-1); return point ? { value: number(point.median), label: "Median" } : null;
+                    }
+                    if (kind === "Treemap") return this.configuration.treemapItems?.length ? { value: this.configuration.treemapItems.reduce((sum, item) => sum + number(item.value), 0), label: "Total" } : null;
+                    if (kind === "Sankey") return this.configuration.sankeyLinks?.length ? { value: this.configuration.sankeyLinks.reduce((sum, link) => sum + number(link.value), 0), label: "Flow" } : null;
+                    if (kind === "Gantt") return this.configuration.ganttItems?.length ? { value: this.configuration.ganttItems.reduce((sum, item) => sum + number(item.progress), 0) / this.configuration.ganttItems.length, label: "Complete" } : null;
+                    return null;
+                })();
+                if (specialized) {
+                    if (this.metric) this.metric.textContent = withSuffix(specialized.value, this.configuration.valueSuffix);
+                    if (this.delta) { this.delta.textContent = specialized.label; this.delta.classList.remove("is-positive", "is-negative"); }
+                    return;
+                }
+            }
             const slices = kind === "Donut" ? this.distribution(series) : [];
             const leadingSlice = slices.reduce((leading, slice) => !leading || slice.value > leading.value ? slice : leading, null);
             const latest = kind === "Donut" ? leadingSlice?.value : points.at(-1)?.value;
@@ -290,7 +383,7 @@
 
         updateLegend() {
             if (!this.legend) return;
-            this.legend.hidden = !this.configuration.showLegend || this.series.length < 2;
+            this.legend.hidden = !this.configuration.showLegend || !this.configuration.legend?.visible || this.series.length < 2;
             if (this.legend.hidden) {
                 this.legend.replaceChildren();
                 return;
@@ -305,7 +398,9 @@
                 const swatch = document.createElement("i");
                 swatch.setAttribute("aria-hidden", "true");
                 button.append(swatch, document.createTextNode(seriesItem.name));
+                button.disabled = this.configuration.legend?.interactive === false;
                 button.addEventListener("click", () => {
+                    if (this.configuration.legend?.interactive === false) return;
                     if (this.hiddenSeries.has(index)) this.hiddenSeries.delete(index);
                     else if (this.hiddenSeries.size < this.series.length - 1) this.hiddenSeries.add(index);
                     this.render(this.series);
@@ -345,7 +440,7 @@
         }
 
         bindTooltip(element, message, position) {
-            if (!this.configuration.showTooltip) return;
+            if (!this.configuration.showTooltip || this.configuration.tooltip?.visible === false) return;
             element.setAttribute("tabindex", "0");
             element.setAttribute("focusable", "true");
             element.setAttribute("aria-label", message);
@@ -384,12 +479,21 @@
             const domain = this.boundedDomain(values);
             const plot = this.layout(width, height, false, sparkline);
             const labels = series[0].points.map(point => point.label);
-            const toX = (index, count) => count <= 1 ? (plot.left + plot.right) / 2 : plot.left + index * (plot.right - plot.left) / (count - 1);
+            const primaryPoints = series[0].points;
+            const hasContinuousX = primaryPoints.length > 1 && primaryPoints.every((point, index) => Number.isFinite(point.x) && (!index || point.x > primaryPoints[index - 1].x));
+            const xMinimum = hasContinuousX ? primaryPoints[0].x : 0;
+            const xMaximum = hasContinuousX ? primaryPoints.at(-1).x : Math.max(primaryPoints.length - 1, 1);
+            const toX = (index, count) => count <= 1 ? (plot.left + plot.right) / 2 : hasContinuousX
+                ? plot.left + ((primaryPoints[index]?.x ?? xMinimum) - xMinimum) / Math.max(xMaximum - xMinimum, 1) * (plot.right - plot.left)
+                : plot.left + index * (plot.right - plot.left) / (count - 1);
+            const pointX = (point, index, count) => hasContinuousX && Number.isFinite(point.x)
+                ? plot.left + (point.x - xMinimum) / Math.max(xMaximum - xMinimum, 1) * (plot.right - plot.left)
+                : toX(index, count);
             const toY = value => plot.bottom - ((value - domain.minimum) / (domain.maximum - domain.minimum)) * (plot.bottom - plot.top);
             if (!sparkline) this.renderFrame(labels, domain, plot, toX, toY);
             series.forEach((seriesItem, seriesIndex) => {
                 const color = this.color(seriesIndex, seriesItem);
-                const points = seriesItem.points.map((point, index) => ({ x: toX(index, seriesItem.points.length), y: toY(point.value), point }));
+                const points = seriesItem.points.map((point, index) => ({ x: pointX(point, index, seriesItem.points.length), y: toY(point.value), point }));
                 const linePath = pathFor(points, this.configuration.curve);
                 if (area) {
                     const id = `z-chart-gradient-${this.root.id.replace(/[^a-z0-9_-]/gi, "")}-${seriesIndex}`;
@@ -491,24 +595,30 @@
         renderDonut(series, width, height) {
             const slices = this.distribution(series).filter(slice => slice.value > 0);
             const total = slices.reduce((sum, slice) => sum + slice.value, 0) || 1;
-            const centerX = width / 2; const centerY = height / 2; const radius = Math.max(48, Math.min(width, height) * .29);
-            const track = svg("path");
-            setAttributes(track, { class: "z-native-chart-ring-track", d: ringPath(centerX, centerY, radius) });
-            this.layers.data.append(track);
+            const centerX = width / 2; const centerY = height / 2; const radius = Math.max(48, Math.min(width, height) * .31);
+            const innerRadius = radius * clamp(number(this.configuration.donutInnerRadius), 0, .9);
+            if (innerRadius > .5) {
+                const track = svg("path");
+                setAttributes(track, { class: "z-native-chart-ring-track", d: ringPath(centerX, centerY, (radius + innerRadius) / 2) });
+                setPaint(track, { "stroke-width": radius - innerRadius });
+                this.layers.data.append(track);
+            }
             const gap = Math.min(3.2, Math.max(1.3, 10 / Math.max(slices.length, 1)));
             let angle = 0;
             slices.forEach((slice, index) => {
                 const share = slice.value / total * 100;
                 const sweep = share * 3.6;
                 const arc = svg("path");
-                setAttributes(arc, { class: "z-native-chart-ring", d: arcPath(centerX, centerY, radius, angle + gap / 2, Math.max(0, sweep - gap)) });
-                setPaint(arc, { stroke: slice.color });
+                setAttributes(arc, { class: "z-native-chart-ring", d: sectorPath(centerX, centerY, radius, innerRadius, angle + gap / 2, Math.max(0, sweep - gap)) });
+                setPaint(arc, { fill: slice.color, stroke: "none" });
                 this.bindTooltip(arc, `${slice.name}: ${format(slice.value)} (${format(share)}%)`, { x: centerX, y: centerY - radius });
                 this.layers.data.append(arc); angle += sweep;
             });
             const leading = slices.reduce((result, slice) => !result || slice.value > result.value ? slice : result, null);
-            appendText(this.layers.annotation, centerX, centerY - 3, withSuffix(leading?.value ?? 0, this.configuration.valueSuffix), "z-native-chart-ring-value", "middle");
-            appendText(this.layers.annotation, centerX, centerY + 17, leading?.name ?? "No data", "z-native-chart-ring-label", "middle");
+            if (innerRadius > .5) {
+                appendText(this.layers.annotation, centerX, centerY - 3, withSuffix(leading?.value ?? 0, this.configuration.valueSuffix), "z-native-chart-ring-value", "middle");
+                appendText(this.layers.annotation, centerX, centerY + 17, leading?.name ?? "No data", "z-native-chart-ring-label", "middle");
+            }
         }
 
         renderGauge(series, width, height) {
@@ -684,6 +794,141 @@
                     setAttributes(connector, { class: "z-native-chart-waterfall-connector", x1: x + barWidth, x2: toX(index + 1, steps.length) - barWidth / 2, y1: toY(step.end), y2: toY(step.end) }); this.layers.data.append(connector);
                 }
             });
+        }
+
+        renderRangeArea(series, width, height) {
+            const points = series[0].points.filter(point => point.low != null && point.high != null);
+            if (points.length < 2) return this.renderTrend(series, width, height, true, false);
+            const domain = this.boundedDomain(points.flatMap(point => [point.low, point.high]));
+            const plot = this.layout(width, height);
+            const labels = points.map(point => point.label);
+            const toX = (index, count) => count <= 1 ? (plot.left + plot.right) / 2 : plot.left + index * (plot.right - plot.left) / (count - 1);
+            const toY = value => plot.bottom - ((value - domain.minimum) / (domain.maximum - domain.minimum)) * (plot.bottom - plot.top);
+            this.renderFrame(labels, domain, plot, toX, toY);
+            const upper = points.map((point, index) => ({ x: toX(index, points.length), y: toY(point.high), point }));
+            const lower = points.map((point, index) => ({ x: toX(index, points.length), y: toY(point.low), point }));
+            const color = this.color(0, series[0]);
+            const fill = svg("path");
+            setAttributes(fill, { class: "z-native-chart-range-area", d: `${pathFor(upper, this.configuration.curve)} L ${lower.at(-1).x} ${lower.at(-1).y} ${[...lower].reverse().slice(1).map(point => `L ${point.x} ${point.y}`).join(" ")} Z` });
+            setPaint(fill, { fill: color }); this.layers.data.append(fill);
+            [upper, lower].forEach((edge, edgeIndex) => {
+                const line = svg("path"); setAttributes(line, { class: "z-native-chart-series", d: pathFor(edge, this.configuration.curve) }); setPaint(line, { stroke: color, "stroke-opacity": edgeIndex ? ".62" : "1" }); this.layers.data.append(line);
+            });
+            upper.forEach((point, index) => this.addHit(point, `${series[0].name} · ${point.point.label}: ${withSuffix(point.point.low, this.configuration.valueSuffix)} – ${withSuffix(point.point.high, this.configuration.valueSuffix)}`, point));
+        }
+
+        renderCombo(series, width, height) {
+            const labels = series[0].points.map(point => point.label);
+            const primary = series.filter(item => item.axis !== "Secondary"); const secondary = series.filter(item => item.axis === "Secondary");
+            const primaryDomain = this.boundedDomain((primary.length ? primary : series).flatMap(item => item.points.map(point => point.value)), true);
+            const secondaryDomain = secondary.length ? this.boundedDomain(secondary.flatMap(item => item.points.map(point => point.value)), true) : null;
+            const plot = this.layout(width, height);
+            const toX = (index, count) => plot.left + (index + .5) * (plot.right - plot.left) / Math.max(count, 1);
+            const toY = (value, axis = "Primary") => {
+                const domain = axis === "Secondary" && secondaryDomain ? secondaryDomain : primaryDomain;
+                return plot.bottom - ((value - domain.minimum) / (domain.maximum - domain.minimum)) * (plot.bottom - plot.top);
+            };
+            this.renderFrame(labels, primaryDomain, plot, toX, value => toY(value));
+            if (secondaryDomain && this.configuration.showAxes) ticks(secondaryDomain.minimum, secondaryDomain.maximum).forEach(value => appendText(this.layers.axis, plot.right + 6, toY(value, "Secondary") + 3.5, format(value), "z-native-chart-axis-label"));
+            const barSeries = series.filter(item => item.renderAs === "Bar"); const barWidth = Math.max(5, (plot.right - plot.left) / Math.max(labels.length, 1) * .52 / Math.max(barSeries.length, 1));
+            series.forEach((seriesItem, seriesIndex) => {
+                const renderAs = seriesItem.renderAs === "Auto" ? "Line" : seriesItem.renderAs;
+                const color = this.color(seriesIndex, seriesItem);
+                const points = seriesItem.points.map((point, index) => ({ x: toX(index, labels.length), y: toY(point.value, seriesItem.axis), point }));
+                if (renderAs === "Bar") {
+                    const order = barSeries.indexOf(seriesItem); const baseline = toY(0, seriesItem.axis);
+                    points.forEach((point, index) => this.appendBar(point.x - barWidth * barSeries.length / 2 + order * barWidth, Math.min(point.y, baseline), barWidth - 2, Math.max(1, Math.abs(baseline - point.y)), color, `${seriesItem.name} · ${point.point.label}: ${withSuffix(point.point.value, this.configuration.valueSuffix)}`));
+                    return;
+                }
+                if (renderAs === "Area") {
+                    const area = svg("path"); setAttributes(area, { class: "z-native-chart-area", d: `${pathFor(points, this.configuration.curve)} L ${points.at(-1).x} ${toY(0, seriesItem.axis)} L ${points[0].x} ${toY(0, seriesItem.axis)} Z` }); setPaint(area, { fill: color, opacity: ".2" }); this.layers.data.append(area);
+                }
+                const line = svg("path"); setAttributes(line, { class: "z-native-chart-series", d: pathFor(points, this.configuration.curve) }); setPaint(line, { stroke: color }); this.layers.data.append(line);
+                points.forEach(point => this.addHit(point, `${seriesItem.name} · ${point.point.label}: ${withSuffix(point.point.value, this.configuration.valueSuffix)}`, point));
+            });
+        }
+
+        renderRadar(series, width, height) {
+            const labels = series[0].points.map(point => point.label); const count = labels.length;
+            const maximum = this.configuration.maximumValue ?? Math.max(...series.flatMap(item => item.points.map(point => point.value)), 1);
+            const minimum = this.configuration.minimumValue ?? 0; const centerX = width / 2; const centerY = height / 2; const radius = Math.max(38, Math.min(width, height) * .31);
+            const vertex = (index, value = 1) => polar(centerX, centerY, radius * value, index * 360 / Math.max(count, 1));
+            [1, .75, .5, .25].forEach(scale => {
+                const vertices = labels.map((_, index) => vertex(index, scale)); const polygon = svg("polygon"); setAttributes(polygon, { class: "z-native-chart-radar-grid", points: vertices.map(point => `${point.x},${point.y}`).join(" ") }); this.layers.grid.append(polygon);
+            });
+            labels.forEach((label, index) => { const edge = vertex(index, 1.13); appendText(this.layers.axis, edge.x, edge.y + 3, label, "z-native-chart-axis-label", "middle"); });
+            series.forEach((seriesItem, seriesIndex) => {
+                const vertices = seriesItem.points.map((point, index) => vertex(index, clamp((point.value - minimum) / Math.max(maximum - minimum, 1), 0, 1)));
+                const polygon = svg("polygon"); setAttributes(polygon, { class: "z-native-chart-radar", points: vertices.map(point => `${point.x},${point.y}`).join(" ") }); setPaint(polygon, { fill: this.color(seriesIndex, seriesItem), stroke: this.color(seriesIndex, seriesItem) }); this.layers.data.append(polygon);
+                vertices.forEach((point, index) => this.addHit(point, `${seriesItem.name} · ${seriesItem.points[index].label}: ${withSuffix(seriesItem.points[index].value, this.configuration.valueSuffix)}`, point));
+            });
+        }
+
+        renderRadial(series, width, height) {
+            const items = this.distribution(series).filter(item => item.value >= 0); const maximum = this.configuration.maximumValue ?? Math.max(...items.map(item => item.value), 1);
+            const centerX = width / 2; const centerY = height / 2; const outer = Math.min(width, height) * .34; const thickness = Math.max(10, Math.min(21, outer / Math.max(items.length, 1) * .76));
+            items.forEach((item, index) => {
+                const radius = outer - index * (thickness + 7); if (radius < thickness) return;
+                const track = svg("path"); setAttributes(track, { class: "z-native-chart-ring-track", d: ringPath(centerX, centerY, radius) }); setPaint(track, { "stroke-width": thickness }); this.layers.data.append(track);
+                const ring = svg("path"); setAttributes(ring, { class: "z-native-chart-ring", d: arcPath(centerX, centerY, radius, 0, item.value / maximum * 360) }); setPaint(ring, { stroke: item.color, "stroke-width": thickness }); this.bindTooltip(ring, `${item.name}: ${withSuffix(item.value, this.configuration.valueSuffix)}`, { x: centerX, y: centerY - radius }); this.layers.data.append(ring);
+            });
+            appendText(this.layers.annotation, centerX, centerY - 2, withSuffix(items.reduce((sum, item) => sum + item.value, 0), this.configuration.valueSuffix), "z-native-chart-ring-value", "middle");
+            appendText(this.layers.annotation, centerX, centerY + 18, "Total", "z-native-chart-ring-label", "middle");
+        }
+
+        renderCalendarHeatmap(series, width, height) {
+            const points = series.flatMap(item => item.points).filter(point => point.timestamp);
+            if (!points.length) return this.renderHeatmap(series, width, height);
+            const values = points.map(point => point.value); const minimum = Math.min(...values); const maximum = Math.max(...values);
+            const ordered = [...points].sort((left, right) => Date.parse(left.timestamp) - Date.parse(right.timestamp)); const weeks = Math.max(1, Math.ceil(ordered.length / 7));
+            const left = 34; const top = 24; const cellWidth = (width - left - 12) / weeks; const cellHeight = Math.max(12, (height - top - 12) / 7);
+            ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].forEach((day, index) => appendText(this.layers.axis, left - 7, top + (index + .5) * cellHeight + 3, day, "z-native-chart-axis-label", "end"));
+            ordered.forEach((point, index) => {
+                const date = new Date(point.timestamp); const week = Math.floor(index / 7); const day = date.getUTCDay(); const cell = svg("rect");
+                setAttributes(cell, { class: "z-native-chart-heat-cell", x: left + week * cellWidth + 2, y: top + day * cellHeight + 2, width: Math.max(2, cellWidth - 4), height: Math.max(2, cellHeight - 4), rx: 3, opacity: .16 + .84 * (point.value - minimum) / Math.max(maximum - minimum, 1) }); setPaint(cell, { fill: "var(--z-data-primary)" }); this.bindTooltip(cell, `${point.label}: ${withSuffix(point.value, this.configuration.valueSuffix)}`, { x: left + week * cellWidth, y: top + day * cellHeight }); this.layers.data.append(cell);
+            });
+        }
+
+        renderLollipops(series, width, height) {
+            const points = series[0].points; const domain = this.boundedDomain(points.map(point => point.value), true); const plot = this.layout(width, height); const toX = (index, count) => plot.left + (index + .5) * (plot.right - plot.left) / Math.max(count, 1); const toY = value => plot.bottom - ((value - domain.minimum) / (domain.maximum - domain.minimum)) * (plot.bottom - plot.top); this.renderFrame(points.map(point => point.label), domain, plot, toX, toY); const baseline = toY(0);
+            points.forEach((point, index) => { const x = toX(index, points.length); const y = toY(point.value); const stem = svg("line"); setAttributes(stem, { class: "z-native-chart-lollipop-stem", x1: x, x2: x, y1: baseline, y2: y }); this.layers.data.append(stem); const head = svg("circle"); setAttributes(head, { class: "z-native-chart-lollipop", cx: x, cy: y, r: 6 }); setPaint(head, { fill: this.color(0, series[0]) }); this.bindTooltip(head, `${point.label}: ${withSuffix(point.value, this.configuration.valueSuffix)}`, { x, y }); this.layers.data.append(head); });
+        }
+
+        renderSlope(series, width, height) {
+            const all = series.flatMap(item => item.points.slice(0, 2).map(point => point.value)); const domain = this.boundedDomain(all); const plot = this.layout(width, height); const toY = value => plot.bottom - ((value - domain.minimum) / (domain.maximum - domain.minimum)) * (plot.bottom - plot.top); const left = plot.left + 45; const right = plot.right - 45;
+            [left, right].forEach((x, index) => appendText(this.layers.axis, x, plot.bottom + 21, series[0].points[index]?.label ?? (index ? "End" : "Start"), "z-native-chart-axis-label", "middle"));
+            series.forEach((seriesItem, index) => { const first = seriesItem.points[0]; const last = seriesItem.points[1]; if (!first || !last) return; const line = svg("line"); setAttributes(line, { class: "z-native-chart-series", x1: left, y1: toY(first.value), x2: right, y2: toY(last.value) }); setPaint(line, { stroke: this.color(index, seriesItem) }); this.layers.data.append(line); [ { x: left, y: toY(first.value), point: first }, { x: right, y: toY(last.value), point: last } ].forEach(point => this.addHit(point, `${seriesItem.name}: ${withSuffix(point.point.value, this.configuration.valueSuffix)}`, point)); });
+        }
+
+        renderCandlestick(width, height) {
+            const points = this.configuration.ohlcPoints.filter(point => [point.open, point.high, point.low, point.close].every(value => Number.isFinite(Number(value)))); if (!points.length) return;
+            const domain = this.boundedDomain(points.flatMap(point => [number(point.low), number(point.high)])); const plot = this.layout(width, height); const toX = (index, count) => plot.left + (index + .5) * (plot.right - plot.left) / Math.max(count, 1); const toY = value => plot.bottom - ((value - domain.minimum) / (domain.maximum - domain.minimum)) * (plot.bottom - plot.top); this.renderFrame(points.map(point => point.label), domain, plot, toX, toY); const bodyWidth = Math.max(4, (plot.right - plot.left) / points.length * .52);
+            points.forEach((point, index) => { const x = toX(index, points.length); const rising = number(point.close) >= number(point.open); const color = rising ? "var(--z-success)" : "var(--z-danger)"; const wick = svg("line"); setAttributes(wick, { class: "z-native-chart-candle-wick", x1: x, x2: x, y1: toY(number(point.high)), y2: toY(number(point.low)) }); setPaint(wick, { stroke: color }); this.layers.data.append(wick); const body = svg("rect"); setAttributes(body, { class: "z-native-chart-candle", x: x - bodyWidth / 2, y: Math.min(toY(number(point.open)), toY(number(point.close))), width: bodyWidth, height: Math.max(2, Math.abs(toY(number(point.open)) - toY(number(point.close)))), rx: 2 }); setPaint(body, { fill: color }); this.bindTooltip(body, `${point.label}: O ${format(number(point.open))} · H ${format(number(point.high))} · L ${format(number(point.low))} · C ${format(number(point.close))}`, { x, y: toY(number(point.high)) }); this.layers.data.append(body); });
+        }
+
+        renderBoxPlot(width, height) {
+            const points = this.configuration.boxPlotPoints.filter(point => [point.minimum, point.firstQuartile, point.median, point.thirdQuartile, point.maximum].every(value => Number.isFinite(Number(value)))); if (!points.length) return;
+            const domain = this.boundedDomain(points.flatMap(point => [number(point.minimum), number(point.maximum), ...(point.outliers ?? []).map(number)])); const plot = this.layout(width, height); const toX = (index, count) => plot.left + (index + .5) * (plot.right - plot.left) / Math.max(count, 1); const toY = value => plot.bottom - ((value - domain.minimum) / (domain.maximum - domain.minimum)) * (plot.bottom - plot.top); this.renderFrame(points.map(point => point.label), domain, plot, toX, toY); const size = Math.max(9, (plot.right - plot.left) / points.length * .45);
+            points.forEach((point, index) => { const x = toX(index, points.length); const color = this.color(index, null); const whisker = svg("line"); setAttributes(whisker, { class: "z-native-chart-box-whisker", x1: x, x2: x, y1: toY(number(point.maximum)), y2: toY(number(point.minimum)) }); this.layers.data.append(whisker); const box = svg("rect"); setAttributes(box, { class: "z-native-chart-box", x: x - size / 2, y: toY(number(point.thirdQuartile)), width: size, height: Math.max(2, toY(number(point.firstQuartile)) - toY(number(point.thirdQuartile))), rx: 3 }); setPaint(box, { fill: color }); this.bindTooltip(box, `${point.label}: min ${format(number(point.minimum))} · Q1 ${format(number(point.firstQuartile))} · median ${format(number(point.median))} · Q3 ${format(number(point.thirdQuartile))} · max ${format(number(point.maximum))}`, { x, y: toY(number(point.median)) }); this.layers.data.append(box); const median = svg("line"); setAttributes(median, { class: "z-native-chart-box-median", x1: x - size / 2, x2: x + size / 2, y1: toY(number(point.median)), y2: toY(number(point.median)) }); this.layers.data.append(median); (point.outliers ?? []).forEach(value => { const outlier = svg("circle"); setAttributes(outlier, { class: "z-native-chart-box-outlier", cx: x, cy: toY(number(value)), r: 3 }); this.layers.data.append(outlier); }); });
+        }
+
+        renderTreemap(width, height) {
+            const items = this.configuration.treemapItems.filter(item => Number(item.value) > 0); if (!items.length) return; const total = items.reduce((sum, item) => sum + number(item.value), 0); const bounds = { x: 8, y: 12, width: width - 16, height: height - 24 }; let offset = 0;
+            items.forEach((item, index) => { const vertical = bounds.width >= bounds.height; const share = number(item.value) / total; const span = (vertical ? bounds.width : bounds.height) * share; const x = vertical ? bounds.x + offset : bounds.x; const y = vertical ? bounds.y : bounds.y + offset; const itemWidth = vertical ? span : bounds.width; const itemHeight = vertical ? bounds.height : span; offset += span; const tile = svg("rect"); setAttributes(tile, { class: "z-native-chart-treemap", x: x + 2, y: y + 2, width: Math.max(1, itemWidth - 4), height: Math.max(1, itemHeight - 4), rx: 6 }); setPaint(tile, { fill: item.color || this.color(index, null) }); this.bindTooltip(tile, `${item.label}: ${withSuffix(number(item.value), this.configuration.valueSuffix)}`, { x: x + itemWidth / 2, y: y + itemHeight / 2 }); this.layers.data.append(tile); if (itemWidth > 70 && itemHeight > 34) appendText(this.layers.annotation, x + 11, y + 21, item.label, "z-native-chart-treemap-label"); });
+        }
+
+        renderSankey(width, height) {
+            const nodes = this.configuration.sankeyNodes ?? []; const links = (this.configuration.sankeyLinks ?? []).filter(link => Number(link.value) > 0); if (!nodes.length || !links.length) return;
+            const ids = new Set(nodes.map(node => node.id)); const incoming = new Set(links.map(link => link.targetId)); const outgoing = new Set(links.map(link => link.sourceId)); const sources = nodes.filter(node => outgoing.has(node.id) && !incoming.has(node.id)); const targets = nodes.filter(node => incoming.has(node.id) && !outgoing.has(node.id)); const middle = nodes.filter(node => !sources.includes(node) && !targets.includes(node)); const columns = [sources, middle, targets].filter(column => column.length); const positions = new Map();
+            columns.forEach((column, columnIndex) => column.forEach((node, index) => positions.set(node.id, { x: 22 + columnIndex * (width - 92) / Math.max(columns.length - 1, 1), y: 18 + index * (height - 44) / Math.max(column.length, 1), width: 18, height: Math.max(24, (height - 52) / Math.max(column.length, 1) * .54), node })));
+            links.forEach((link, index) => { const source = positions.get(link.sourceId); const target = positions.get(link.targetId); if (!source || !target) return; const thickness = clamp(Math.sqrt(number(link.value)) * 2.5, 3, 22); const path = svg("path"); setAttributes(path, { class: "z-native-chart-sankey-link", d: `M ${source.x + source.width} ${source.y + source.height / 2} C ${(source.x + target.x) / 2} ${source.y + source.height / 2}, ${(source.x + target.x) / 2} ${target.y + target.height / 2}, ${target.x} ${target.y + target.height / 2}` }); setPaint(path, { stroke: link.color || this.color(index, null), "stroke-width": thickness }); this.bindTooltip(path, `${link.label || `${source.node.label} → ${target.node.label}`}: ${withSuffix(number(link.value), this.configuration.valueSuffix)}`, { x: (source.x + target.x) / 2, y: (source.y + target.y) / 2 }); this.layers.data.append(path); });
+            [...positions.values()].forEach((position, index) => { const node = svg("rect"); setAttributes(node, { class: "z-native-chart-sankey-node", x: position.x, y: position.y, width: position.width, height: position.height, rx: 4 }); setPaint(node, { fill: position.node.color || this.color(index, null) }); this.layers.data.append(node); appendText(this.layers.annotation, position.x + (position.x < width / 2 ? position.width + 6 : -6), position.y + position.height / 2 + 4, position.node.label, "z-native-chart-sankey-label", position.x < width / 2 ? "start" : "end"); });
+        }
+
+        renderGantt(width, height) {
+            const items = this.configuration.ganttItems.filter(item => Date.parse(item.start) && Date.parse(item.end)); if (!items.length) return; const start = Math.min(...items.map(item => Date.parse(item.start))); const end = Math.max(...items.map(item => Date.parse(item.end))); const plot = { left: Math.min(130, width * .32), right: width - 16, top: 24, bottom: height - 14 }; const rowHeight = (plot.bottom - plot.top) / items.length; const toX = value => plot.left + (value - start) / Math.max(end - start, 1) * (plot.right - plot.left);
+            ticks(start, end, 4).forEach(value => { const x = toX(value); const grid = svg("line"); setAttributes(grid, { class: "z-native-chart-grid", x1: x, x2: x, y1: plot.top, y2: plot.bottom }); this.layers.grid.append(grid); appendText(this.layers.axis, x, plot.top - 7, new Date(value).toLocaleDateString(undefined, { month: "short", day: "numeric" }), "z-native-chart-axis-label", "middle"); });
+            items.forEach((item, index) => { const y = plot.top + index * rowHeight + Math.max(3, rowHeight * .18); const bar = svg("rect"); const x = toX(Date.parse(item.start)); const itemWidth = Math.max(2, toX(Date.parse(item.end)) - x); setAttributes(bar, { class: "z-native-chart-gantt", x, y, width: itemWidth, height: Math.max(8, rowHeight * .62), rx: 4 }); setPaint(bar, { fill: item.color || this.color(index, null) }); this.bindTooltip(bar, `${item.label}: ${new Date(item.start).toLocaleDateString()} – ${new Date(item.end).toLocaleDateString()} · ${format(number(item.progress))}%`, { x: x + itemWidth / 2, y }); this.layers.data.append(bar); if (number(item.progress) > 0) { const progress = svg("rect"); setAttributes(progress, { class: "z-native-chart-gantt-progress", x, y, width: itemWidth * clamp(number(item.progress), 0, 100) / 100, height: Math.max(8, rowHeight * .62), rx: 4 }); this.layers.data.append(progress); } appendText(this.layers.axis, plot.left - 9, y + rowHeight * .39, item.label, "z-native-chart-axis-label", "end"); });
         }
 
         async load() {

@@ -9,6 +9,12 @@ public enum ZoorceChartCurve
     /// <summary>Uses a restrained monotone-like smooth curve.</summary>
     Smooth,
 
+    /// <summary>
+    /// Uses cubic monotone interpolation. This keeps the line within the bounds of
+    /// adjacent observations instead of introducing visual overshoot.
+    /// </summary>
+    Monotone,
+
     /// <summary>Uses horizontal and vertical steps between observations.</summary>
     Step
 }

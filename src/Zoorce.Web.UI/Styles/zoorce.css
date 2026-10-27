@@ -603,3 +603,25 @@ html.z-diagram-focus-active, body.z-diagram-focus-active { overflow: hidden; }.z
 
 .z-topbar-back { flex: none; text-decoration: none; }
 .z-topbar-back:focus-visible { outline: 2px solid var(--z-primary); outline-offset: 3px; }
+
+/* Configurable chart presentation and extended native-SVG catalogue. */
+.z-chart-component[data-z-chart-surface="Bare"] { background: transparent; border: 0; box-shadow: none; padding: 0; border-radius: 0; gap: .65rem; }
+.z-chart-component[data-z-chart-surface="Bare"]::after { display: none; }
+.z-chart-component[data-z-chart-surface="Bare"] .z-chart-visual { background: transparent; border: 0; border-radius: 0; padding: 0; min-height: unset; }
+.z-chart-component[data-z-chart-surface="Bare"] .z-chart-component-header { padding-inline: 0; }
+.z-chart-component[data-z-chart-surface="Bare"] .z-chart-legend { padding-inline: 0; }
+.z-native-chart-range-area { fill-opacity: .18; stroke: none; }
+.z-native-chart-radar-grid { fill: color-mix(in srgb, var(--z-subtle) 45%, transparent); stroke: var(--z-border); stroke-width: 1; }
+.z-native-chart-radar { fill-opacity: .16; stroke-width: 2.25; stroke-linejoin: round; }
+.z-native-chart-lollipop-stem, .z-native-chart-candle-wick, .z-native-chart-box-whisker { stroke: var(--z-border); stroke-width: 1.5; }
+.z-native-chart-lollipop { stroke: var(--z-surface); stroke-width: 2; }
+.z-native-chart-candle { stroke: color-mix(in srgb, currentColor 14%, transparent); }
+.z-native-chart-box { fill-opacity: .31; stroke: var(--z-text); stroke-opacity: .48; stroke-width: 1.25; }
+.z-native-chart-box-median { stroke: var(--z-text); stroke-width: 2; }
+.z-native-chart-box-outlier { fill: var(--z-danger); stroke: var(--z-surface); stroke-width: 1; }
+.z-native-chart-treemap { fill-opacity: .86; stroke: var(--z-surface); stroke-width: 2; }
+.z-native-chart-treemap-label, .z-native-chart-sankey-label { fill: var(--z-text); font-size: .72rem; font-weight: 650; }
+.z-native-chart-sankey-link { fill: none; stroke-opacity: .36; stroke-linecap: round; }
+.z-native-chart-sankey-node { stroke: var(--z-surface); stroke-width: 1; }
+.z-native-chart-gantt { fill-opacity: .86; }
+.z-native-chart-gantt-progress { fill: color-mix(in srgb, var(--z-text) 28%, transparent); pointer-events: none; }
