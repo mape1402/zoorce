@@ -74,6 +74,8 @@ test('monotone curve intentionally falls back to straight segments for two or in
 
 test('trend rendering shares monotone paths with area rendering and retains interactions', () => {
     assert.match(source, /pathFor\(points, this\.configuration\.curve\)/);
+    assert.match(source, /renderStackedArea\(series, width, height\)/);
+    assert.match(source, /areaMode !== "Overlay"/);
     assert.match(source, /bindTooltip\(/);
     assert.match(source, /aria-pressed/);
 });

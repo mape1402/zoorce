@@ -161,7 +161,7 @@
         constructor(root, configuration) {
             this.root = root;
             this.configuration = {
-                curve: "Smooth", barMode: "Grouped", showLegend: true, showGrid: true, showAxes: true, showTooltip: true,
+                curve: "Smooth", barMode: "Grouped", areaMode: "Overlay", showLegend: true, showGrid: true, showAxes: true, showTooltip: true,
                 appearance: { surface: "Card" }, header: { visible: true, showMetric: true }, legend: { visible: true, interactive: true }, tooltip: { visible: true },
                 donutInnerRadius: .56, ...configuration
             };
@@ -320,6 +320,7 @@
             if (kind === "Radar") return this.renderRadar(visible, width, height);
             if (kind === "Lollipop") return this.renderLollipops(visible, width, height);
             if (kind === "Slope") return this.renderSlope(visible, width, height);
+            if (kind === "Area" && this.configuration.areaMode !== "Overlay") return this.renderStackedArea(visible, width, height);
             this.renderTrend(visible, width, height, kind === "Area", kind === "Sparkline");
         }
 
@@ -517,6 +518,38 @@
                 setPaint(marker, { fill: color });
                 this.layers.data.append(marker);
                 points.forEach(item => this.addHit(item, `${seriesItem.name} · ${item.point.label}: ${withSuffix(item.point.value, this.configuration.valueSuffix)}`, item));
+            });
+        }
+
+        renderStackedArea(series, width, height) {
+            const labels = series[0].points.map(point => point.label);
+            const mode = this.configuration.areaMode || "Stacked";
+            const totals = labels.map((_, pointIndex) => series.reduce((sum, seriesItem) => sum + Math.max(0, number(seriesItem.points[pointIndex]?.value)), 0));
+            const maximums = mode === "Stacked100"
+                ? labels.map(() => 100)
+                : labels.map((_, pointIndex) => series.reduce((sum, seriesItem) => sum + number(seriesItem.points[pointIndex]?.value), 0));
+            const domain = this.boundedDomain([0, ...maximums], true);
+            const plot = this.layout(width, height);
+            const toX = (index, count) => count <= 1 ? (plot.left + plot.right) / 2 : plot.left + index * (plot.right - plot.left) / (count - 1);
+            const toY = value => plot.bottom - ((value - domain.minimum) / (domain.maximum - domain.minimum)) * (plot.bottom - plot.top);
+            this.renderFrame(labels, domain, plot, toX, toY);
+            const accumulators = labels.map(() => 0);
+            series.forEach((seriesItem, seriesIndex) => {
+                const lower = []; const upper = [];
+                seriesItem.points.forEach((point, index) => {
+                    const raw = number(point.value);
+                    const value = mode === "Stacked100" ? raw / Math.max(totals[index], 1) * 100 : raw;
+                    const start = accumulators[index]; const end = start + value; accumulators[index] = end;
+                    lower.push({ x: toX(index, labels.length), y: toY(start), point, value, start });
+                    upper.push({ x: toX(index, labels.length), y: toY(end), point, value, start });
+                });
+                const color = this.color(seriesIndex, seriesItem);
+                const area = svg("path");
+                const boundary = [...lower].reverse();
+                setAttributes(area, { class: "z-native-chart-area z-native-chart-stacked-area", d: `${pathFor(upper, this.configuration.curve)} ${boundary.map(point => `L ${point.x} ${point.y}`).join(" ")} Z` });
+                setPaint(area, { fill: color, opacity: ".54" }); this.layers.data.append(area);
+                const line = svg("path"); setAttributes(line, { class: "z-native-chart-series", d: pathFor(upper, this.configuration.curve) }); setPaint(line, { stroke: color }); this.layers.data.append(line);
+                upper.forEach((point, index) => this.addHit(point, `${seriesItem.name} · ${point.point.label}: ${withSuffix(point.point.value, this.configuration.valueSuffix)}${mode === "Stacked100" ? ` (${format(point.value)}%)` : ""}`, point));
             });
         }
 

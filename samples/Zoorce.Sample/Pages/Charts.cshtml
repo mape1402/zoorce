@@ -9,6 +9,12 @@
         Series("Adoption", new("May", 48), new("Jun", 56), new("Jul", 54), new("Aug", 67), new("Sep", 74), new("Oct", 82), new("Nov", 88)),
         Series("Target", new("May", 52), new("Jun", 58), new("Jul", 64), new("Aug", 68), new("Sep", 74), new("Oct", 80), new("Nov", 84))
     };
+    var stackedLatency = new[]
+    {
+        Series("Resolve RTT", new("12:30", 980), new("12:31", 930), new("12:32", 1010), new("12:33", 960), new("12:34", 1040), new("12:35", 2310), new("12:36", 1010), new("12:37", 1140), new("12:38", 1990), new("12:39", 1120), new("12:40", 980), new("12:41", 1620), new("12:42", 860)),
+        Series("TCP connect", new("12:30", 360), new("12:31", 290), new("12:32", 310), new("12:33", 300), new("12:34", 330), new("12:35", 420), new("12:36", 290), new("12:37", 520), new("12:38", 410), new("12:39", 320), new("12:40", 350), new("12:41", 290), new("12:42", 270)),
+        Series("Handshake", new("12:30", 710), new("12:31", 960), new("12:32", 760), new("12:33", 850), new("12:34", 690), new("12:35", 810), new("12:36", 790), new("12:37", 720), new("12:38", 970), new("12:39", 770), new("12:40", 740), new("12:41", 620), new("12:42", 680))
+    };
     var channels = new[]
     {
         Series("Product", new("Direct", 42), new("Partners", 31), new("Community", 18), new("Inbound", 9)),
@@ -64,6 +70,7 @@
 
     <div class="z-chart-gallery">
         @await Component.InvokeAsync("ZoorceChart", new ZoorceChartOptions { Id = "chart-trend", Title = "Product adoption", Summary = "Monthly adoption compared with target", Kind = ZoorceChartKind.Area, Size = ZoorceChartSize.Wide, ValueSuffix = "%", Curve = ZoorceChartCurve.Smooth, Series = adoption })
+        @await Component.InvokeAsync("ZoorceChart", new ZoorceChartOptions { Id = "chart-stacked-area", Title = "HTTP ping times", Summary = "Stacked monitor timings over the selected window", Kind = ZoorceChartKind.Area, AreaMode = ZoorceChartAreaMode.Stacked, Size = ZoorceChartSize.Wide, ValueSuffix = " ms", Curve = ZoorceChartCurve.Monotone, Appearance = new ZoorceChartAppearanceOptions { Surface = ZoorceChartSurface.Bare }, Header = new ZoorceChartHeaderOptions { ShowMetric = false }, Series = stackedLatency })
         @await Component.InvokeAsync("ZoorceChart", new ZoorceChartOptions { Id = "chart-bars", Title = "Channel composition", Summary = "Acquisition channel composition", Kind = ZoorceChartKind.Bar, BarMode = ZoorceChartBarMode.Stacked100, ValueSuffix = "%", Series = channels })
         @await Component.InvokeAsync("ZoorceChart", new ZoorceChartOptions { Id = "chart-ranking", Title = "Service ranking", Summary = "Services ranked by response score", Kind = ZoorceChartKind.HorizontalBar, ValueSuffix = " ms", Series = ranking })
         @await Component.InvokeAsync("ZoorceChart", new ZoorceChartOptions { Id = "chart-donut", Title = "Portfolio health", Summary = "Health status distribution", Kind = ZoorceChartKind.Donut, ValueSuffix = "%", Series = distribution })
