@@ -201,6 +201,28 @@ Celebration runs once by default, returns to `idle`, and emits a bubbling `zoorc
 
 Customize `--z-valky-size`, `--z-valky-bubble-background`, `--z-valky-bubble-color`, `--z-valky-bubble-border`, `--z-valky-inset-inline`, `--z-valky-inset-block` and `--z-valky-z-index` per instance. The optional `image-url` and `body-image-url` override the head and headless-body artwork; replacements must match Valky's original 1230 × 1278 layout and layer alignment because the animation uses fixed clipping and facial coordinates. The component loads its own JavaScript module; ensure the library's static assets are served. Animations are disabled when reduced motion is requested, while one-shot celebration still returns to idle. See the **Valky assistant** sample for interactive states.
 
+### Native charts
+
+`ZoorceChart` is a native-SVG component: charts inherit the active Zoorce palette and do not require a third-party charting runtime. The existing card remains the default, while the host can remove all card chrome for dashboard composition with `ZoorceChartSurface.Bare`. Header, metric, legend interaction and tooltip feedback are independently optional.
+
+```cshtml
+@await Component.InvokeAsync("ZoorceChart", new ZoorceChartOptions
+{
+    Id = "activity",
+    Title = "Activity",
+    Summary = "Bounded activity over time",
+    Kind = ZoorceChartKind.Area,
+    Curve = ZoorceChartCurve.Monotone,
+    MinimumValue = 0,
+    Appearance = new ZoorceChartAppearanceOptions { Surface = ZoorceChartSurface.Bare },
+    Header = new ZoorceChartHeaderOptions { ShowMetric = false },
+    Legend = new ZoorceChartLegendOptions { Visible = false },
+    Series = activitySeries
+})
+```
+
+`Monotone` is opt-in and preserves the bounds between adjacent observations, including uneven X values; `Smooth` retains its existing appearance. The catalogue includes trend, area, range area, grouped/stacked bars, combo/secondary-axis, donut or pie (`DonutInnerRadius = 0`), radial, gauge, funnel, heatmap/calendar heatmap, scatter/bubble, bullet, histogram, waterfall, lollipop, slope, radar, candlestick, box plot, treemap, Sankey and Gantt charts. Specialized visuals accept their explicit data contracts (`OhlcPoints`, `BoxPlotPoints`, `TreemapItems`, `SankeyNodes`/`SankeyLinks`, and `GanttItems`) rather than overloading ordinary point data.
+
 ## Run the sample
 
 ```bash

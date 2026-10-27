@@ -12,6 +12,10 @@
         size = Model.Size,
         barMode = Model.BarMode,
         curve = Model.Curve,
+        appearance = Model.Appearance,
+        header = Model.Header,
+        legend = Model.Legend,
+        tooltip = Model.Tooltip,
         showLegend = Model.ShowLegend,
         showGrid = Model.ShowGrid,
         showAxes = Model.ShowAxes,
@@ -19,9 +23,16 @@
         minimumValue = Model.MinimumValue,
         maximumValue = Model.MaximumValue,
         targetValue = Model.TargetValue,
+        donutInnerRadius = Model.DonutInnerRadius,
         valueSuffix = Model.ValueSuffix,
         binding = Model.Binding,
-        series = Model.Series
+        series = Model.Series,
+        ohlcPoints = Model.OhlcPoints,
+        boxPlotPoints = Model.BoxPlotPoints,
+        treemapItems = Model.TreemapItems,
+        sankeyNodes = Model.SankeyNodes,
+        sankeyLinks = Model.SankeyLinks,
+        ganttItems = Model.GanttItems
     }, jsonOptions);
     var firstSeries = Model.Series.FirstOrDefault();
     var latestValue = firstSeries?.Points.LastOrDefault()?.Value;
@@ -34,13 +45,19 @@
         return $"{DisplayValue(value)}{(suffix.Length > 0 && char.IsLetter(suffix[0]) ? " " : string.Empty)}{suffix}";
     }
 }
-<section id="@Model.Id" class="z-component z-chart-component" data-z-chart data-z-chart-kind="@Model.Kind" data-z-chart-size="@Model.Size" aria-label="@Model.Summary">
+<section id="@Model.Id" class="z-component z-chart-component @(Model.Appearance.CssClass ?? string.Empty)" data-z-chart data-z-chart-kind="@Model.Kind" data-z-chart-size="@Model.Size" data-z-chart-surface="@Model.Appearance.Surface" aria-label="@Model.Summary">
     <script type="application/json" data-z-chart-config>@Html.Raw(configuration)</script>
+    @if (Model.Header.Visible)
+    {
     <div class="z-chart-component-header">
         <div class="z-chart-copy"><p class="z-card-title">@Model.Title</p><p class="z-card-caption">@Model.Summary</p></div>
+        @if (Model.Header.ShowMetric)
+        {
         <div class="z-chart-metric" aria-live="polite"><strong data-z-chart-metric>@DisplayWithSuffix(latestValue)</strong><span data-z-chart-delta class="@(change is > 0 ? "is-positive" : change is < 0 ? "is-negative" : string.Empty)">@(change is null ? "Awaiting data" : $"{(change >= 0 ? "+" : string.Empty)}{DisplayWithSuffix(change)} vs. previous")</span></div>
+        }
     </div>
-    <div class="z-chart-legend" data-z-chart-legend aria-label="Toggle data series" @(Model.ShowLegend ? null : "hidden")></div>
+    }
+    <div class="z-chart-legend" data-z-chart-legend aria-label="Toggle data series" @((Model.ShowLegend && Model.Legend.Visible) ? null : "hidden")></div>
     <div class="z-chart-visual" data-z-chart-visual>
         <svg class="z-native-chart" data-z-chart-canvas role="img" aria-label="@Model.Summary" focusable="false" shape-rendering="geometricPrecision" text-rendering="geometricPrecision">
             <title>@Model.Title</title>

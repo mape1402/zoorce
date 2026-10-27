@@ -210,6 +210,10 @@ public sealed class ComponentContractTests
         Assert.Contains(ZoorceChartKind.Line, Enum.GetValues<ZoorceChartKind>());
         Assert.Contains(ZoorceChartKind.Bar, Enum.GetValues<ZoorceChartKind>());
         Assert.Contains(ZoorceChartKind.Donut, Enum.GetValues<ZoorceChartKind>());
+        Assert.Contains(ZoorceChartKind.RangeArea, Enum.GetValues<ZoorceChartKind>());
+        Assert.Contains(ZoorceChartKind.Combo, Enum.GetValues<ZoorceChartKind>());
+        Assert.Contains(ZoorceChartKind.Radar, Enum.GetValues<ZoorceChartKind>());
+        Assert.Contains(ZoorceChartKind.Sankey, Enum.GetValues<ZoorceChartKind>());
         Assert.Contains(ZoorceChartSize.Wide, Enum.GetValues<ZoorceChartSize>());
     }
 
@@ -244,6 +248,7 @@ public sealed class ComponentContractTests
         Assert.Equal(72, normalized.TargetValue);
         Assert.Equal(ZoorceChartKind.Gauge, Enum.GetValues<ZoorceChartKind>().Single(value => value == ZoorceChartKind.Gauge));
         Assert.Equal(ZoorceChartKind.Waterfall, Enum.GetValues<ZoorceChartKind>().Single(value => value == ZoorceChartKind.Waterfall));
+        Assert.Equal(ZoorceChartCurve.Monotone, Enum.GetValues<ZoorceChartCurve>().Single(value => value == ZoorceChartCurve.Monotone));
 
         Assert.Equal(0, (CreateChart() with { MinimumValue = 0 }).Normalize().MinimumValue);
         Assert.Throws<ArgumentException>(() => (CreateChart() with { MinimumValue = 100, MaximumValue = 0 }).Normalize());
@@ -292,6 +297,36 @@ public sealed class ComponentContractTests
         Assert.Equal("Opportunity", series.Name);
         Assert.Same(point, series.Points.Single());
         Assert.Equal("#7c3aed", series.Color);
+    }
+
+    [Fact]
+    public void Chart_supports_bare_presentation_monotone_and_specialized_data_contracts()
+    {
+        var timestamp = DateTimeOffset.UtcNow;
+        var normalized = (CreateChart() with
+        {
+            Curve = ZoorceChartCurve.Monotone,
+            Appearance = new ZoorceChartAppearanceOptions { Surface = ZoorceChartSurface.Bare, CssClass = " embedded-chart " },
+            Header = new ZoorceChartHeaderOptions { Visible = true, ShowMetric = false },
+            Legend = new ZoorceChartLegendOptions { Visible = false, Interactive = false },
+            Tooltip = new ZoorceChartTooltipOptions { Visible = false },
+            DonutInnerRadius = 0,
+            Series = [new ZoorceChartSeries("Trend", [new ZoorceChartPoint("First", 0, Timestamp: timestamp), new("Second", 19, Timestamp: timestamp.AddDays(1))])]
+        }).Normalize();
+
+        Assert.Equal(ZoorceChartCurve.Monotone, normalized.Curve);
+        Assert.Equal(ZoorceChartSurface.Bare, normalized.Appearance.Surface);
+        Assert.Equal("embedded-chart", normalized.Appearance.CssClass);
+        Assert.False(normalized.Header.ShowMetric);
+        Assert.False(normalized.Legend.Visible);
+        Assert.False(normalized.Tooltip.Visible);
+        Assert.Equal(0, normalized.DonutInnerRadius);
+        Assert.Equal(timestamp, normalized.Series.Single().Points.First().Timestamp);
+        Assert.Throws<ArgumentOutOfRangeException>(() => (CreateChart() with { DonutInnerRadius = 1 }).Normalize());
+        Assert.Throws<ArgumentException>(() => (CreateChart() with { Kind = ZoorceChartKind.Candlestick, Series = [] }).Normalize());
+
+        var candles = (CreateChart() with { Kind = ZoorceChartKind.Candlestick, Series = [], OhlcPoints = [new ZoorceChartOhlcPoint("Today", 1, 3, 0, 2)] }).Normalize();
+        Assert.Single(candles.OhlcPoints);
     }
 
     [Fact]

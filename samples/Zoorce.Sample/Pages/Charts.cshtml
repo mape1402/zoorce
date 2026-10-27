@@ -32,6 +32,24 @@
     var bubbles = new[] { Series("Accounts", new("North", 74, X: 55, Size: 17), new("West", 48, X: 37, Size: 11), new("South", 88, X: 79, Size: 24), new("East", 64, X: 68, Size: 14)) };
     var histogram = new[] { Series("Latency", new("0–50", 18), new("50–100", 44), new("100–150", 72), new("150–200", 39), new("200–250", 16), new("250+", 7)) };
     var waterfall = new[] { Series("Revenue", new("Base", 120), new("New", 46), new("Expansion", 28), new("Churn", -31), new("Credits", -12), new("Close", 19)) };
+    var range = new[] { Series("Forecast", new("May", 54, Low: 42, High: 62), new("Jun", 61, Low: 49, High: 71), new("Jul", 57, Low: 46, High: 68), new("Aug", 70, Low: 60, High: 79), new("Sep", 74, Low: 65, High: 86)) };
+    var combo = new[]
+    {
+        Series("Requests", new ZoorceChartPoint("May", 38), new ZoorceChartPoint("Jun", 52), new ZoorceChartPoint("Jul", 48), new ZoorceChartPoint("Aug", 67), new ZoorceChartPoint("Sep", 72)) with { RenderAs = ZoorceChartSeriesKind.Bar },
+        Series("Success rate", new ZoorceChartPoint("May", 91), new ZoorceChartPoint("Jun", 94), new ZoorceChartPoint("Jul", 92), new ZoorceChartPoint("Aug", 97), new ZoorceChartPoint("Sep", 96)) with { RenderAs = ZoorceChartSeriesKind.Line, Axis = ZoorceChartAxis.Secondary }
+    };
+    var radar = new[] { Series("Platform", new("Quality", 84), new("Security", 93), new("Speed", 72), new("Coverage", 88), new("Support", 79)), Series("Target", new("Quality", 80), new("Security", 88), new("Speed", 80), new("Coverage", 82), new("Support", 78)) };
+    var radial = new[] { Series("Reliability", new ZoorceChartPoint("Current", 98)), Series("Coverage", new ZoorceChartPoint("Current", 82)), Series("Adoption", new ZoorceChartPoint("Current", 67)) };
+    var calendar = new[] { Series("Deployments", Enumerable.Range(0, 28).Select(index => new ZoorceChartPoint($"Day {index + 1}", 14 + (index * 17) % 83, Timestamp: DateTimeOffset.UtcNow.Date.AddDays(-27 + index))).ToArray()) };
+    var lollipops = new[] { Series("Lead time", new("Plan", 7), new("Build", 13), new("Verify", 9), new("Release", 18), new("Learn", 11)) };
+    var slope = new[] { Series("Gateway", new("Before", 74), new("After", 92)), Series("Search", new("Before", 88), new("After", 79)), Series("Billing", new("Before", 61), new("After", 86)) };
+    var candles = new[] { new ZoorceChartOhlcPoint("Mon", 82, 94, 76, 90), new("Tue", 90, 96, 83, 87), new("Wed", 87, 103, 85, 99), new("Thu", 99, 108, 92, 95), new("Fri", 95, 107, 91, 104) };
+    var boxes = new[] { new ZoorceChartBoxPlotPoint("API", 28, 42, 51, 67, 88, new[] { 18m, 96m }), new("Search", 34, 49, 59, 73, 91), new("Checkout", 21, 38, 47, 62, 84, new[] { 99m }) };
+    var treemap = new[] { new ZoorceChartTreemapItem("platform", "Platform", 42), new("data", "Data", 31), new("experience", "Experience", 18), new("security", "Security", 9) };
+    var sankeyNodes = new[] { new ZoorceChartSankeyNode("events", "Events"), new("rules", "Rules"), new("alerts", "Alerts"), new("incidents", "Incidents") };
+    var sankeyLinks = new[] { new ZoorceChartSankeyLink("events", "rules", 92), new("rules", "alerts", 61), new("rules", "incidents", 23), new("alerts", "incidents", 18) };
+    var ganttStart = DateTimeOffset.UtcNow.Date;
+    var gantt = new[] { new ZoorceChartGanttItem("design", "Design", ganttStart, ganttStart.AddDays(4), "Release", 100), new("build", "Build", ganttStart.AddDays(3), ganttStart.AddDays(9), "Release", 64), new("verify", "Verify", ganttStart.AddDays(8), ganttStart.AddDays(12), "Release", 18) };
 }
 
 <section class="z-chart-gallery-page">
@@ -58,6 +76,19 @@
         @await Component.InvokeAsync("ZoorceChart", new ZoorceChartOptions { Id = "chart-bullet", Title = "Release confidence", Summary = "Release confidence against its target", Kind = ZoorceChartKind.Bullet, ValueSuffix = "%", MinimumValue = 0, MaximumValue = 100, TargetValue = 92, ShowLegend = false, Series = new[] { Series("Confidence", new ZoorceChartPoint("Current", 87)) } })
         @await Component.InvokeAsync("ZoorceChart", new ZoorceChartOptions { Id = "chart-histogram", Title = "Latency distribution", Summary = "Distribution of request latency", Kind = ZoorceChartKind.Histogram, ValueSuffix = " requests", ShowLegend = false, Series = histogram })
         @await Component.InvokeAsync("ZoorceChart", new ZoorceChartOptions { Id = "chart-waterfall", Title = "Revenue bridge", Summary = "Revenue changes that produce the period result", Kind = ZoorceChartKind.Waterfall, ValueSuffix = "k", ShowLegend = false, Series = waterfall })
+        @await Component.InvokeAsync("ZoorceChart", new ZoorceChartOptions { Id = "chart-range", Title = "Forecast range", Summary = "Expected interval without invented extrema", Kind = ZoorceChartKind.RangeArea, Curve = ZoorceChartCurve.Monotone, ValueSuffix = "%", ShowLegend = false, Series = range })
+        @await Component.InvokeAsync("ZoorceChart", new ZoorceChartOptions { Id = "chart-combo", Title = "Delivery throughput", Summary = "Bars and a secondary-axis service level", Kind = ZoorceChartKind.Combo, ValueSuffix = "%", Series = combo })
+        @await Component.InvokeAsync("ZoorceChart", new ZoorceChartOptions { Id = "chart-radar", Title = "Platform scorecard", Summary = "Category comparison on a radial scale", Kind = ZoorceChartKind.Radar, ValueSuffix = "%", Series = radar })
+        @await Component.InvokeAsync("ZoorceChart", new ZoorceChartOptions { Id = "chart-radial", Title = "Capability rings", Summary = "Several proportional outcomes", Kind = ZoorceChartKind.Radial, ValueSuffix = "%", Series = radial })
+        @await Component.InvokeAsync("ZoorceChart", new ZoorceChartOptions { Id = "chart-calendar", Title = "Deployment calendar", Summary = "Daily deployment activity", Kind = ZoorceChartKind.CalendarHeatmap, ValueSuffix = " events", ShowLegend = false, Series = calendar })
+        @await Component.InvokeAsync("ZoorceChart", new ZoorceChartOptions { Id = "chart-lollipop", Title = "Stage lead time", Summary = "Values with precise endpoints", Kind = ZoorceChartKind.Lollipop, ValueSuffix = " h", ShowLegend = false, Series = lollipops })
+        @await Component.InvokeAsync("ZoorceChart", new ZoorceChartOptions { Id = "chart-slope", Title = "Release impact", Summary = "Before and after service scores", Kind = ZoorceChartKind.Slope, ValueSuffix = "%", Series = slope })
+        @await Component.InvokeAsync("ZoorceChart", new ZoorceChartOptions { Id = "chart-candle", Title = "Latency movement", Summary = "Open high low close latency values", Kind = ZoorceChartKind.Candlestick, ValueSuffix = " ms", ShowLegend = false, OhlcPoints = candles })
+        @await Component.InvokeAsync("ZoorceChart", new ZoorceChartOptions { Id = "chart-box", Title = "Response spread", Summary = "Quartiles and outliers by service", Kind = ZoorceChartKind.BoxPlot, ValueSuffix = " ms", ShowLegend = false, BoxPlotPoints = boxes })
+        @await Component.InvokeAsync("ZoorceChart", new ZoorceChartOptions { Id = "chart-treemap", Title = "Investment mix", Summary = "Relative portfolio weight", Kind = ZoorceChartKind.Treemap, ShowLegend = false, TreemapItems = treemap })
+        @await Component.InvokeAsync("ZoorceChart", new ZoorceChartOptions { Id = "chart-sankey", Title = "Signal routing", Summary = "Flow from events into incidents", Kind = ZoorceChartKind.Sankey, ShowLegend = false, SankeyNodes = sankeyNodes, SankeyLinks = sankeyLinks })
+        @await Component.InvokeAsync("ZoorceChart", new ZoorceChartOptions { Id = "chart-gantt", Title = "Release plan", Summary = "Scheduled work and completion", Kind = ZoorceChartKind.Gantt, ShowLegend = false, GanttItems = gantt })
+        @await Component.InvokeAsync("ZoorceChart", new ZoorceChartOptions { Id = "chart-bare", Title = "Embedded trend", Summary = "A host-owned chart surface", Kind = ZoorceChartKind.Area, Curve = ZoorceChartCurve.Monotone, ValueSuffix = "%", Appearance = new ZoorceChartAppearanceOptions { Surface = ZoorceChartSurface.Bare }, Header = new ZoorceChartHeaderOptions { ShowMetric = false }, Legend = new ZoorceChartLegendOptions { Visible = false }, Series = new[] { adoption[0] } })
     </div>
 </section>
 
