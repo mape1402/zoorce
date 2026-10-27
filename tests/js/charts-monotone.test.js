@@ -76,6 +76,10 @@ test('trend rendering shares monotone paths with area rendering and retains inte
     assert.match(source, /pathFor\(points, this\.configuration\.curve\)/);
     assert.match(source, /renderStackedArea\(series, width, height\)/);
     assert.match(source, /areaMode !== "Overlay"/);
+    assert.match(source, /frameSettings\(\)/);
+    assert.match(source, /showSeriesLines\(\)/);
+    assert.match(source, /showTargetMarker\(\)/);
+    assert.match(source, /showDataLabels/);
     assert.match(source, /bindTooltip\(/);
     assert.match(source, /aria-pressed/);
 });

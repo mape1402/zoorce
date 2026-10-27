@@ -158,12 +158,27 @@
         : [];
 
     class NativeChartController {
-        constructor(root, configuration) {
+        constructor(root, configuration = {}) {
             this.root = root;
-            this.configuration = {
+            const input = configuration ?? {};
+            const defaults = {
                 curve: "Smooth", barMode: "Grouped", areaMode: "Overlay", showLegend: true, showGrid: true, showAxes: true, showTooltip: true,
-                appearance: { surface: "Card" }, header: { visible: true, showMetric: true }, legend: { visible: true, interactive: true }, tooltip: { visible: true },
-                donutInnerRadius: .56, ...configuration
+                appearance: { surface: "Card", showSurfaceBackground: true, showSurfaceBorder: true, showPlotBackground: true, showPlotBorder: true },
+                header: { visible: true, showTitle: true, showSummary: true, showMetric: true },
+                legend: { visible: true, interactive: true }, tooltip: { visible: true },
+                axes: { visible: true, showGridLines: true, showValueLabels: true, showCategoryLabels: true, valueTickCount: 4, categoryLabelInterval: 0 },
+                plot: { showSeriesLines: true, showLineMarkers: true, showDataLabels: true, showTargetMarker: true },
+                donutInnerRadius: .56
+            };
+            this.configuration = {
+                ...defaults,
+                ...input,
+                appearance: { ...defaults.appearance, ...input.appearance },
+                header: { ...defaults.header, ...input.header },
+                legend: { ...defaults.legend, ...input.legend },
+                tooltip: { ...defaults.tooltip, ...input.tooltip },
+                axes: { ...defaults.axes, ...input.axes },
+                plot: { ...defaults.plot, ...input.plot }
             };
             this.canvas = root.querySelector("[data-z-chart-canvas]");
             this.visual = root.querySelector("[data-z-chart-visual]");
@@ -411,10 +426,41 @@
             this.legend.replaceChildren(...buttons);
         }
 
+        frameSettings() {
+            const axes = this.configuration.axes ?? {};
+            const visible = this.configuration.showAxes !== false && axes.visible !== false;
+            return {
+                visible,
+                showGridLines: this.configuration.showGrid !== false && axes.showGridLines !== false,
+                showValueLabels: visible && axes.showValueLabels !== false,
+                showCategoryLabels: visible && axes.showCategoryLabels !== false,
+                valueTickCount: clamp(Math.round(number(axes.valueTickCount || 4)), 2, 12),
+                categoryLabelInterval: Math.max(0, Math.round(number(axes.categoryLabelInterval)))
+            };
+        }
+
+        showSeriesLines() {
+            return this.configuration.plot?.showSeriesLines !== false;
+        }
+
+        showLineMarkers() {
+            return this.configuration.plot?.showLineMarkers !== false;
+        }
+
+        showTargetMarker() {
+            return this.configuration.plot?.showTargetMarker !== false;
+        }
+
+        appendDataLabel(parent, x, y, value, className, anchor = "start") {
+            if (this.configuration.plot?.showDataLabels === false) return null;
+            return appendText(parent, x, y, value, className, anchor);
+        }
+
         renderFrame(labels, domain, plot, toX, toY, options = {}) {
             const { xTicks = labels, xFormatter = value => value, horizontal = false } = options;
-            if (this.configuration.showGrid) {
-                ticks(domain.minimum, domain.maximum).forEach(value => {
+            const settings = this.frameSettings();
+            if (settings.showGridLines) {
+                ticks(domain.minimum, domain.maximum, settings.valueTickCount).forEach(value => {
                     const coordinate = horizontal ? toX(value) : toY(value);
                     const line = svg("line");
                     setAttributes(line, horizontal
@@ -423,12 +469,15 @@
                     this.layers.grid.append(line);
                 });
             }
-            if (!this.configuration.showAxes) return;
-            ticks(domain.minimum, domain.maximum).forEach(value => {
-                const coordinate = horizontal ? toX(value) : toY(value);
-                appendText(this.layers.axis, horizontal ? coordinate : plot.left - 10, horizontal ? plot.bottom + 21 : coordinate + 3.5, format(value), "z-native-chart-axis-label", horizontal ? "middle" : "end");
-            });
-            const interval = Math.max(1, Math.ceil(xTicks.length / 6));
+            if (!settings.visible) return;
+            if (settings.showValueLabels) {
+                ticks(domain.minimum, domain.maximum, settings.valueTickCount).forEach(value => {
+                    const coordinate = horizontal ? toX(value) : toY(value);
+                    appendText(this.layers.axis, horizontal ? coordinate : plot.left - 10, horizontal ? plot.bottom + 21 : coordinate + 3.5, format(value), "z-native-chart-axis-label", horizontal ? "middle" : "end");
+                });
+            }
+            if (!settings.showCategoryLabels) return;
+            const interval = settings.categoryLabelInterval || Math.max(1, Math.ceil(xTicks.length / 6));
             xTicks.forEach((label, index) => {
                 if (index % interval && index !== xTicks.length - 1) return;
                 if (horizontal) {
@@ -508,15 +557,19 @@
                     setAttributes(fill, { class: "z-native-chart-area", d: `${linePath} L ${points.at(-1).x} ${plot.bottom} L ${points[0].x} ${plot.bottom} Z`, fill: `url(#${id})` });
                     this.layers.data.append(fill);
                 }
-                const line = svg("path");
-                setAttributes(line, { class: "z-native-chart-series", d: linePath });
-                setPaint(line, { stroke: color });
-                this.layers.data.append(line);
-                const last = points.at(-1);
-                const marker = svg("circle");
-                setAttributes(marker, { class: "z-native-chart-marker", cx: last.x, cy: last.y, r: 3.8 });
-                setPaint(marker, { fill: color });
-                this.layers.data.append(marker);
+                if (this.showSeriesLines()) {
+                    const line = svg("path");
+                    setAttributes(line, { class: "z-native-chart-series", d: linePath });
+                    setPaint(line, { stroke: color });
+                    this.layers.data.append(line);
+                }
+                if (this.showLineMarkers()) {
+                    const last = points.at(-1);
+                    const marker = svg("circle");
+                    setAttributes(marker, { class: "z-native-chart-marker", cx: last.x, cy: last.y, r: 3.8 });
+                    setPaint(marker, { fill: color });
+                    this.layers.data.append(marker);
+                }
                 points.forEach(item => this.addHit(item, `${seriesItem.name} · ${item.point.label}: ${withSuffix(item.point.value, this.configuration.valueSuffix)}`, item));
             });
         }
@@ -548,7 +601,9 @@
                 const boundary = [...lower].reverse();
                 setAttributes(area, { class: "z-native-chart-area z-native-chart-stacked-area", d: `${pathFor(upper, this.configuration.curve)} ${boundary.map(point => `L ${point.x} ${point.y}`).join(" ")} Z` });
                 setPaint(area, { fill: color, opacity: ".54" }); this.layers.data.append(area);
-                const line = svg("path"); setAttributes(line, { class: "z-native-chart-series", d: pathFor(upper, this.configuration.curve) }); setPaint(line, { stroke: color }); this.layers.data.append(line);
+                if (this.showSeriesLines()) {
+                    const line = svg("path"); setAttributes(line, { class: "z-native-chart-series", d: pathFor(upper, this.configuration.curve) }); setPaint(line, { stroke: color }); this.layers.data.append(line);
+                }
                 upper.forEach((point, index) => this.addHit(point, `${seriesItem.name} · ${point.point.label}: ${withSuffix(point.point.value, this.configuration.valueSuffix)}${mode === "Stacked100" ? ` (${format(point.value)}%)` : ""}`, point));
             });
         }
@@ -649,8 +704,8 @@
             });
             const leading = slices.reduce((result, slice) => !result || slice.value > result.value ? slice : result, null);
             if (innerRadius > .5) {
-                appendText(this.layers.annotation, centerX, centerY - 3, withSuffix(leading?.value ?? 0, this.configuration.valueSuffix), "z-native-chart-ring-value", "middle");
-                appendText(this.layers.annotation, centerX, centerY + 17, leading?.name ?? "No data", "z-native-chart-ring-label", "middle");
+                this.appendDataLabel(this.layers.annotation, centerX, centerY - 3, withSuffix(leading?.value ?? 0, this.configuration.valueSuffix), "z-native-chart-ring-value", "middle");
+                this.appendDataLabel(this.layers.annotation, centerX, centerY + 17, leading?.name ?? "No data", "z-native-chart-ring-label", "middle");
             }
         }
 
@@ -672,7 +727,7 @@
                 this.bindTooltip(indicator, `${series[0].name}: ${withSuffix(value, this.configuration.valueSuffix)}`, { x: centerX, y: centerY - radius });
                 this.layers.data.append(indicator);
             }
-            if (this.configuration.targetValue != null) {
+            if (this.configuration.targetValue != null && this.showTargetMarker()) {
                 const targetAngle = startAngle + clamp((this.configuration.targetValue - minimum) / Math.max(maximum - minimum, 1), 0, 1) * span;
                 const inside = polar(centerX, centerY, radius - 13, targetAngle);
                 const outside = polar(centerX, centerY, radius + 11, targetAngle);
@@ -680,10 +735,12 @@
                 setAttributes(marker, { class: "z-native-chart-target", x1: inside.x, y1: inside.y, x2: outside.x, y2: outside.y });
                 this.layers.annotation.append(marker);
             }
-            appendText(this.layers.annotation, centerX, centerY - 4, withSuffix(value, this.configuration.valueSuffix), "z-native-chart-ring-value", "middle");
-            appendText(this.layers.annotation, centerX, centerY + 17, series[0].name, "z-native-chart-ring-label", "middle");
-            appendText(this.layers.annotation, centerX - radius, centerY + radius + 24, format(minimum), "z-native-chart-axis-label", "middle");
-            appendText(this.layers.annotation, centerX + radius, centerY + radius + 24, format(maximum), "z-native-chart-axis-label", "middle");
+            this.appendDataLabel(this.layers.annotation, centerX, centerY - 4, withSuffix(value, this.configuration.valueSuffix), "z-native-chart-ring-value", "middle");
+            this.appendDataLabel(this.layers.annotation, centerX, centerY + 17, series[0].name, "z-native-chart-ring-label", "middle");
+            if (this.frameSettings().showValueLabels) {
+                appendText(this.layers.annotation, centerX - radius, centerY + radius + 24, format(minimum), "z-native-chart-axis-label", "middle");
+                appendText(this.layers.annotation, centerX + radius, centerY + radius + 24, format(maximum), "z-native-chart-axis-label", "middle");
+            }
         }
 
         renderFunnel(series, width, height) {
@@ -717,7 +774,7 @@
                 setPaint(polygon, { fill: `var(--z-funnel-stage-${index % 4 + 1})` });
                 this.bindTooltip(polygon, `${stage.point.label}: ${withSuffix(stage.point.value, this.configuration.valueSuffix)}`, { x: center, y: stage.top + segmentHeight / 2 });
                 this.layers.data.append(polygon);
-                appendText(this.layers.annotation, center, stage.top + segmentHeight / 2 + 4, `${stage.point.label} · ${format(stage.point.value)}`, "z-native-chart-funnel-label", "middle");
+                this.appendDataLabel(this.layers.annotation, center, stage.top + segmentHeight / 2 + 4, `${stage.point.label} · ${format(stage.point.value)}`, "z-native-chart-funnel-label", "middle");
             });
         }
 
@@ -730,8 +787,10 @@
             const plot = { left: Math.min(70, width * .22), right: width - 16, top: 23, bottom: height - 31 };
             const cellWidth = (plot.right - plot.left) / Math.max(columns.length, 1);
             const cellHeight = (plot.bottom - plot.top) / Math.max(rows.length, 1);
-            rows.forEach((row, rowIndex) => appendText(this.layers.axis, plot.left - 9, plot.top + (rowIndex + .5) * cellHeight + 3.5, row, "z-native-chart-axis-label", "end"));
-            columns.forEach((column, columnIndex) => appendText(this.layers.axis, plot.left + (columnIndex + .5) * cellWidth, plot.bottom + 19, column, "z-native-chart-axis-label", "middle"));
+            if (this.frameSettings().showCategoryLabels) {
+                rows.forEach((row, rowIndex) => appendText(this.layers.axis, plot.left - 9, plot.top + (rowIndex + .5) * cellHeight + 3.5, row, "z-native-chart-axis-label", "end"));
+                columns.forEach((column, columnIndex) => appendText(this.layers.axis, plot.left + (columnIndex + .5) * cellWidth, plot.bottom + 19, column, "z-native-chart-axis-label", "middle"));
+            }
             points.forEach(point => {
                 const row = rows.indexOf(point.group || series[0].name);
                 const column = columns.indexOf(point.label);
@@ -752,10 +811,11 @@
             const toX = value => plot.left + ((value - xDomain.minimum) / (xDomain.maximum - xDomain.minimum)) * (plot.right - plot.left);
             const toY = value => plot.bottom - ((value - yDomain.minimum) / (yDomain.maximum - yDomain.minimum)) * (plot.bottom - plot.top);
             this.renderFrame([], yDomain, plot, () => 0, toY);
-            if (this.configuration.showGrid) ticks(xDomain.minimum, xDomain.maximum).forEach(value => {
+            const frame = this.frameSettings();
+            if (frame.showGridLines) ticks(xDomain.minimum, xDomain.maximum, frame.valueTickCount).forEach(value => {
                 const x = toX(value); const line = svg("line");
                 setAttributes(line, { class: "z-native-chart-grid", x1: x, x2: x, y1: plot.top, y2: plot.bottom }); this.layers.grid.append(line);
-                appendText(this.layers.axis, x, plot.bottom + 21, format(value), "z-native-chart-axis-label", "middle");
+                if (frame.showValueLabels) appendText(this.layers.axis, x, plot.bottom + 21, format(value), "z-native-chart-axis-label", "middle");
             });
             points.forEach(item => {
                 const radius = bubble ? clamp(item.point.size ?? 9, 5, 26) : 6;
@@ -785,12 +845,14 @@
             setPaint(actual, { fill: this.color(0, series[0]) });
             this.bindTooltip(actual, `${series[0].name}: ${withSuffix(point?.value ?? 0, this.configuration.valueSuffix)}`, { x: toX(point?.value ?? minimum), y: plot.top });
             this.layers.data.append(actual);
-            if (this.configuration.targetValue != null) {
+            if (this.configuration.targetValue != null && this.showTargetMarker()) {
                 const target = svg("line"); const x = toX(this.configuration.targetValue);
                 setAttributes(target, { class: "z-native-chart-target", x1: x, x2: x, y1: plot.top - 6, y2: plot.bottom + 6 }); this.layers.annotation.append(target);
             }
-            appendText(this.layers.annotation, plot.left, plot.bottom + 25, format(minimum), "z-native-chart-axis-label");
-            appendText(this.layers.annotation, plot.right, plot.bottom + 25, format(maximum), "z-native-chart-axis-label", "end");
+            if (this.frameSettings().showValueLabels) {
+                appendText(this.layers.annotation, plot.left, plot.bottom + 25, format(minimum), "z-native-chart-axis-label");
+                appendText(this.layers.annotation, plot.right, plot.bottom + 25, format(maximum), "z-native-chart-axis-label", "end");
+            }
         }
 
         renderHistogram(series, width, height) {
@@ -844,9 +906,11 @@
             const fill = svg("path");
             setAttributes(fill, { class: "z-native-chart-range-area", d: `${pathFor(upper, this.configuration.curve)} L ${lower.at(-1).x} ${lower.at(-1).y} ${[...lower].reverse().slice(1).map(point => `L ${point.x} ${point.y}`).join(" ")} Z` });
             setPaint(fill, { fill: color }); this.layers.data.append(fill);
-            [upper, lower].forEach((edge, edgeIndex) => {
-                const line = svg("path"); setAttributes(line, { class: "z-native-chart-series", d: pathFor(edge, this.configuration.curve) }); setPaint(line, { stroke: color, "stroke-opacity": edgeIndex ? ".62" : "1" }); this.layers.data.append(line);
-            });
+            if (this.showSeriesLines()) {
+                [upper, lower].forEach((edge, edgeIndex) => {
+                    const line = svg("path"); setAttributes(line, { class: "z-native-chart-series", d: pathFor(edge, this.configuration.curve) }); setPaint(line, { stroke: color, "stroke-opacity": edgeIndex ? ".62" : "1" }); this.layers.data.append(line);
+                });
+            }
             upper.forEach((point, index) => this.addHit(point, `${series[0].name} · ${point.point.label}: ${withSuffix(point.point.low, this.configuration.valueSuffix)} – ${withSuffix(point.point.high, this.configuration.valueSuffix)}`, point));
         }
 
@@ -862,7 +926,8 @@
                 return plot.bottom - ((value - domain.minimum) / (domain.maximum - domain.minimum)) * (plot.bottom - plot.top);
             };
             this.renderFrame(labels, primaryDomain, plot, toX, value => toY(value));
-            if (secondaryDomain && this.configuration.showAxes) ticks(secondaryDomain.minimum, secondaryDomain.maximum).forEach(value => appendText(this.layers.axis, plot.right + 6, toY(value, "Secondary") + 3.5, format(value), "z-native-chart-axis-label"));
+            const frame = this.frameSettings();
+            if (secondaryDomain && frame.showValueLabels) ticks(secondaryDomain.minimum, secondaryDomain.maximum, frame.valueTickCount).forEach(value => appendText(this.layers.axis, plot.right + 6, toY(value, "Secondary") + 3.5, format(value), "z-native-chart-axis-label"));
             const barSeries = series.filter(item => item.renderAs === "Bar"); const barWidth = Math.max(5, (plot.right - plot.left) / Math.max(labels.length, 1) * .52 / Math.max(barSeries.length, 1));
             series.forEach((seriesItem, seriesIndex) => {
                 const renderAs = seriesItem.renderAs === "Auto" ? "Line" : seriesItem.renderAs;
@@ -876,7 +941,9 @@
                 if (renderAs === "Area") {
                     const area = svg("path"); setAttributes(area, { class: "z-native-chart-area", d: `${pathFor(points, this.configuration.curve)} L ${points.at(-1).x} ${toY(0, seriesItem.axis)} L ${points[0].x} ${toY(0, seriesItem.axis)} Z` }); setPaint(area, { fill: color, opacity: ".2" }); this.layers.data.append(area);
                 }
-                const line = svg("path"); setAttributes(line, { class: "z-native-chart-series", d: pathFor(points, this.configuration.curve) }); setPaint(line, { stroke: color }); this.layers.data.append(line);
+                if (this.showSeriesLines()) {
+                    const line = svg("path"); setAttributes(line, { class: "z-native-chart-series", d: pathFor(points, this.configuration.curve) }); setPaint(line, { stroke: color }); this.layers.data.append(line);
+                }
                 points.forEach(point => this.addHit(point, `${seriesItem.name} · ${point.point.label}: ${withSuffix(point.point.value, this.configuration.valueSuffix)}`, point));
             });
         }
@@ -886,10 +953,13 @@
             const maximum = this.configuration.maximumValue ?? Math.max(...series.flatMap(item => item.points.map(point => point.value)), 1);
             const minimum = this.configuration.minimumValue ?? 0; const centerX = width / 2; const centerY = height / 2; const radius = Math.max(38, Math.min(width, height) * .31);
             const vertex = (index, value = 1) => polar(centerX, centerY, radius * value, index * 360 / Math.max(count, 1));
-            [1, .75, .5, .25].forEach(scale => {
-                const vertices = labels.map((_, index) => vertex(index, scale)); const polygon = svg("polygon"); setAttributes(polygon, { class: "z-native-chart-radar-grid", points: vertices.map(point => `${point.x},${point.y}`).join(" ") }); this.layers.grid.append(polygon);
-            });
-            labels.forEach((label, index) => { const edge = vertex(index, 1.13); appendText(this.layers.axis, edge.x, edge.y + 3, label, "z-native-chart-axis-label", "middle"); });
+            const frame = this.frameSettings();
+            if (frame.showGridLines) {
+                [1, .75, .5, .25].forEach(scale => {
+                    const vertices = labels.map((_, index) => vertex(index, scale)); const polygon = svg("polygon"); setAttributes(polygon, { class: "z-native-chart-radar-grid", points: vertices.map(point => `${point.x},${point.y}`).join(" ") }); this.layers.grid.append(polygon);
+                });
+            }
+            if (frame.showCategoryLabels) labels.forEach((label, index) => { const edge = vertex(index, 1.13); appendText(this.layers.axis, edge.x, edge.y + 3, label, "z-native-chart-axis-label", "middle"); });
             series.forEach((seriesItem, seriesIndex) => {
                 const vertices = seriesItem.points.map((point, index) => vertex(index, clamp((point.value - minimum) / Math.max(maximum - minimum, 1), 0, 1)));
                 const polygon = svg("polygon"); setAttributes(polygon, { class: "z-native-chart-radar", points: vertices.map(point => `${point.x},${point.y}`).join(" ") }); setPaint(polygon, { fill: this.color(seriesIndex, seriesItem), stroke: this.color(seriesIndex, seriesItem) }); this.layers.data.append(polygon);
@@ -905,8 +975,8 @@
                 const track = svg("path"); setAttributes(track, { class: "z-native-chart-ring-track", d: ringPath(centerX, centerY, radius) }); setPaint(track, { "stroke-width": thickness }); this.layers.data.append(track);
                 const ring = svg("path"); setAttributes(ring, { class: "z-native-chart-ring", d: arcPath(centerX, centerY, radius, 0, item.value / maximum * 360) }); setPaint(ring, { stroke: item.color, "stroke-width": thickness }); this.bindTooltip(ring, `${item.name}: ${withSuffix(item.value, this.configuration.valueSuffix)}`, { x: centerX, y: centerY - radius }); this.layers.data.append(ring);
             });
-            appendText(this.layers.annotation, centerX, centerY - 2, withSuffix(items.reduce((sum, item) => sum + item.value, 0), this.configuration.valueSuffix), "z-native-chart-ring-value", "middle");
-            appendText(this.layers.annotation, centerX, centerY + 18, "Total", "z-native-chart-ring-label", "middle");
+            this.appendDataLabel(this.layers.annotation, centerX, centerY - 2, withSuffix(items.reduce((sum, item) => sum + item.value, 0), this.configuration.valueSuffix), "z-native-chart-ring-value", "middle");
+            this.appendDataLabel(this.layers.annotation, centerX, centerY + 18, "Total", "z-native-chart-ring-label", "middle");
         }
 
         renderCalendarHeatmap(series, width, height) {
@@ -915,7 +985,7 @@
             const values = points.map(point => point.value); const minimum = Math.min(...values); const maximum = Math.max(...values);
             const ordered = [...points].sort((left, right) => Date.parse(left.timestamp) - Date.parse(right.timestamp)); const weeks = Math.max(1, Math.ceil(ordered.length / 7));
             const left = 34; const top = 24; const cellWidth = (width - left - 12) / weeks; const cellHeight = Math.max(12, (height - top - 12) / 7);
-            ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].forEach((day, index) => appendText(this.layers.axis, left - 7, top + (index + .5) * cellHeight + 3, day, "z-native-chart-axis-label", "end"));
+            if (this.frameSettings().showCategoryLabels) ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].forEach((day, index) => appendText(this.layers.axis, left - 7, top + (index + .5) * cellHeight + 3, day, "z-native-chart-axis-label", "end"));
             ordered.forEach((point, index) => {
                 const date = new Date(point.timestamp); const week = Math.floor(index / 7); const day = date.getUTCDay(); const cell = svg("rect");
                 setAttributes(cell, { class: "z-native-chart-heat-cell", x: left + week * cellWidth + 2, y: top + day * cellHeight + 2, width: Math.max(2, cellWidth - 4), height: Math.max(2, cellHeight - 4), rx: 3, opacity: .16 + .84 * (point.value - minimum) / Math.max(maximum - minimum, 1) }); setPaint(cell, { fill: "var(--z-data-primary)" }); this.bindTooltip(cell, `${point.label}: ${withSuffix(point.value, this.configuration.valueSuffix)}`, { x: left + week * cellWidth, y: top + day * cellHeight }); this.layers.data.append(cell);
@@ -929,8 +999,8 @@
 
         renderSlope(series, width, height) {
             const all = series.flatMap(item => item.points.slice(0, 2).map(point => point.value)); const domain = this.boundedDomain(all); const plot = this.layout(width, height); const toY = value => plot.bottom - ((value - domain.minimum) / (domain.maximum - domain.minimum)) * (plot.bottom - plot.top); const left = plot.left + 45; const right = plot.right - 45;
-            [left, right].forEach((x, index) => appendText(this.layers.axis, x, plot.bottom + 21, series[0].points[index]?.label ?? (index ? "End" : "Start"), "z-native-chart-axis-label", "middle"));
-            series.forEach((seriesItem, index) => { const first = seriesItem.points[0]; const last = seriesItem.points[1]; if (!first || !last) return; const line = svg("line"); setAttributes(line, { class: "z-native-chart-series", x1: left, y1: toY(first.value), x2: right, y2: toY(last.value) }); setPaint(line, { stroke: this.color(index, seriesItem) }); this.layers.data.append(line); [ { x: left, y: toY(first.value), point: first }, { x: right, y: toY(last.value), point: last } ].forEach(point => this.addHit(point, `${seriesItem.name}: ${withSuffix(point.point.value, this.configuration.valueSuffix)}`, point)); });
+            if (this.frameSettings().showCategoryLabels) [left, right].forEach((x, index) => appendText(this.layers.axis, x, plot.bottom + 21, series[0].points[index]?.label ?? (index ? "End" : "Start"), "z-native-chart-axis-label", "middle"));
+            series.forEach((seriesItem, index) => { const first = seriesItem.points[0]; const last = seriesItem.points[1]; if (!first || !last) return; if (this.showSeriesLines()) { const line = svg("line"); setAttributes(line, { class: "z-native-chart-series", x1: left, y1: toY(first.value), x2: right, y2: toY(last.value) }); setPaint(line, { stroke: this.color(index, seriesItem) }); this.layers.data.append(line); } [ { x: left, y: toY(first.value), point: first }, { x: right, y: toY(last.value), point: last } ].forEach(point => this.addHit(point, `${seriesItem.name}: ${withSuffix(point.point.value, this.configuration.valueSuffix)}`, point)); });
         }
 
         renderCandlestick(width, height) {
@@ -947,7 +1017,7 @@
 
         renderTreemap(width, height) {
             const items = this.configuration.treemapItems.filter(item => Number(item.value) > 0); if (!items.length) return; const total = items.reduce((sum, item) => sum + number(item.value), 0); const bounds = { x: 8, y: 12, width: width - 16, height: height - 24 }; let offset = 0;
-            items.forEach((item, index) => { const vertical = bounds.width >= bounds.height; const share = number(item.value) / total; const span = (vertical ? bounds.width : bounds.height) * share; const x = vertical ? bounds.x + offset : bounds.x; const y = vertical ? bounds.y : bounds.y + offset; const itemWidth = vertical ? span : bounds.width; const itemHeight = vertical ? bounds.height : span; offset += span; const tile = svg("rect"); setAttributes(tile, { class: "z-native-chart-treemap", x: x + 2, y: y + 2, width: Math.max(1, itemWidth - 4), height: Math.max(1, itemHeight - 4), rx: 6 }); setPaint(tile, { fill: item.color || this.color(index, null) }); this.bindTooltip(tile, `${item.label}: ${withSuffix(number(item.value), this.configuration.valueSuffix)}`, { x: x + itemWidth / 2, y: y + itemHeight / 2 }); this.layers.data.append(tile); if (itemWidth > 70 && itemHeight > 34) appendText(this.layers.annotation, x + 11, y + 21, item.label, "z-native-chart-treemap-label"); });
+            items.forEach((item, index) => { const vertical = bounds.width >= bounds.height; const share = number(item.value) / total; const span = (vertical ? bounds.width : bounds.height) * share; const x = vertical ? bounds.x + offset : bounds.x; const y = vertical ? bounds.y : bounds.y + offset; const itemWidth = vertical ? span : bounds.width; const itemHeight = vertical ? bounds.height : span; offset += span; const tile = svg("rect"); setAttributes(tile, { class: "z-native-chart-treemap", x: x + 2, y: y + 2, width: Math.max(1, itemWidth - 4), height: Math.max(1, itemHeight - 4), rx: 6 }); setPaint(tile, { fill: item.color || this.color(index, null) }); this.bindTooltip(tile, `${item.label}: ${withSuffix(number(item.value), this.configuration.valueSuffix)}`, { x: x + itemWidth / 2, y: y + itemHeight / 2 }); this.layers.data.append(tile); if (itemWidth > 70 && itemHeight > 34) this.appendDataLabel(this.layers.annotation, x + 11, y + 21, item.label, "z-native-chart-treemap-label"); });
         }
 
         renderSankey(width, height) {
@@ -955,13 +1025,14 @@
             const ids = new Set(nodes.map(node => node.id)); const incoming = new Set(links.map(link => link.targetId)); const outgoing = new Set(links.map(link => link.sourceId)); const sources = nodes.filter(node => outgoing.has(node.id) && !incoming.has(node.id)); const targets = nodes.filter(node => incoming.has(node.id) && !outgoing.has(node.id)); const middle = nodes.filter(node => !sources.includes(node) && !targets.includes(node)); const columns = [sources, middle, targets].filter(column => column.length); const positions = new Map();
             columns.forEach((column, columnIndex) => column.forEach((node, index) => positions.set(node.id, { x: 22 + columnIndex * (width - 92) / Math.max(columns.length - 1, 1), y: 18 + index * (height - 44) / Math.max(column.length, 1), width: 18, height: Math.max(24, (height - 52) / Math.max(column.length, 1) * .54), node })));
             links.forEach((link, index) => { const source = positions.get(link.sourceId); const target = positions.get(link.targetId); if (!source || !target) return; const thickness = clamp(Math.sqrt(number(link.value)) * 2.5, 3, 22); const path = svg("path"); setAttributes(path, { class: "z-native-chart-sankey-link", d: `M ${source.x + source.width} ${source.y + source.height / 2} C ${(source.x + target.x) / 2} ${source.y + source.height / 2}, ${(source.x + target.x) / 2} ${target.y + target.height / 2}, ${target.x} ${target.y + target.height / 2}` }); setPaint(path, { stroke: link.color || this.color(index, null), "stroke-width": thickness }); this.bindTooltip(path, `${link.label || `${source.node.label} → ${target.node.label}`}: ${withSuffix(number(link.value), this.configuration.valueSuffix)}`, { x: (source.x + target.x) / 2, y: (source.y + target.y) / 2 }); this.layers.data.append(path); });
-            [...positions.values()].forEach((position, index) => { const node = svg("rect"); setAttributes(node, { class: "z-native-chart-sankey-node", x: position.x, y: position.y, width: position.width, height: position.height, rx: 4 }); setPaint(node, { fill: position.node.color || this.color(index, null) }); this.layers.data.append(node); appendText(this.layers.annotation, position.x + (position.x < width / 2 ? position.width + 6 : -6), position.y + position.height / 2 + 4, position.node.label, "z-native-chart-sankey-label", position.x < width / 2 ? "start" : "end"); });
+            [...positions.values()].forEach((position, index) => { const node = svg("rect"); setAttributes(node, { class: "z-native-chart-sankey-node", x: position.x, y: position.y, width: position.width, height: position.height, rx: 4 }); setPaint(node, { fill: position.node.color || this.color(index, null) }); this.layers.data.append(node); this.appendDataLabel(this.layers.annotation, position.x + (position.x < width / 2 ? position.width + 6 : -6), position.y + position.height / 2 + 4, position.node.label, "z-native-chart-sankey-label", position.x < width / 2 ? "start" : "end"); });
         }
 
         renderGantt(width, height) {
             const items = this.configuration.ganttItems.filter(item => Date.parse(item.start) && Date.parse(item.end)); if (!items.length) return; const start = Math.min(...items.map(item => Date.parse(item.start))); const end = Math.max(...items.map(item => Date.parse(item.end))); const plot = { left: Math.min(130, width * .32), right: width - 16, top: 24, bottom: height - 14 }; const rowHeight = (plot.bottom - plot.top) / items.length; const toX = value => plot.left + (value - start) / Math.max(end - start, 1) * (plot.right - plot.left);
-            ticks(start, end, 4).forEach(value => { const x = toX(value); const grid = svg("line"); setAttributes(grid, { class: "z-native-chart-grid", x1: x, x2: x, y1: plot.top, y2: plot.bottom }); this.layers.grid.append(grid); appendText(this.layers.axis, x, plot.top - 7, new Date(value).toLocaleDateString(undefined, { month: "short", day: "numeric" }), "z-native-chart-axis-label", "middle"); });
-            items.forEach((item, index) => { const y = plot.top + index * rowHeight + Math.max(3, rowHeight * .18); const bar = svg("rect"); const x = toX(Date.parse(item.start)); const itemWidth = Math.max(2, toX(Date.parse(item.end)) - x); setAttributes(bar, { class: "z-native-chart-gantt", x, y, width: itemWidth, height: Math.max(8, rowHeight * .62), rx: 4 }); setPaint(bar, { fill: item.color || this.color(index, null) }); this.bindTooltip(bar, `${item.label}: ${new Date(item.start).toLocaleDateString()} – ${new Date(item.end).toLocaleDateString()} · ${format(number(item.progress))}%`, { x: x + itemWidth / 2, y }); this.layers.data.append(bar); if (number(item.progress) > 0) { const progress = svg("rect"); setAttributes(progress, { class: "z-native-chart-gantt-progress", x, y, width: itemWidth * clamp(number(item.progress), 0, 100) / 100, height: Math.max(8, rowHeight * .62), rx: 4 }); this.layers.data.append(progress); } appendText(this.layers.axis, plot.left - 9, y + rowHeight * .39, item.label, "z-native-chart-axis-label", "end"); });
+            const frame = this.frameSettings();
+            ticks(start, end, frame.valueTickCount).forEach(value => { const x = toX(value); if (frame.showGridLines) { const grid = svg("line"); setAttributes(grid, { class: "z-native-chart-grid", x1: x, x2: x, y1: plot.top, y2: plot.bottom }); this.layers.grid.append(grid); } if (frame.showValueLabels) appendText(this.layers.axis, x, plot.top - 7, new Date(value).toLocaleDateString(undefined, { month: "short", day: "numeric" }), "z-native-chart-axis-label", "middle"); });
+            items.forEach((item, index) => { const y = plot.top + index * rowHeight + Math.max(3, rowHeight * .18); const bar = svg("rect"); const x = toX(Date.parse(item.start)); const itemWidth = Math.max(2, toX(Date.parse(item.end)) - x); setAttributes(bar, { class: "z-native-chart-gantt", x, y, width: itemWidth, height: Math.max(8, rowHeight * .62), rx: 4 }); setPaint(bar, { fill: item.color || this.color(index, null) }); this.bindTooltip(bar, `${item.label}: ${new Date(item.start).toLocaleDateString()} – ${new Date(item.end).toLocaleDateString()} · ${format(number(item.progress))}%`, { x: x + itemWidth / 2, y }); this.layers.data.append(bar); if (number(item.progress) > 0) { const progress = svg("rect"); setAttributes(progress, { class: "z-native-chart-gantt-progress", x, y, width: itemWidth * clamp(number(item.progress), 0, 100) / 100, height: Math.max(8, rowHeight * .62), rx: 4 }); this.layers.data.append(progress); } if (frame.showCategoryLabels) appendText(this.layers.axis, plot.left - 9, y + rowHeight * .39, item.label, "z-native-chart-axis-label", "end"); });
         }
 
         async load() {

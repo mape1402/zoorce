@@ -307,10 +307,12 @@ public sealed class ComponentContractTests
         {
             Curve = ZoorceChartCurve.Monotone,
             AreaMode = ZoorceChartAreaMode.Stacked100,
-            Appearance = new ZoorceChartAppearanceOptions { Surface = ZoorceChartSurface.Bare, CssClass = " embedded-chart " },
-            Header = new ZoorceChartHeaderOptions { Visible = true, ShowMetric = false },
+            Appearance = new ZoorceChartAppearanceOptions { Surface = ZoorceChartSurface.Bare, ShowSurfaceBackground = false, ShowSurfaceBorder = false, ShowPlotBackground = false, ShowPlotBorder = false, CssClass = " embedded-chart " },
+            Header = new ZoorceChartHeaderOptions { Visible = true, ShowTitle = false, ShowSummary = false, ShowMetric = false },
             Legend = new ZoorceChartLegendOptions { Visible = false, Interactive = false },
             Tooltip = new ZoorceChartTooltipOptions { Visible = false },
+            Axes = new ZoorceChartAxesOptions { Visible = false, ShowGridLines = false, ShowValueLabels = false, ShowCategoryLabels = false, ValueTickCount = 99, CategoryLabelInterval = -1 },
+            Plot = new ZoorceChartPlotOptions { ShowSeriesLines = false, ShowLineMarkers = false, ShowDataLabels = false, ShowTargetMarker = false, Height = 99 },
             DonutInnerRadius = 0,
             Series = [new ZoorceChartSeries("Trend", [new ZoorceChartPoint("First", 0, Timestamp: timestamp), new("Second", 19, Timestamp: timestamp.AddDays(1))])]
         }).Normalize();
@@ -319,9 +321,26 @@ public sealed class ComponentContractTests
         Assert.Equal(ZoorceChartAreaMode.Stacked100, normalized.AreaMode);
         Assert.Equal(ZoorceChartSurface.Bare, normalized.Appearance.Surface);
         Assert.Equal("embedded-chart", normalized.Appearance.CssClass);
+        Assert.False(normalized.Appearance.ShowSurfaceBackground);
+        Assert.False(normalized.Appearance.ShowSurfaceBorder);
+        Assert.False(normalized.Appearance.ShowPlotBackground);
+        Assert.False(normalized.Appearance.ShowPlotBorder);
+        Assert.False(normalized.Header.ShowTitle);
+        Assert.False(normalized.Header.ShowSummary);
         Assert.False(normalized.Header.ShowMetric);
         Assert.False(normalized.Legend.Visible);
         Assert.False(normalized.Tooltip.Visible);
+        Assert.False(normalized.Axes.Visible);
+        Assert.False(normalized.Axes.ShowGridLines);
+        Assert.False(normalized.Axes.ShowValueLabels);
+        Assert.False(normalized.Axes.ShowCategoryLabels);
+        Assert.Equal(12, normalized.Axes.ValueTickCount);
+        Assert.Equal(0, normalized.Axes.CategoryLabelInterval);
+        Assert.False(normalized.Plot.ShowSeriesLines);
+        Assert.False(normalized.Plot.ShowLineMarkers);
+        Assert.False(normalized.Plot.ShowDataLabels);
+        Assert.False(normalized.Plot.ShowTargetMarker);
+        Assert.Equal(120, normalized.Plot.Height);
         Assert.Equal(0, normalized.DonutInnerRadius);
         Assert.Equal(timestamp, normalized.Series.Single().Points.First().Timestamp);
         Assert.Throws<ArgumentOutOfRangeException>(() => (CreateChart() with { DonutInnerRadius = 1 }).Normalize());
