@@ -2,6 +2,15 @@
 
 All notable changes to ZoorceCode are documented in this file.
 
+## [v1.2.0] - 2026-10-26
+
+### Added
+
+- Expanded the native SVG chart catalogue with range-area, combo, radar, radial, calendar heatmap, scatter, bubble, bullet, histogram, waterfall, lollipop, slope, candlestick, box plot, treemap, Sankey and Gantt visualizations.
+- `ZoorceChartCurve.Monotone`, an opt-in cubic monotone interpolation for line and area charts that preserves the bounds and order of source data, including non-uniform X spacing.
+- Stacked and 100%-stacked area modes through `ZoorceChartAreaMode`.
+- Independent chart presentation options for the component surface, plot surface, header, legend, axes, grid, scales, labels, line details, target markers, tooltips and viewport height.
+
 ## [v1.1.0] - 2026-10-25
 
 ### Added

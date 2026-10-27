@@ -18,6 +18,7 @@ Zoorce is an ecosystem of reusable libraries and tools developed by Elysium Codi
 - Complete light and dark semantic palettes, customizable at runtime without a full-page rerender.
 - Accessible interaction contracts: keyboard navigation, focus management, live feedback and ARIA labels.
 - Host-controlled templates and transitions where content or validation belongs to the application.
+- Native SVG charts with bounded monotone curves, stacked areas and independently configurable presentation layers.
 - A runnable sample that exercises components as an integrated product UI.
 
 ## Packages
