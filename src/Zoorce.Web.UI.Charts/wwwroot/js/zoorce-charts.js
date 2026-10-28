@@ -134,8 +134,23 @@
             const current = points[index];
             const next = points[index + 1];
             const after = points[index + 2] ?? next;
-            const firstControl = { x: current.x + (next.x - previous.x) / 6, y: current.y + (next.y - previous.y) / 6 };
-            const secondControl = { x: next.x - (after.x - current.x) / 6, y: next.y - (after.y - current.y) / 6 };
+            // A cubic Bézier stays inside the convex hull of its endpoints and
+            // controls.  The legacy smooth curve derives its controls from the
+            // surrounding observations, which can otherwise pull a 0 → 0
+            // segment below a zero baseline.  Keep the familiar smooth shape,
+            // but never let either control invent an extremum between its two
+            // observed values.  `Monotone` remains the explicit, fully
+            // shape-preserving interpolation mode.
+            const lower = Math.min(current.y, next.y);
+            const upper = Math.max(current.y, next.y);
+            const firstControl = {
+                x: current.x + (next.x - previous.x) / 6,
+                y: clamp(current.y + (next.y - previous.y) / 6, lower, upper)
+            };
+            const secondControl = {
+                x: next.x - (after.x - current.x) / 6,
+                y: clamp(next.y - (after.y - current.y) / 6, lower, upper)
+            };
             path += ` C ${firstControl.x} ${firstControl.y}, ${secondControl.x} ${secondControl.y}, ${next.x} ${next.y}`;
         }
         return path;

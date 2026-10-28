@@ -6,7 +6,10 @@ public enum ZoorceChartCurve
     /// <summary>Connects observations with direct segments.</summary>
     Straight,
 
-    /// <summary>Uses a restrained monotone-like smooth curve.</summary>
+    /// <summary>
+    /// Uses a segment-bounded smooth Bézier curve. The stroke remains within
+    /// the values of each adjacent pair of observations.
+    /// </summary>
     Smooth,
 
     /// <summary>
