@@ -55,6 +55,16 @@ test('monotone curve does not overshoot a non-negative 0, 0, 19, 0 series', () =
     assertWithinSegmentBounds(pathValue);
 });
 
+test('smooth curve does not invent extrema between observations', () => {
+    const pathFor = loadPathFor();
+    // Screen coordinates are inverted relative to chart values.  A value of
+    // zero is therefore the larger y coordinate; a control above 200 would
+    // represent an invented negative value.
+    const pathValue = pathFor([{ x: 0, y: 200 }, { x: 1, y: 200 }, { x: 2, y: 10 }, { x: 3, y: 200 }], 'Smooth');
+    assert.match(pathValue, / C /);
+    assertWithinSegmentBounds(pathValue);
+});
+
 test('monotone curve preserves increasing, peak, negative and non-uniform series bounds', () => {
     const pathFor = loadPathFor();
     const cases = [

@@ -2,6 +2,12 @@
 
 All notable changes to ZoorceCode are documented in this file.
 
+## [v1.2.1] - 2026-10-28
+
+### Fixed
+
+- Smooth line and area curves no longer draw extrema outside the values of adjacent observations, preventing non-negative series from visually crossing below zero.
+
 ## [v1.2.0] - 2026-10-26
 
 ### Added
