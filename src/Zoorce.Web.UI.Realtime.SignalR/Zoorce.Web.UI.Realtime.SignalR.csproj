@@ -13,7 +13,7 @@
   </PropertyGroup>
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
-    <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="10.0.13" />
+    <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="10.0.14" />
     <ProjectReference Include="..\Zoorce.Web.UI.Abstractions\Zoorce.Web.UI.Abstractions.csproj" />
     <ProjectReference Include="..\Zoorce.Web.UI.Data\Zoorce.Web.UI.Data.csproj" />
   </ItemGroup>
