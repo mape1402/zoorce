@@ -103,7 +103,7 @@ Use the component option type to own labels, variants, templates, state and beha
 
 ### Built-in theme presets
 
-`ZoorceThemePreset` includes thirty complete light/dark pairs. A preset changes the complete semantic contract: canvas and surfaces, typography, borders, navigation, code blocks, feedback tones, shadows, overlays and data-series colors. It does not only replace the primary accent.
+`ZoorceThemePreset` includes forty complete light/dark pairs. A preset changes the complete semantic contract: canvas and surfaces, typography, borders, navigation, code blocks, feedback tones, shadows, overlays and data-series colors. It does not only replace the primary accent.
 
 ```csharp
 shell.Themes.UsePreset(ZoorceThemePreset.Forest);
@@ -116,7 +116,30 @@ var darkPalette = ZoorceThemePresets.CreatePalette(
 
 Use `ZoorceThemePresets.Available` to populate a host-owned selector. It exposes stable identifiers, display names, descriptions and representative light/dark accents. Zoorce never adds a brand selector to a host UI automatically.
 
-The catalog includes `Verdant`, `Amethyst`, `Neutral`, `Crimson`, `Chestnut`, `Ember`, `Saffron`, `Rose`, `Obsidian`, `Graphite`, `Teal`, `Indigo`, `Cyan`, `Lime`, `Coral`, `Navy`, `Violet`, `Magenta`, `Burgundy`, `Copper`, `Gold`, `Olive`, `Mint`, `Turquoise`, `Sand`, `Lavender`, `Cobalt`, `Forest`, `Raspberry` and `Stone`.
+The catalog includes `Verdant`, `Amethyst`, `Neutral`, `Crimson`, `Chestnut`, `Ember`, `Saffron`, `Rose`, `Obsidian`, `Graphite`, `Teal`, `Indigo`, `Cyan`, `Lime`, `Coral`, `Navy`, `Violet`, `Magenta`, `Burgundy`, `Copper`, `Gold`, `Olive`, `Mint`, `Turquoise`, `Sand`, `Lavender`, `Cobalt`, `Forest`, `Raspberry`, `Stone`, `Seafoam`, `Azure`, `Periwinkle`, `Orchid`, `Mulberry`, `Terracotta`, `Apricot`, `Citron`, `Moss` and `Onyx`.
+
+### Optional runtime theme selector
+
+The top-bar selector is opt-in and remains owned by the host. It applies an entire preset pair at runtime, so switching between light and dark continues to use the selected preset rather than only changing an accent color.
+
+```csharp
+using Zoorce.Web.UI.Layout.Components;
+
+options.ThemeSelector = new ZoorceThemeSelectorOptions
+{
+    Visible = true,
+    Presets =
+    [
+        ZoorceThemePreset.Forest,
+        ZoorceThemePreset.Cobalt,
+        ZoorceThemePreset.Amethyst
+    ],
+    DefaultPreset = ZoorceThemePreset.Forest,
+    StorageKey = "my-product-theme"
+};
+```
+
+Leave `Presets` empty to expose the full catalog. The selector is hidden unless `Visible` is `true`; set `PersistSelection` to `false` to avoid browser storage. The supplied Zoorce layout resolves a saved preset in the document head, before the first visible paint, so navigation does not briefly show the server default. When a user chooses a preset, the document emits `zoorce:theme-preset-change` with its identifier in `event.detail.preset`, allowing host code to synchronize any adjacent UI.
 
 ### Optional top-bar back action
 

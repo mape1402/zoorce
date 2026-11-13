@@ -1,4 +1,5 @@
 @using Microsoft.Extensions.Options
+@using System.Text.Json
 @using Zoorce.Web.UI.Layout
 @using Zoorce.Web.UI.Theming
 @using Zoorce.Web.UI.Foundation.WaitDialog
@@ -12,6 +13,7 @@
     var sidebarDefault = shell.SidebarCollapsedByDefault ? "collapsed" : "expanded";
     var navigationDensity = shell.NavigationDensity.ToString().ToLowerInvariant();
     var navigationExpansion = shell.NavigationExpansion.ToString().ToLowerInvariant();
+    var themeSelector = ZoorceThemeSelectorModel.Create(shell);
 }
 <!DOCTYPE html>
 <html lang="en" data-zoorce-theme="@defaultTheme">
@@ -22,11 +24,37 @@
     <title>@pageTitle · @shell.ApplicationName</title>
     <script>
         (() => {
-            const stored = localStorage.getItem("zoorce-theme");
+            let stored = null;
+            try { stored = localStorage.getItem("zoorce-theme"); } catch { /* Storage may be unavailable. */ }
             const fallback = document.documentElement.dataset.zoorceTheme;
             document.documentElement.dataset.zoorceTheme = stored === "light" || stored === "dark" ? stored : fallback;
         })();
     </script>
+    @if (themeSelector is not null)
+    {
+        <script type="application/json" data-z-theme-preset-catalog>@Html.Raw(themeSelector.RuntimeCatalogJson)</script>
+        <script>
+            (() => {
+                try {
+                    const catalog = JSON.parse(document.querySelector("[data-z-theme-preset-catalog]")?.textContent ?? "{}");
+                    const storageKey = @Html.Raw(JsonSerializer.Serialize(themeSelector.StorageKey));
+                    const defaultPreset = @Html.Raw(JsonSerializer.Serialize(themeSelector.InitialPreset.ToString()));
+                    const persisted = @themeSelector.PersistSelection.ToString().ToLowerInvariant() ? localStorage.getItem(storageKey) : null;
+                    const preset = Object.prototype.hasOwnProperty.call(catalog, persisted) ? persisted : defaultPreset;
+                    const entry = catalog[preset];
+                    if (!entry) return;
+
+                    const root = document.documentElement;
+                    const mode = root.dataset.zoorceTheme === "light" ? "light" : "dark";
+                    root.dataset.zoorceThemePreset = preset;
+                    const style = document.createElement("style");
+                    style.dataset.zThemePresetBootstrap = "";
+                    style.textContent = `:root[data-zoorce-theme="${mode}"][data-zoorce-theme-preset]{${mode === "light" ? entry.light : entry.dark}}`;
+                    document.head.append(style);
+                } catch { /* Use the server-configured palette when browser storage is unavailable or invalid. */ }
+            })();
+        </script>
+    }
     <style>@Html.Raw(shell.ToCssThemeRules())</style>
     <link rel="stylesheet" href="~/_content/Zoorce.Web.UI/css/zoorce.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/_content/Zoorce.Web.UI.Foundation/css/zoorce-foundation-progress.css" asp-append-version="true" />

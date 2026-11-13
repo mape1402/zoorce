@@ -7,8 +7,13 @@
     const dialogLayer = document.querySelector("[data-z-dialog-layer]");
     const commandLayer = document.querySelector("[data-z-command-layer]");
     const commandInput = document.querySelector("[data-z-command-input]");
+    const themePresetSelector = document.querySelector("[data-z-theme-preset-selector]");
+    const themePresetCatalogElement = document.querySelector("[data-z-theme-preset-catalog]");
     let restoreFocus = null;
     let pendingConfirmation = null;
+    let activeThemePreset = null;
+    let themePresetCatalog = {};
+    let themePresetStyle = null;
 
     const mode = () => root.dataset.zoorceTheme === "light" ? "light" : "dark";
     const updateThemeControls = () => {
@@ -19,12 +24,59 @@
             button.querySelector(".z-theme-icon").textContent = dark ? "☼" : "◐";
         });
     };
+    const getThemePresetEntry = preset => Object.prototype.hasOwnProperty.call(themePresetCatalog, preset) ? themePresetCatalog[preset] : null;
+    const renderThemePreset = () => {
+        const entry = activeThemePreset ? getThemePresetEntry(activeThemePreset) : null;
+        if (!entry || !themePresetStyle) return;
+        const dark = mode() === "dark";
+        themePresetStyle.textContent = `:root[data-zoorce-theme="${dark ? "dark" : "light"}"][data-zoorce-theme-preset]{${dark ? entry.dark : entry.light}}`;
+        const selectorRoot = themePresetSelector?.closest("[data-z-theme-preset-selector-root]");
+        if (selectorRoot) selectorRoot.style.setProperty("--z-theme-preset-accent", dark ? entry.darkAccent : entry.lightAccent);
+    };
+    const selectThemePreset = (preset, persist = true) => {
+        if (!getThemePresetEntry(preset)) return false;
+        activeThemePreset = preset;
+        root.dataset.zoorceThemePreset = preset;
+        if (themePresetSelector) themePresetSelector.value = preset;
+        renderThemePreset();
+        if (persist && themePresetSelector?.dataset.zThemePresetPersist === "true") {
+            try {
+                localStorage.setItem(themePresetSelector.dataset.zThemePresetStorageKey, preset);
+            } catch {
+                // A blocked storage area should not prevent an in-memory theme choice.
+            }
+        }
+        document.dispatchEvent(new CustomEvent("zoorce:theme-preset-change", { detail: { preset, mode: mode() } }));
+        return true;
+    };
     const setTheme = value => {
         root.dataset.zoorceTheme = value === "light" ? "light" : "dark";
         localStorage.setItem("zoorce-theme", root.dataset.zoorceTheme);
+        renderThemePreset();
         updateThemeControls();
         document.dispatchEvent(new CustomEvent("zoorce:theme-change", { detail: { mode: root.dataset.zoorceTheme } }));
     };
+
+    if (themePresetSelector && themePresetCatalogElement) {
+        try {
+            themePresetCatalog = JSON.parse(themePresetCatalogElement.textContent ?? "{}");
+        } catch {
+            themePresetCatalog = {};
+        }
+        themePresetStyle = document.createElement("style");
+        themePresetStyle.dataset.zThemePresetRuntime = "";
+        document.head.append(themePresetStyle);
+        let savedPreset = null;
+        if (themePresetSelector.dataset.zThemePresetPersist === "true") {
+            try {
+                savedPreset = localStorage.getItem(themePresetSelector.dataset.zThemePresetStorageKey);
+            } catch {
+                // Use the host-selected default when local storage is unavailable.
+            }
+        }
+        selectThemePreset(savedPreset && getThemePresetEntry(savedPreset) ? savedPreset : themePresetSelector.value, false);
+        themePresetSelector.addEventListener("change", () => selectThemePreset(themePresetSelector.value));
+    }
     updateThemeControls();
 
     const desktopSidebarQuery = window.matchMedia("(min-width: 851px)");

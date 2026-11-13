@@ -75,6 +75,41 @@ public sealed class ShellThemeAndFoundationTests
         Assert.Null(Assert.IsType<ZoorceTopBarModel>(Assert.IsType<ViewViewComponentResult>(noDefault.Invoke()).ViewData!.Model).Back);
     }
 
+    [Fact]
+    public void Runtime_theme_selector_is_opt_in_and_uses_the_host_selected_catalog()
+    {
+        var shell = new ZoorceShellOptions
+        {
+            ThemeSelector = new ZoorceThemeSelectorOptions
+            {
+                Visible = true,
+                Label = "Product theme",
+                DefaultPreset = ZoorceThemePreset.Cobalt,
+                Presets = [ZoorceThemePreset.Cobalt, ZoorceThemePreset.Forest],
+                StorageKey = "host-theme"
+            }
+        };
+        shell.UseThemePreset(ZoorceThemePreset.Amethyst);
+
+        var topBar = new ZoorceTopBarViewComponent(Options.Create(shell), new TestUserMenuProvider(null));
+        var model = Assert.IsType<ZoorceTopBarModel>(Assert.IsType<ViewViewComponentResult>(topBar.Invoke()).ViewData!.Model);
+        var selector = Assert.IsType<ZoorceThemeSelectorModel>(model.ThemeSelector);
+
+        Assert.Equal("Product theme", selector.Label);
+        Assert.Equal("host-theme", selector.StorageKey);
+        Assert.Equal(ZoorceThemePreset.Cobalt, selector.InitialPreset);
+        Assert.Equal([ZoorceThemePreset.Cobalt, ZoorceThemePreset.Forest], selector.Presets.Select(preset => preset.Preset));
+        Assert.Contains("Cobalt", selector.RuntimeCatalogJson);
+        Assert.DoesNotContain("Amethyst", selector.RuntimeCatalogJson);
+        Assert.Equal(ZoorceThemePreset.Amethyst, shell.Themes.ActivePreset);
+
+        var disabled = new ZoorceTopBarViewComponent(Options.Create(new ZoorceShellOptions()), new TestUserMenuProvider(null));
+        Assert.Null(Assert.IsType<ZoorceTopBarModel>(Assert.IsType<ViewViewComponentResult>(disabled.Invoke()).ViewData!.Model).ThemeSelector);
+
+        var invalid = new ZoorceShellOptions { ThemeSelector = new ZoorceThemeSelectorOptions { Visible = true, Presets = [(ZoorceThemePreset)999] } };
+        Assert.Throws<ArgumentOutOfRangeException>(() => new ZoorceTopBarViewComponent(Options.Create(invalid), new TestUserMenuProvider(null)).Invoke());
+    }
+
     [Theory]
     [InlineData(401, "Sign in", "/login")]
     [InlineData(403, "Go to home", "/home")]
@@ -191,6 +226,7 @@ public sealed class ShellThemeAndFoundationTests
         var catalog = new ZoorceThemeCatalogOptions().UsePreset(ZoorceThemePreset.Amethyst);
         Assert.Contains("data-zoorce-theme", catalog.ToCssRules());
         Assert.Equal("dark", catalog.CreateDefinition(ZoorceThemeMode.Dark).Name);
+        Assert.Equal(ZoorceThemePreset.Amethyst, catalog.ActivePreset);
         Assert.Throws<ArgumentOutOfRangeException>(() => new ZoorceThemeCatalogOptions().UsePreset((ZoorceThemePreset)999));
     }
 

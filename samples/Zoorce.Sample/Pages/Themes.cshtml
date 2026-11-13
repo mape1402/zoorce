@@ -125,8 +125,9 @@
             const search = gallery.querySelector('[data-z-theme-gallery-search]');
             const count = gallery.querySelector('[data-z-theme-gallery-count]');
             const empty = gallery.querySelector('[data-z-theme-gallery-empty]');
+            const presetSelector = document.querySelector('[data-z-theme-preset-selector]');
             let previewMode = 'light';
-            let activePreset = sessionStorage.getItem('zoorce-sample-theme-preset');
+            let activePreset = root.dataset.zoorceThemePreset || sessionStorage.getItem('zoorce-sample-theme-preset');
             const originalStyles = root.getAttribute('style') ?? '';
 
             const applyCardMode = () => {
@@ -140,8 +141,20 @@
 
             const applyPreset = () => {
                 if (!activePreset || !catalog[activePreset]) return;
+                if (presetSelector) return;
                 const mode = root.dataset.zoorceTheme === 'light' ? 'light' : 'dark';
                 root.style.cssText = catalog[activePreset][mode];
+            };
+
+            const selectPreset = preset => {
+                if (presetSelector && [...presetSelector.options].some(option => option.value === preset)) {
+                    presetSelector.value = preset;
+                    presetSelector.dispatchEvent(new Event('change', { bubbles: true }));
+                    return;
+                }
+                activePreset = preset;
+                sessionStorage.setItem('zoorce-sample-theme-preset', activePreset);
+                applyPreset();
             };
 
             const filter = () => {
@@ -167,16 +180,21 @@
                 applyCardMode();
             }));
             gallery.querySelectorAll('[data-z-theme-apply]').forEach(button => button.addEventListener('click', () => {
-                activePreset = button.dataset.zThemeApply;
-                sessionStorage.setItem('zoorce-sample-theme-preset', activePreset);
-                applyPreset();
+                selectPreset(button.dataset.zThemeApply);
             }));
             gallery.querySelector('[data-z-theme-gallery-reset]').addEventListener('click', () => {
+                if (presetSelector) {
+                    selectPreset(presetSelector.dataset.zThemePresetDefault);
+                    return;
+                }
                 activePreset = null;
                 sessionStorage.removeItem('zoorce-sample-theme-preset');
                 root.setAttribute('style', originalStyles);
             });
-            new MutationObserver(applyPreset).observe(root, { attributes: true, attributeFilter: ['data-zoorce-theme'] });
+            document.addEventListener('zoorce:theme-preset-change', event => {
+                activePreset = event.detail.preset;
+            });
+            if (!presetSelector) new MutationObserver(applyPreset).observe(root, { attributes: true, attributeFilter: ['data-zoorce-theme'] });
             applyCardMode();
             applyPreset();
         })();

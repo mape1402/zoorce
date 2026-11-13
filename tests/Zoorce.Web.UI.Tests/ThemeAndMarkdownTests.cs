@@ -47,14 +47,14 @@ public sealed class ThemeAndMarkdownTests
     }
 
     [Fact]
-    public void Built_in_theme_catalog_exposes_thirty_complete_independent_palette_pairs()
+    public void Built_in_theme_catalog_exposes_forty_complete_independent_palette_pairs()
     {
         var presets = ZoorceThemePresets.Available;
 
-        Assert.Equal(30, presets.Count);
-        Assert.Equal(30, presets.Select(preset => preset.Preset).Distinct().Count());
+        Assert.Equal(40, presets.Count);
+        Assert.Equal(40, presets.Select(preset => preset.Preset).Distinct().Count());
         Assert.Equal(ZoorceThemePreset.Verdant, presets[0].Preset);
-        Assert.Equal(ZoorceThemePreset.Stone, presets[^1].Preset);
+        Assert.Equal(ZoorceThemePreset.Onyx, presets[^1].Preset);
 
         foreach (var preset in presets)
         {
