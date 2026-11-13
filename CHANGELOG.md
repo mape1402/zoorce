@@ -2,6 +2,18 @@
 
 All notable changes to ZoorceCode are documented in this file.
 
+## [v1.4.0] - 2026-11-13
+
+### Added
+
+- `ZoorceThemeSelectorOptions`, an optional host-configured top-bar selector that applies complete light/dark preset pairs at runtime, can restrict the available catalog, and can persist a visitor's selection in browser storage.
+- Ten additional complete palette pairs—Seafoam, Azure, Periwinkle, Orchid, Mulberry, Terracotta, Apricot, Citron, Moss and Onyx—bringing the built-in catalog to 40 themes.
+- The `zoorce:theme-preset-change` document event for host code that needs to synchronize with a selected runtime preset.
+
+### Fixed
+
+- Persisted runtime theme presets now resolve in the document head before the first visible paint, preventing the configured server default from flashing during navigation.
+
 ## [v1.3.0] - 2026-11-13
 
 ### Added

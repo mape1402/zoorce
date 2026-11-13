@@ -64,6 +64,9 @@ public sealed class ZoorceShellOptions
     /// <summary>Gets or sets the optional default back action; individual pages can override it.</summary>
     public ZoorceTopBarBackOptions? TopBarBack { get; set; }
 
+    /// <summary>Gets or sets the optional host-controlled runtime preset selector shown in the top bar.</summary>
+    public ZoorceThemeSelectorOptions? ThemeSelector { get; set; }
+
     /// <summary>Gets the central palette catalog consumed by every Zoorce package.</summary>
     public ZoorceThemeCatalogOptions Themes { get; } = new();
 

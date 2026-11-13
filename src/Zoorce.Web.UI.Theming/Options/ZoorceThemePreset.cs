@@ -91,5 +91,35 @@ public enum ZoorceThemePreset
     Raspberry,
 
     /// <summary>A warm mineral-gray palette.</summary>
-    Stone
+    Stone,
+
+    /// <summary>A light sea-green palette.</summary>
+    Seafoam,
+
+    /// <summary>A clear azure-blue palette.</summary>
+    Azure,
+
+    /// <summary>A soft blue-violet palette.</summary>
+    Periwinkle,
+
+    /// <summary>A floral orchid palette.</summary>
+    Orchid,
+
+    /// <summary>A dark mulberry palette.</summary>
+    Mulberry,
+
+    /// <summary>An earthy terracotta palette.</summary>
+    Terracotta,
+
+    /// <summary>A warm apricot palette.</summary>
+    Apricot,
+
+    /// <summary>A lively citron palette.</summary>
+    Citron,
+
+    /// <summary>A muted moss-green palette.</summary>
+    Moss,
+
+    /// <summary>A cool near-black palette.</summary>
+    Onyx
 }

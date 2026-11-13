@@ -2,6 +2,7 @@ using Zoorce.Web.UI;
 using Zoorce.Web.UI.Abstractions.Navigation;
 using Zoorce.Web.UI.Abstractions.UserContext;
 using Zoorce.Web.UI.Layout;
+using Zoorce.Web.UI.Layout.Components;
 using Zoorce.Web.UI.Theming;
 using Zoorce.Web.UI.Realtime.SignalR;
 using Zoorce.Sample.Infrastructure;
@@ -25,6 +26,7 @@ builder.Services.AddRazorPages().AddZoorceWebUI(options =>
     options.BrandMark = "Z";
     options.DefaultTheme = ZoorceThemeMode.Dark;
     options.UseThemePreset(ZoorceThemePreset.Amethyst);
+    options.ThemeSelector = new ZoorceThemeSelectorOptions { Visible = true };
     options.SidebarMode = ZoorceSidebarMode.Collapsible;
     options.SidebarCollapsedByDefault = false;
     options.PersistSidebarState = true;

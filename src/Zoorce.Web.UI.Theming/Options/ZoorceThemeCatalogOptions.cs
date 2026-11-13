@@ -5,6 +5,9 @@ namespace Zoorce.Web.UI.Theming;
 /// </summary>
 public sealed class ZoorceThemeCatalogOptions
 {
+    /// <summary>Gets the preset most recently applied through <see cref="UsePreset"/>, when applicable.</summary>
+    public ZoorceThemePreset? ActivePreset { get; private set; }
+
     /// <summary>Gets the token palette used by the light color mode.</summary>
     public ZoorceThemePalette Light { get; } = ZoorceThemePalette.CreateLight();
 
@@ -15,6 +18,7 @@ public sealed class ZoorceThemeCatalogOptions
     public ZoorceThemeCatalogOptions UsePreset(ZoorceThemePreset preset)
     {
         ZoorceThemePresets.Apply(this, preset);
+        ActivePreset = preset;
         return this;
     }
 

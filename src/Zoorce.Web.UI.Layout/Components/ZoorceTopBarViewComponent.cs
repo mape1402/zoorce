@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using Zoorce.Web.UI.Abstractions.UserContext;
+using Zoorce.Web.UI.Theming;
 
 namespace Zoorce.Web.UI.Layout.Components;
 
@@ -38,9 +39,10 @@ public sealed class ZoorceTopBarViewComponent : ViewComponent
             _shell.ApplicationName,
             profile,
             initials,
-            _shell.DefaultTheme == Theming.ZoorceThemeMode.Dark,
+            _shell.DefaultTheme == ZoorceThemeMode.Dark,
             _shell.NotificationCenter,
-            back));
+            back,
+            ZoorceThemeSelectorModel.Create(_shell)));
     }
 }
 
@@ -52,4 +54,5 @@ public sealed record ZoorceTopBarModel(
     string Initials,
     bool StartsDark,
     Zoorce.Web.UI.Foundation.Components.ZoorceNotificationCenterOptions? NotificationCenter,
-    ZoorceTopBarBackOptions? Back = null);
+    ZoorceTopBarBackOptions? Back = null,
+    ZoorceThemeSelectorModel? ThemeSelector = null);

@@ -34,7 +34,17 @@ public static class ZoorceThemePresets
         Branded(ZoorceThemePreset.Cobalt, "Cobalt", "An electric cobalt palette.", ThemeFamily.Cool, "#1d4ed8", "#ffffff", "#1e40af", "#dbeafe", "#2563eb", "#93c5fd", "#101b4e", "#bfdbfe", "#1e3a8a", "#60a5fa"),
         Branded(ZoorceThemePreset.Forest, "Forest", "A deep forest-green palette.", ThemeFamily.Verdant, "#166534", "#ffffff", "#14532d", "#dcfce7", "#15803d", "#86efac", "#082915", "#bbf7d0", "#14532d", "#4ade80"),
         Branded(ZoorceThemePreset.Raspberry, "Raspberry", "A rich raspberry palette.", ThemeFamily.Rose, "#9d174d", "#ffffff", "#831843", "#fce7f3", "#be185d", "#f9a8d4", "#36091e", "#fbcfe8", "#500724", "#f472b6"),
-        Branded(ZoorceThemePreset.Stone, "Stone", "A warm mineral-gray palette.", ThemeFamily.Stone, "#57534e", "#ffffff", "#44403c", "#ece9e3", "#78716c", "#d6d3d1", "#1c1917", "#e7e5e4", "#292524", "#a8a29e")
+        Branded(ZoorceThemePreset.Stone, "Stone", "A warm mineral-gray palette.", ThemeFamily.Stone, "#57534e", "#ffffff", "#44403c", "#ece9e3", "#78716c", "#d6d3d1", "#1c1917", "#e7e5e4", "#292524", "#a8a29e"),
+        Branded(ZoorceThemePreset.Seafoam, "Seafoam", "A light sea-green palette.", ThemeFamily.Verdant, "#0f766e", "#ffffff", "#115e59", "#ccfbf1", "#14b8a6", "#99f6e4", "#042f2e", "#ccfbf1", "#134e4a", "#5eead4"),
+        Branded(ZoorceThemePreset.Azure, "Azure", "A clear azure-blue palette.", ThemeFamily.Cool, "#0369a1", "#ffffff", "#075985", "#e0f2fe", "#0284c7", "#7dd3fc", "#082f49", "#bae6fd", "#0c4a6e", "#38bdf8"),
+        Branded(ZoorceThemePreset.Periwinkle, "Periwinkle", "A soft blue-violet palette.", ThemeFamily.Violet, "#4f46e5", "#ffffff", "#4338ca", "#e0e7ff", "#6366f1", "#c7d2fe", "#1e1b4b", "#e0e7ff", "#312e81", "#a5b4fc"),
+        Branded(ZoorceThemePreset.Orchid, "Orchid", "A floral orchid palette.", ThemeFamily.Rose, "#a21caf", "#ffffff", "#86198f", "#fae8ff", "#c026d3", "#f0abfc", "#4a044e", "#f5d0fe", "#701a75", "#e879f9"),
+        Branded(ZoorceThemePreset.Mulberry, "Mulberry", "A dark mulberry palette.", ThemeFamily.Rose, "#86198f", "#ffffff", "#701a75", "#fae8ff", "#a21caf", "#f5d0fe", "#4a044e", "#fae8ff", "#701a75", "#e879f9"),
+        Branded(ZoorceThemePreset.Terracotta, "Terracotta", "An earthy terracotta palette.", ThemeFamily.Warm, "#b45309", "#ffffff", "#92400e", "#ffedd5", "#d97706", "#fdba74", "#431407", "#fed7aa", "#7c2d12", "#fb923c"),
+        Branded(ZoorceThemePreset.Apricot, "Apricot", "A warm apricot palette.", ThemeFamily.Warm, "#c2410c", "#ffffff", "#9a3412", "#fff7ed", "#ea580c", "#fed7aa", "#431407", "#ffedd5", "#7c2d12", "#fdba74"),
+        Branded(ZoorceThemePreset.Citron, "Citron", "A lively citron palette.", ThemeFamily.Sun, "#4d7c0f", "#ffffff", "#3f6212", "#ecfccb", "#65a30d", "#d9f99d", "#1a2e05", "#ecfccb", "#365314", "#a3e635"),
+        Branded(ZoorceThemePreset.Moss, "Moss", "A muted moss-green palette.", ThemeFamily.Verdant, "#3f6212", "#ffffff", "#365314", "#f0fdf4", "#4d7c0f", "#bef264", "#1a2e05", "#d9f99d", "#365314", "#a3e635"),
+        Branded(ZoorceThemePreset.Onyx, "Onyx", "A cool near-black palette.", ThemeFamily.Stone, "#334155", "#ffffff", "#1e293b", "#e2e8f0", "#475569", "#cbd5e1", "#0f172a", "#e2e8f0", "#1e293b", "#94a3b8")
     ];
 
     private static readonly IReadOnlyDictionary<ZoorceThemePreset, PresetDefinition> DefinitionsByPreset = Definitions.ToDictionary(definition => definition.Info.Preset);
