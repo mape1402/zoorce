@@ -22,6 +22,7 @@ public sealed class SampleNavigationProvider : INavigationProvider
             [
                 new("Components", "/components", "▤", MatchMode: NavigationMatchMode.Exact),
                 new("Charts", "/charts", "◒", MatchMode: NavigationMatchMode.Exact),
+                new("Themes", "/themes", "◐", MatchMode: NavigationMatchMode.Exact),
                 new("Diagrams", "/diagrams", "◇", MatchMode: NavigationMatchMode.Exact),
                 new("Steppers", "/steppers", "⇢", MatchMode: NavigationMatchMode.Exact),
                 new("Wizards", "/wizards", "↳", MatchMode: NavigationMatchMode.Exact),
