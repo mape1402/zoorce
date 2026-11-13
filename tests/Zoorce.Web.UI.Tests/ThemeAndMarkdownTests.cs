@@ -47,6 +47,43 @@ public sealed class ThemeAndMarkdownTests
     }
 
     [Fact]
+    public void Built_in_theme_catalog_exposes_thirty_complete_independent_palette_pairs()
+    {
+        var presets = ZoorceThemePresets.Available;
+
+        Assert.Equal(30, presets.Count);
+        Assert.Equal(30, presets.Select(preset => preset.Preset).Distinct().Count());
+        Assert.Equal(ZoorceThemePreset.Verdant, presets[0].Preset);
+        Assert.Equal(ZoorceThemePreset.Stone, presets[^1].Preset);
+
+        foreach (var preset in presets)
+        {
+            Assert.False(string.IsNullOrWhiteSpace(preset.DisplayName));
+            Assert.False(string.IsNullOrWhiteSpace(preset.Description));
+
+            var light = ZoorceThemePresets.CreatePalette(preset.Preset, ZoorceThemeMode.Light);
+            var dark = ZoorceThemePresets.CreatePalette(preset.Preset, ZoorceThemeMode.Dark);
+            var secondLight = ZoorceThemePresets.CreatePalette(preset.Preset, ZoorceThemeMode.Light);
+
+            Assert.Equal(36, light.ToTokenDictionary().Count);
+            Assert.Equal(36, dark.ToTokenDictionary().Count);
+            Assert.All(light.ToTokenDictionary(), token => Assert.False(string.IsNullOrWhiteSpace(token.Value)));
+            Assert.All(dark.ToTokenDictionary(), token => Assert.False(string.IsNullOrWhiteSpace(token.Value)));
+            Assert.NotSame(light, secondLight);
+            Assert.NotEqual(light.Primary, light.DataPrimary);
+            Assert.NotEqual(dark.Primary, dark.DataPrimary);
+            Assert.True(ContrastRatio(light.Primary, light.PrimaryForeground) >= 4.5, $"{preset.DisplayName} light primary text lacks contrast.");
+            Assert.True(ContrastRatio(dark.Primary, dark.PrimaryForeground) >= 4.5, $"{preset.DisplayName} dark primary text lacks contrast.");
+        }
+    }
+
+    [Fact]
+    public void Palette_factory_rejects_an_unknown_theme_mode()
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(() => ZoorceThemePresets.CreatePalette(ZoorceThemePreset.Verdant, (ZoorceThemeMode)999));
+    }
+
+    [Fact]
     public void Palette_copy_and_css_output_include_every_new_semantic_token()
     {
         var source = ZoorceThemePalette.CreateDark();
@@ -189,6 +226,25 @@ public sealed class ThemeAndMarkdownTests
         services.AddZoorceWebUI();
         using var provider = services.BuildServiceProvider();
         return provider.GetRequiredService<IZoorceMarkdownRenderer>();
+    }
+
+    private static double ContrastRatio(string first, string second)
+    {
+        var firstLuminance = RelativeLuminance(first);
+        var secondLuminance = RelativeLuminance(second);
+        return (Math.Max(firstLuminance, secondLuminance) + 0.05) / (Math.Min(firstLuminance, secondLuminance) + 0.05);
+    }
+
+    private static double RelativeLuminance(string hex)
+    {
+        Assert.StartsWith("#", hex);
+        Assert.Equal(7, hex.Length);
+        var channels = Enumerable.Range(1, 3)
+            .Select(index => Convert.ToInt32(hex.Substring(index * 2 - 1, 2), 16) / 255d)
+            .Select(channel => channel <= 0.04045 ? channel / 12.92 : Math.Pow((channel + 0.055) / 1.055, 2.4))
+            .ToArray();
+
+        return (0.2126 * channels[0]) + (0.7152 * channels[1]) + (0.0722 * channels[2]);
     }
 
     private static string RenderHtml(IHtmlContent content)
