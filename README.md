@@ -15,7 +15,7 @@ Zoorce is an ecosystem of reusable libraries and tools developed by Elysium Codi
 ## Highlights
 
 - Typed, isolated components for layout, navigation, forms, feedback, data and workflow surfaces.
-- Complete light and dark semantic palettes, customizable at runtime without a full-page rerender.
+- Thirty complete light and dark semantic palette pairs, customizable at runtime without a full-page rerender.
 - Accessible interaction contracts: keyboard navigation, focus management, live feedback and ARIA labels.
 - Host-controlled templates and transitions where content or validation belongs to the application.
 - Native SVG charts with bounded monotone curves, stacked areas and independently configurable presentation layers.
@@ -100,6 +100,23 @@ The default shell has no application navigation until the host supplies a naviga
 ```
 
 Use the component option type to own labels, variants, templates, state and behavior. For visual changes, set the semantic palette tokens once on the shell or scope CSS variables to an individual component root.
+
+### Built-in theme presets
+
+`ZoorceThemePreset` includes thirty complete light/dark pairs. A preset changes the complete semantic contract: canvas and surfaces, typography, borders, navigation, code blocks, feedback tones, shadows, overlays and data-series colors. It does not only replace the primary accent.
+
+```csharp
+shell.Themes.UsePreset(ZoorceThemePreset.Forest);
+
+// Build a scoped palette without mutating the host catalog.
+var darkPalette = ZoorceThemePresets.CreatePalette(
+    ZoorceThemePreset.Cobalt,
+    ZoorceThemeMode.Dark);
+```
+
+Use `ZoorceThemePresets.Available` to populate a host-owned selector. It exposes stable identifiers, display names, descriptions and representative light/dark accents. Zoorce never adds a brand selector to a host UI automatically.
+
+The catalog includes `Verdant`, `Amethyst`, `Neutral`, `Crimson`, `Chestnut`, `Ember`, `Saffron`, `Rose`, `Obsidian`, `Graphite`, `Teal`, `Indigo`, `Cyan`, `Lime`, `Coral`, `Navy`, `Violet`, `Magenta`, `Burgundy`, `Copper`, `Gold`, `Olive`, `Mint`, `Turquoise`, `Sand`, `Lavender`, `Cobalt`, `Forest`, `Raspberry` and `Stone`.
 
 ### Optional top-bar back action
 
@@ -252,7 +269,7 @@ Customize `--z-valky-size`, `--z-valky-bubble-background`, `--z-valky-bubble-col
 dotnet run --project samples/Zoorce.Sample --urls http://127.0.0.1:5135
 ```
 
-Open `http://127.0.0.1:5135` to explore the component gallery, test light/dark themes and exercise interactive controls. The standalone sign-in example is at `/sign-in`; the status-page examples are at `/status/401`, `/status/403`, `/status/404`, `/status/500` and `/status/503`.
+Open `http://127.0.0.1:5135` to explore the component gallery, test light/dark themes and exercise interactive controls. The theme gallery at `/themes` previews all 30 palette pairs and can apply a temporary preset to the sample shell. The standalone sign-in example is at `/sign-in`; the status-page examples are at `/status/401`, `/status/403`, `/status/404`, `/status/500` and `/status/503`.
 
 ## Quality and release
 

@@ -2,6 +2,14 @@
 
 All notable changes to ZoorceCode are documented in this file.
 
+## [v1.3.0] - 2026-11-13
+
+### Added
+
+- Twenty-seven additional complete theme preset pairs, expanding the built-in catalog to 30 light/dark semantic palettes.
+- `ZoorceThemePresets.Available` for host-owned preset selectors and `ZoorceThemePresets.CreatePalette` for independent scoped palette creation.
+- A theme gallery in the sample that previews every semantic palette and can temporarily apply a preset to the sample shell.
+
 ## [v1.2.1] - 2026-10-28
 
 ### Fixed
