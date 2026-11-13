@@ -1,0 +1,184 @@
+@page "/themes"
+@using System.Text.Json
+@using Zoorce.Web.UI.Theming
+@{
+    ViewData["Title"] = "Theme gallery";
+    var presets = ZoorceThemePresets.Available;
+    var gallery = presets.ToDictionary(
+        preset => preset.Preset.ToString(),
+        preset => new
+        {
+            light = ZoorceThemePresets.CreatePalette(preset.Preset, ZoorceThemeMode.Light).ToCssVariables(),
+            dark = ZoorceThemePresets.CreatePalette(preset.Preset, ZoorceThemeMode.Dark).ToCssVariables()
+        });
+    var galleryJson = JsonSerializer.Serialize(gallery);
+}
+
+<section class="z-theme-gallery" data-z-theme-gallery>
+    <div class="z-page-heading z-theme-gallery-heading">
+        <div>
+            <span class="z-section-kicker">Foundation · 30 preset pairs</span>
+            <h1>Theme palettes with a full semantic contract.</h1>
+            <p>Each preset supplies independent light and dark tokens for surfaces, text, feedback, navigation, code and data visualization.</p>
+        </div>
+        <div class="z-theme-gallery-actions">
+            <label class="z-theme-gallery-search">
+                <span class="sr-only">Filter theme presets</span>
+                <span aria-hidden="true">⌕</span>
+                <input type="search" data-z-theme-gallery-search placeholder="Filter themes" autocomplete="off" />
+            </label>
+            <div class="z-theme-gallery-mode" role="group" aria-label="Preview color mode">
+                <button class="is-active" type="button" data-z-theme-gallery-mode="light" aria-pressed="true">Light</button>
+                <button type="button" data-z-theme-gallery-mode="dark" aria-pressed="false">Dark</button>
+            </div>
+            <button class="z-button z-button-ghost" type="button" data-z-theme-gallery-reset>Reset sample</button>
+        </div>
+    </div>
+
+    <div class="z-theme-gallery-summary" role="status" aria-live="polite">
+        <span data-z-theme-gallery-count>30</span> complete palette pairs · the sample starts with Amethyst.
+    </div>
+
+    <div class="z-theme-gallery-grid" data-z-theme-gallery-grid>
+        @foreach (var preset in presets)
+        {
+            var palette = ZoorceThemePresets.CreatePalette(preset.Preset, ZoorceThemeMode.Light);
+            <article class="z-theme-swatch-card" data-z-theme-swatch data-z-theme-key="@preset.Preset" data-z-theme-searchable="@($"{preset.DisplayName} {preset.Description}")" style="@Html.Raw(palette.ToCssVariables())">
+                <header>
+                    <div class="z-theme-swatch-colors" aria-hidden="true">
+                        <i style="background:var(--z-primary)"></i>
+                        <i style="background:var(--z-data-primary)"></i>
+                        <i style="background:var(--z-data-secondary)"></i>
+                        <i style="background:var(--z-success)"></i>
+                    </div>
+                    <span class="z-theme-swatch-mode" data-z-theme-swatch-mode>Light</span>
+                </header>
+                <div class="z-theme-swatch-copy">
+                    <h2>@preset.DisplayName</h2>
+                    <p>@preset.Description</p>
+                </div>
+                <div class="z-theme-swatch-preview" aria-label="@preset.DisplayName component preview">
+                    <span class="z-theme-swatch-kicker">Workspace</span>
+                    <div><strong>Release readiness</strong><span class="z-theme-swatch-status">Ready</span></div>
+                    <div class="z-theme-swatch-bars" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+                    <button type="button">Primary action</button>
+                </div>
+                <footer>
+                    <code>@preset.LightAccent</code>
+                    <button class="z-theme-swatch-apply" type="button" data-z-theme-apply="@preset.Preset">Apply to sample <span aria-hidden="true">→</span></button>
+                </footer>
+            </article>
+        }
+    </div>
+
+    <p class="z-theme-gallery-empty" data-z-theme-gallery-empty hidden>No preset matches that filter.</p>
+</section>
+
+<style>
+    .z-theme-gallery { display: grid; gap: 18px; }
+    .z-theme-gallery-heading { align-items: end; }
+    .z-theme-gallery-heading > div:first-child { max-width: 690px; }
+    .z-theme-gallery-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px; }
+    .z-theme-gallery-search { display: flex; align-items: center; gap: 7px; min-width: 205px; height: 34px; padding: 0 10px; border: 1px solid var(--z-border); border-radius: 9px; background: var(--z-surface); color: var(--z-muted); }
+    .z-theme-gallery-search:focus-within { border-color: var(--z-primary); box-shadow: 0 0 0 3px color-mix(in srgb, var(--z-primary) 16%, transparent); }
+    .z-theme-gallery-search input { width: 100%; min-width: 0; border: 0; outline: 0; background: transparent; color: var(--z-text); font-size: 11px; }
+    .z-theme-gallery-mode { display: inline-flex; gap: 2px; padding: 3px; border: 1px solid var(--z-border); border-radius: 9px; background: var(--z-subtle); }
+    .z-theme-gallery-mode button { min-height: 27px; padding: 0 9px; border: 0; border-radius: 6px; background: transparent; color: var(--z-muted); font: 740 10px var(--font-sans, sans-serif); cursor: pointer; }
+    .z-theme-gallery-mode button.is-active { background: var(--z-surface); color: var(--z-primary); box-shadow: 0 1px 4px color-mix(in srgb, var(--z-shadow) 35%, transparent); }
+    .z-theme-gallery-summary { color: var(--z-muted); font-size: 11px; }
+    .z-theme-gallery-summary span { color: var(--z-text); font-weight: 780; }
+    .z-theme-gallery-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(248px, 1fr)); gap: 14px; }
+    .z-theme-swatch-card { display: grid; grid-template-rows: auto auto 1fr auto; gap: 13px; min-width: 0; padding: 15px; border: 1px solid var(--z-border); border-radius: 14px; background: var(--z-canvas); box-shadow: 0 10px 24px color-mix(in srgb, var(--z-shadow) 22%, transparent); color: var(--z-text); transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease; }
+    .z-theme-swatch-card:hover { transform: translateY(-2px); border-color: color-mix(in srgb, var(--z-primary) 48%, var(--z-border)); box-shadow: 0 16px 30px color-mix(in srgb, var(--z-shadow) 30%, transparent); }
+    .z-theme-swatch-card > header, .z-theme-swatch-card > footer { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .z-theme-swatch-colors { display: flex; overflow: hidden; border: 1px solid var(--z-border); border-radius: 999px; }
+    .z-theme-swatch-colors i { display: block; width: 22px; height: 9px; }
+    .z-theme-swatch-mode { color: var(--z-muted); font-size: 9px; font-weight: 780; letter-spacing: .06em; text-transform: uppercase; }
+    .z-theme-swatch-copy h2 { margin: 0; color: var(--z-text); font-size: 17px; letter-spacing: -.03em; }
+    .z-theme-swatch-copy p { min-height: 31px; margin: 4px 0 0; color: var(--z-muted); font-size: 10px; line-height: 1.5; }
+    .z-theme-swatch-preview { display: grid; gap: 9px; padding: 12px; border: 1px solid var(--z-border); border-radius: 10px; background: var(--z-surface); box-shadow: inset 0 1px 0 color-mix(in srgb, var(--z-elevated) 75%, transparent); }
+    .z-theme-swatch-kicker { color: var(--z-primary); font-size: 8px; font-weight: 820; letter-spacing: .09em; text-transform: uppercase; }
+    .z-theme-swatch-preview > div:nth-child(2) { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    .z-theme-swatch-preview strong { color: var(--z-text); font-size: 11px; }
+    .z-theme-swatch-status { padding: 3px 6px; border-radius: 99px; background: var(--z-success-soft); color: var(--z-success); font-size: 8px; font-weight: 800; }
+    .z-theme-swatch-bars { display: flex; align-items: end; gap: 4px; height: 28px; padding: 4px 0; border-bottom: 1px solid var(--z-border); }
+    .z-theme-swatch-bars i { display: block; flex: 1; border-radius: 3px 3px 0 0; background: var(--z-data-primary); }
+    .z-theme-swatch-bars i:nth-child(1) { height: 37%; }.z-theme-swatch-bars i:nth-child(2) { height: 72%; background: var(--z-data-secondary); }.z-theme-swatch-bars i:nth-child(3) { height: 52%; background: var(--z-data-tertiary); }.z-theme-swatch-bars i:nth-child(4) { height: 88%; background: var(--z-data-quaternary); }.z-theme-swatch-bars i:nth-child(5) { height: 64%; background: var(--z-data-quinary); }
+    .z-theme-swatch-preview button { min-height: 26px; padding: 0 8px; border: 0; border-radius: 6px; background: var(--z-primary); color: var(--z-primary-foreground); font: 760 9px var(--font-sans, sans-serif); }
+    .z-theme-swatch-card code { color: var(--z-muted); font: 700 9px var(--font-mono, monospace); }
+    .z-theme-swatch-apply { display: inline-flex; align-items: center; gap: 5px; min-height: 27px; padding: 0; border: 0; background: transparent; color: var(--z-primary); font: 760 10px var(--font-sans, sans-serif); cursor: pointer; }
+    .z-theme-swatch-apply:focus-visible, .z-theme-gallery-mode button:focus-visible { outline: 3px solid var(--z-primary); outline-offset: 3px; }
+    .z-theme-gallery-empty { margin: 0; padding: 30px; border: 1px dashed var(--z-border); border-radius: 12px; color: var(--z-muted); text-align: center; }
+    @@media (max-width: 700px) { .z-theme-gallery-actions { justify-content: flex-start; }.z-theme-gallery-search { flex: 1 1 180px; }.z-theme-gallery-grid { grid-template-columns: 1fr; } }
+    @@media (prefers-reduced-motion: reduce) { .z-theme-swatch-card { transition: none; }.z-theme-swatch-card:hover { transform: none; } }
+</style>
+
+@section Scripts {
+    <script>
+        (() => {
+            const root = document.documentElement;
+            const gallery = document.querySelector('[data-z-theme-gallery]');
+            if (!gallery) return;
+
+            const catalog = @Html.Raw(galleryJson);
+            const cards = [...gallery.querySelectorAll('[data-z-theme-swatch]')];
+            const search = gallery.querySelector('[data-z-theme-gallery-search]');
+            const count = gallery.querySelector('[data-z-theme-gallery-count]');
+            const empty = gallery.querySelector('[data-z-theme-gallery-empty]');
+            let previewMode = 'light';
+            let activePreset = sessionStorage.getItem('zoorce-sample-theme-preset');
+            const originalStyles = root.getAttribute('style') ?? '';
+
+            const applyCardMode = () => {
+                cards.forEach(card => {
+                    const entry = catalog[card.dataset.zThemeKey];
+                    if (!entry) return;
+                    card.style.cssText = entry[previewMode];
+                    card.querySelector('[data-z-theme-swatch-mode]').textContent = previewMode === 'dark' ? 'Dark' : 'Light';
+                });
+            };
+
+            const applyPreset = () => {
+                if (!activePreset || !catalog[activePreset]) return;
+                const mode = root.dataset.zoorceTheme === 'light' ? 'light' : 'dark';
+                root.style.cssText = catalog[activePreset][mode];
+            };
+
+            const filter = () => {
+                const query = (search.value || '').trim().toLocaleLowerCase();
+                let visible = 0;
+                cards.forEach(card => {
+                    const matches = !query || card.dataset.zThemeSearchable.toLocaleLowerCase().includes(query);
+                    card.hidden = !matches;
+                    if (matches) visible++;
+                });
+                count.textContent = visible;
+                empty.hidden = visible !== 0;
+            };
+
+            search.addEventListener('input', filter);
+            gallery.querySelectorAll('[data-z-theme-gallery-mode]').forEach(button => button.addEventListener('click', () => {
+                previewMode = button.dataset.zThemeGalleryMode;
+                gallery.querySelectorAll('[data-z-theme-gallery-mode]').forEach(control => {
+                    const selected = control === button;
+                    control.classList.toggle('is-active', selected);
+                    control.setAttribute('aria-pressed', String(selected));
+                });
+                applyCardMode();
+            }));
+            gallery.querySelectorAll('[data-z-theme-apply]').forEach(button => button.addEventListener('click', () => {
+                activePreset = button.dataset.zThemeApply;
+                sessionStorage.setItem('zoorce-sample-theme-preset', activePreset);
+                applyPreset();
+            }));
+            gallery.querySelector('[data-z-theme-gallery-reset]').addEventListener('click', () => {
+                activePreset = null;
+                sessionStorage.removeItem('zoorce-sample-theme-preset');
+                root.setAttribute('style', originalStyles);
+            });
+            new MutationObserver(applyPreset).observe(root, { attributes: true, attributeFilter: ['data-zoorce-theme'] });
+            applyCardMode();
+            applyPreset();
+        })();
+    </script>
+}
